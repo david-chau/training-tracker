@@ -490,7 +490,7 @@ trainer with twenty-five people has twenty-five of them — identical and fully
 independent. There is no multi-tenancy anywhere in the design.
 
 ```
-   Jane          Marcus         Priya            each is:
+   David         Jill           Arden            each is:
    ┌────┐        ┌────┐        ┌────┐              · one Sheet
    │Sheet│       │Sheet│       │Sheet│             · one bound script
    │  +  │       │  +  │       │  +  │             · one deployment
