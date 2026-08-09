@@ -17,6 +17,8 @@ trainer who records your sessions.
   the template, paste in the code, publish, share the links
 - [Admin guide](https://david-chau.github.io/training-tracker/admin.html)
 - [Viewer guide](https://david-chau.github.io/training-tracker/viewer.html)
+- [Personal records](https://david-chau.github.io/training-tracker/records.html)
 - [Architecture](https://david-chau.github.io/training-tracker/architecture.html)
+- [Troubleshooting](https://david-chau.github.io/training-tracker/troubleshooting.html)
 
 Working on the code: [DEVELOPMENT.md](DEVELOPMENT.md).
