@@ -1,0 +1,38 @@
+title: Training tracker
+description: A tap-only workout log built on Google Sheets — log your own training, or have a trainer log it for you.
+
+# ── Change these two if the GitHub user or repo name differs ──────────
+# baseurl must match the path GitHub Pages serves the site from, and
+# `repo` is used for every link back to a source file.
+baseurl: "/training-tracker"
+repo: "https://github.com/david-chau/training-tracker"
+
+remote_theme: just-the-docs/just-the-docs@v0.12.0
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+  - jekyll-include-cache
+
+color_scheme: light
+search_enabled: true
+heading_anchors: true
+
+nav_external_links:
+  - title: Source code on GitHub
+    url: "https://github.com/david-chau/training-tracker"
+
+callouts:
+  note:
+    title: Note
+    color: blue
+  warning:
+    title: Careful
+    color: red
+  tip:
+    title: Tip
+    color: green
+
+exclude:
+  - Gemfile
+  - Gemfile.lock

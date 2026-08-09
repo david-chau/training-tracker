@@ -1,0 +1,4 @@
+.DS_Store
+
+# Points at one specific spreadsheet — never shared.
+.clasp.json
