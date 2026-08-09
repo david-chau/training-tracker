@@ -1,6 +1,7 @@
 ---
-title: Viewer guide
-nav_order: 4
+title: Viewer
+parent: User guide
+nav_order: 2
 ---
 
 # Viewer guide
@@ -30,9 +31,14 @@ then opens like an app.
 
 ## Finding an old session
 
-1. Tap the day type along the top: **Push**, **Pull** or **Legs**.
+1. Tap the day type along the top — **Push**, **Pull**, **Legs**, or whatever
+   names your log uses.
 2. Use the **‹** arrow next to the date to step back through previous
    sessions of that type. **›** goes forward again.
+
+Only day types that have sessions appear, so every button leads somewhere. If
+you see *"Nothing has been logged yet"*, nothing has been recorded in this log
+at all so far.
 
 If a date has nothing logged you will see *No Push session logged on…* — that
 just means you did not train that day.

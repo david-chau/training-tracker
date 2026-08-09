@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-nav_order: 7
+nav_order: 6
 ---
 
 # Troubleshooting
@@ -40,6 +40,31 @@ Click **Advanced**, then **Go to Training log (unsafe)**, then **Allow**.
 
 The permissions it asks for are to read and write the spreadsheet it is
 attached to, and to show its own web page. Nothing else.
+
+---
+
+## "Sorry, unable to open the file at present"
+
+The link points at a deployment that is not live. Almost always one of:
+
+- **It is the `/dev` link.** That one is the editor's test link. It only works
+  while you are signed in as the owner, and never for anyone else. The link
+  you want ends in `/exec`.
+- **The stored link is out of date.** Creating a *new* deployment mints a new
+  URL and retires the old one. Run **Training → Set web app link** and paste
+  the current URL from **Deploy → Manage deployments**.
+- **Nothing has been deployed yet.** Saving the code in the editor is not
+  deploying it — see [step 3](setup.html#step-3--publish-the-web-app).
+
+```
+   ✓  https://script.google.com/macros/s/AKfy…/exec        share this
+   ✗  https://script.google.com/macros/s/AKfy…/dev         owner-only test link
+```
+
+{: .note }
+The app cannot work the URL out for itself reliably — the Apps Script API for
+it returns the test link, or a deployment that has since been replaced. That
+is why it asks you to paste the real one once and remembers it.
 
 ---
 
@@ -122,6 +147,20 @@ reload.
 Day-type buttons come from the `Templates` tab plus everything ever logged, so
 a new day type appears on the next page load once either exists. See
 [day types are yours](admin.html#day-types-are-yours).
+
+---
+
+## A viewer sees no day buttons, or fewer than I do
+
+Deliberate. Whoever holds the admin link sees every day type they *could*
+start — everything on the `Templates` tab, everything ever logged, plus
+**Custom**. A viewer only sees day types that actually have sessions.
+
+Offering a viewer a day with nothing behind it just produces a button that
+always answers "No Push session logged". Log a session against a day type and
+it appears for viewers from then on.
+
+A brand-new log therefore shows a viewer *"Nothing has been logged yet."*
 
 ---
 

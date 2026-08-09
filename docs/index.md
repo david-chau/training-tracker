@@ -47,8 +47,8 @@ genuinely cannot write.
 | I am… | Start here |
 |---|---|
 | Setting this up for the first time | [Setup guide](setup.html) |
-| The one recording sets — myself or a trainer | [Admin guide](admin.html) |
-| Someone who was sent a view-only link | [Viewer guide](viewer.html) |
+| The one recording sets — myself or a trainer | [User guide → Admin](admin.html) |
+| Someone who was sent a view-only link | [User guide → Viewer](viewer.html) |
 | After personal bests | [Personal records](records.html) |
 | Hitting something odd | [Troubleshooting](troubleshooting.html) |
 | Curious how it is built | [Architecture](architecture.html) |

@@ -113,11 +113,19 @@ On the left is a file called `Code.gs` holding a few lines of sample code.
 
 ### Save
 
-Click the save icon, or `Ctrl`/`Cmd` + `S`. Switch back to the spreadsheet tab
-and **reload the page**.
+Click the save icon, or `Ctrl`/`Cmd` + `S`. It should now look like this — two
+files on the left, `Code.gs` and `Index.html`:
 
-A new **Training** menu appears next to *Help*. That is how you know the code
-is attached to the right spreadsheet. If it is missing, see
+![The Apps Script editor with Code.gs and Index.html]({{ site.baseurl }}/img/apps-script-editor.jpeg)
+
+Switch back to the spreadsheet tab and **reload the page**.
+
+A new **Training** menu appears to the right of *Help*:
+
+![The Training menu open in Google Sheets]({{ site.baseurl }}/img/training-menu.jpeg)
+
+That is how you know the code is attached to the right spreadsheet. If it is
+missing, see
 [Troubleshooting](troubleshooting.html#the-training-menu-is-missing).
 
 ---
@@ -146,13 +154,37 @@ spreadsheet.
    your own script and it was never submitted for review.
 3. **Advanced → Go to Training log (unsafe) → Allow**.
 
-Ignore the URL on the confirmation screen. The links you want come from step 4.
+When it finishes, the editor shows a **Web app URL** ending in `/exec`. Copy
+it now — step 4 needs it.
 
 ---
 
 ## Step 4 — The two links
 
-Go back to the spreadsheet: **Training → Show shareable links**.
+### Copy the deployment link
+
+At the end of step 3 the editor shows a **Web app URL** ending in `/exec`.
+Copy it. If you have closed that dialog, get it back with **Deploy → Manage
+deployments** — it is the URL shown against the active deployment.
+
+Then in the spreadsheet: **Training → Show shareable links**. The first time,
+it asks you to paste that URL. Paste it and click OK; it is remembered from
+then on.
+
+{: .warning }
+It has to be the link ending in **`/exec`**. The editor also shows one ending
+in `/dev` — that is the test link, it only ever works while *you* are signed
+in, and it will not work for anyone you send it to. If you paste the wrong one
+the app tells you so.
+
+{: .note }
+Made a **new** deployment later? That mints a new URL, so run **Training → Set
+web app link** and paste the new one. *Editing* an existing deployment keeps
+the same URL and needs nothing.
+
+### The links themselves
+
+**Training → Show shareable links** now prints both:
 
 ```
         …/exec?key=a1b2c3d4e5f6         …/exec

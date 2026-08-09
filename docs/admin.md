@@ -1,6 +1,7 @@
 ---
-title: Admin guide
-nav_order: 3
+title: Admin
+parent: User guide
+nav_order: 1
 ---
 
 # Admin guide

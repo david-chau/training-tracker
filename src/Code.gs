@@ -74,19 +74,76 @@ function assertEdit(k) {
   }
 }
 
+// A deployed web app URL, or '' if we have not got a trustworthy one.
+//
+// ScriptApp.getService().getUrl() cannot be relied on: from a menu handler it
+// returns either the /dev URL — which only ever works for the owner — or the
+// /exec URL of a deployment that may since have been replaced, which opens as
+// "Sorry, unable to open the file at present". So the real URL is pasted once
+// and kept in script properties, and getUrl() is only a fallback.
+const URL_PROP = 'WEB_APP_URL';
+const EXEC_URL = /^https:\/\/script\.google\.com\/(a\/macros\/[^\/]+|macros)\/s\/[\w-]+\/exec$/;
+
+function webAppUrl() {
+  const saved = PropertiesService.getScriptProperties().getProperty(URL_PROP);
+  if (saved && EXEC_URL.test(saved)) return saved;
+
+  let auto = '';
+  try { auto = ScriptApp.getService().getUrl() || ''; } catch (e) { auto = ''; }
+  return EXEC_URL.test(auto) ? auto : '';
+}
+
+// Prompts for the /exec URL and stores it. Returns '' if the user cancels or
+// pastes something that is not a deployment URL.
+function askForUrl(ui) {
+  const res = ui.prompt(
+    'Web app link',
+    'In the Apps Script editor: Deploy > Manage deployments, then copy the\n' +
+    'Web app URL. It ends in /exec.\n\n' +
+    'Paste it here:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (res.getSelectedButton() !== ui.Button.OK) return '';
+
+  const url = String(res.getResponseText() || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+  if (!EXEC_URL.test(url)) {
+    ui.alert(
+      'That does not look like a deployment link',
+      'It needs to look like:\n\n' +
+      'https://script.google.com/macros/s/AKfy…/exec\n\n' +
+      'A link ending in /dev is the test link and only works for you. Take the\n' +
+      'one from Deploy > Manage deployments.',
+      ui.ButtonSet.OK
+    );
+    return '';
+  }
+
+  PropertiesService.getScriptProperties().setProperty(URL_PROP, url);
+  return url;
+}
+
+// Menu: paste or replace the deployment link. Creating a *new* deployment
+// mints a new URL, so this needs re-running after that; editing an existing
+// deployment keeps the same one.
+function setWebAppLink() {
+  const ui = SpreadsheetApp.getUi();
+  const url = askForUrl(ui);
+  if (url) showLinks();
+}
+
 // Menu helper: prints both links.
 function showLinks() {
-  const base = ScriptApp.getService().getUrl();
   const ui = SpreadsheetApp.getUi();
-  if (!base) {
-    return ui.alert('Deploy the web app first (Deploy > New deployment > Web app).');
-  }
+  const base = webAppUrl() || askForUrl(ui);
+  if (!base) return;
+
   ui.alert(
     'Links',
     'ADMIN (can edit):\n' + base + '?key=' + editKey() +
     '\n\nVIEWER (read only):\n' + base +
     '\n\nKeep the first one, or give it to whoever records your sessions. ' +
-    'Anyone holding it can write.',
+    'Anyone holding it can write.\n\n' +
+    'Wrong link? Training > Set web app link.',
     ui.ButtonSet.OK
   );
 }
@@ -96,6 +153,7 @@ function onOpen() {
     .createMenu('Training')
     .addItem('Open entry form', 'showSidebar')
     .addItem('Show shareable links', 'showLinks')
+    .addItem('Set web app link…', 'setWebAppLink')
     .addItem('Rebuild records', 'showRecords')
     .addItem('Refresh exercise dropdown', 'setupExerciseValidation')
     .addToUi();
@@ -108,16 +166,28 @@ function showSidebar() {
 
 // ---------- reads ----------
 
-// Day types are data, not a hardcoded list: whatever is in Templates plus
-// whatever has ever been logged, with the blank day always available last.
-function getBootstrap() {
+// Day types are data, not a hardcoded list.
+//
+// For whoever is entering: everything in Templates plus everything ever
+// logged, with the blank day appended — those are the days you could start.
+//
+// For a viewer: only days that actually have sessions. The Templates tab and
+// the blank day are planning tools, so offering them read-only just produces
+// buttons that always answer "nothing logged".
+function getBootstrap(k) {
+  const canEdit = String(k) === editKey();
   const logged = allRows().map(function (r) { return String(r[COL.day]).trim(); });
-  const planned = templateRows().map(function (r) { return String(r[0]).trim(); });
-  let days = dedupe(planned.concat(logged)).filter(Boolean);
-  if (!days.length) days = ['Push', 'Pull', 'Legs'];
-  if (!days.some(function (d) { return sameDay(d, CFG.blankDay); })) {
-    days.push(CFG.blankDay);
+
+  let days = dedupe(logged).filter(Boolean);
+  if (canEdit) {
+    const planned = templateRows().map(function (r) { return String(r[0]).trim(); });
+    days = dedupe(planned.concat(logged)).filter(Boolean);
+    if (!days.length) days = ['Push', 'Pull', 'Legs'];
+    if (!days.some(function (d) { return sameDay(d, CFG.blankDay); })) {
+      days.push(CFG.blankDay);
+    }
   }
+
   return {
     days: days,
     exercises: exerciseList(),

@@ -1,6 +1,6 @@
 ---
 title: Architecture
-nav_order: 6
+nav_order: 5
 ---
 
 # Architecture
@@ -129,12 +129,12 @@ derived from it.
               D is an optional picture URL. E hides the weight field
               and stops progress() adding load
 
-   Templates  ┌─────┬──────────┬──────┬──────┬────────┬─────────┐
-              │ day │ exercise │ sets │ reps │ weight │ default │
-              └─────┴──────────┴──────┴──────┴────────┴─────────┘
-              first session only; `day` also defines the day-type
-              buttons. F = "no" keeps a row on the plan without
-              putting it in the session
+   Templates  ┌─────┬──────────┬──────┬──────┬────────┬────────────────┐
+              │ day │ exercise │ sets │ reps │ weight │ include in new │
+              └─────┴──────────┴──────┴──────┴────────┴────────────────┘
+              the "from the template" source; `day` also defines the
+              day-type buttons. F = "no" keeps a row on the plan
+              without it being generated
 
    Settings   ┌─────┬───────┬──────────────┐
               │ key │ value │ what it does │  key/value; C is for the human.

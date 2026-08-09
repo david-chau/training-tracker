@@ -179,7 +179,15 @@ google.script.run.withSuccessHandler(function (b) {
     el.onclick = function () { S.day = name; markDay(); load(false); };
     d.appendChild(el);
   });
-}).getBootstrap();
+
+  // A viewer is only offered days that have sessions, so an empty list means
+  // there is genuinely nothing to look at yet.
+  if (!b.days.length) {
+    document.getElementById('body').innerHTML = CAN_EDIT
+      ? '<div class="msg">No day types yet — add rows to the Templates tab.</div>'
+      : '<div class="msg">Nothing has been logged yet.</div>';
+  }
+}).getBootstrap(KEY);
 
 document.getElementById('date').onchange = function () {
   S.date = this.value; load(false);

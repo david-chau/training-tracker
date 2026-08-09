@@ -90,10 +90,10 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 │                optional picture URL (http(s) only) + a flag hiding the
 │                weight field. Grows on use. Ships 256 rows including the
 │                `[Other]` placeholder and 52 unweighted ones.
-├── Templates  — day | exercise | sets | reps | weight | default. Seeds a
-│                first session; F="no" keeps a row out of generation.
-│                Ships 5 exercises / 16 sets per day (~1hr) plus one
-│                default="no" row per day as a worked example.
+├── Templates  — day | exercise | sets | reps | weight | include in new
+│                session. Seeds a session; F="no" keeps a row out of
+│                generation. Ships 5 exercises / 16 sets per day (~1hr)
+│                plus one "no" row per day as a worked example.
 ├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing
 │                keys fall back to DEFAULTS in Code.gs.
 └── Records    — DERIVED OUTPUT. Rewritten wholesale; never a source.
@@ -183,6 +183,16 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   connection comes from the in-memory queue; `localStorage` only adds
   surviving a reload, and `beforeunload` covers the rest. Don't promise more
   than that in the docs.
+- **`ScriptApp.getService().getUrl()` is not trustworthy.** From a menu
+  handler it returns the `/dev` URL (owner-only) or the `/exec` URL of a
+  deployment that has since been replaced — which opens as "Sorry, unable to
+  open the file at present". The real URL is pasted once and kept in
+  `WEB_APP_URL`; `getUrl()` is only a fallback, and only when it matches
+  `EXEC_URL`. Don't "simplify" this back to deriving the URL.
+- **Day types differ by role.** Admin sees Templates + logged + blank day;
+  a viewer sees only logged days. Templates and the blank day are entry-time
+  concepts, and offering them read-only yields buttons that always answer
+  "nothing logged". `getBootstrap(k)` takes the key for this reason.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the
