@@ -96,6 +96,32 @@ Column H is written by the generator (`from template`, `was easy`, `repeat`,
 `backed off`). Column I is the admin's free text. They are separate on
 purpose.
 
+## The demo clip
+
+`docs/img/tablet-demo.{gif,mp4}` are generated from a phone recording of a
+tablet, kept out of the repo. Both are silent.
+
+```bash
+CROP="crop=612:915:60:57"     # trims the desk around the tablet
+CHAIN="$CROP,fps=5,scale=360:-1:flags=lanczos,hqdn3d=6:6:10:10"
+
+ffmpeg -i example.mp4 -an -vf "$CHAIN,palettegen=stats_mode=diff:max_colors=64" -y pal.png
+ffmpeg -i example.mp4 -i pal.png -an \
+  -lavfi "[0:v]$CHAIN[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
+  -y docs/img/tablet-demo.gif
+
+ffmpeg -i example.mp4 -an -vf "$CROP,scale=540:-2" \
+  -c:v libx264 -crf 30 -preset slow -pix_fmt yuv420p -movflags +faststart \
+  -y docs/img/tablet-demo.mp4
+```
+
+Hand-held footage is the worst case for GIF: every pixel changes each frame,
+so nothing compresses. The levers that mattered were cropping, 5 fps, 64
+colours and `hqdn3d` — 39 MB down to 5.9 MB. Dithering roughly doubles the
+size and `deshake` made it *larger*, so neither is used. The README uses the
+GIF because GitHub renders those reliably; the docs pages use the MP4, which
+is a fifth of the weight.
+
 ## Testing
 
 Two things run locally, neither needing a dependency:

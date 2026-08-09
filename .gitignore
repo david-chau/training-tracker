@@ -19,3 +19,6 @@ node_modules/
 
 # Bug-report screenshots, kept locally
 /issue_*.jpeg
+
+# Screen-recording sources. The silent GIF/MP4 under docs/img/ are what ship.
+/example.mp4

@@ -11,6 +11,9 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
+![Starting a Push session on a tablet, entering reps and weights, and adding
+an exercise](docs/img/tablet-demo.gif)
+
 ## Documentation
 
 **[Documentation home →](https://david-chau.github.io/training-tracker/)**

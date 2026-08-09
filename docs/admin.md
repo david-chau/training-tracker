@@ -41,6 +41,12 @@ mid-session would take any not-yet-saved changes with it.
 
 ## Running a session
 
+<video src="{{ site.baseurl }}/img/tablet-demo.mp4"
+       autoplay loop muted playsinline controls
+       aria-label="A Push session being started and logged on a tablet"
+       style="max-width:360px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+</video>
+
 ### 1. Pick the date and day
 
 | Control | Moves |
