@@ -118,8 +118,9 @@ its own hosts — `github.com`, `*.githubusercontent.com` user uploads, and its
 asset S3 bucket. Neither the Pages URL nor `raw.githubusercontent.com` is on
 that list, so a `<video>` pointing at a repo file renders as nothing. Only
 files uploaded through GitHub's browser attachment flow get a playable URL.
-Hence the poster image linking to the blob view, which does play it. The docs
-pages have no such restriction and use `<video>` directly.
+Hence the poster image, linked to the documentation home page where the clip
+plays inline — a blob link works too, but lands on a download rather than a
+player. The docs pages have no such restriction and use `<video>` directly.
 
 A GIF was tried and dropped. Hand-held footage is the worst case for the
 format — camera shake changes every pixel every frame, so inter-frame

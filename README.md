@@ -13,12 +13,11 @@ trainer who records your sessions.
 
 [![A Push session open on a tablet: exercise cards showing personal bests,
 last week's numbers under each field, and the status bar reporting an unsaved
-change](docs/img/tablet-demo-poster.png)](https://github.com/david-chau/training-tracker/blob/main/docs/img/tablet-demo.mp4)
+change](docs/img/tablet-demo-poster.png)](https://david-chau.github.io/training-tracker/)
 
-**[▶ Watch the tablet demo](https://github.com/david-chau/training-tracker/blob/main/docs/img/tablet-demo.mp4)** — 40 seconds: starting a
-session, logging sets, adding an exercise. Also on the
-[documentation home](https://david-chau.github.io/training-tracker/), where it
-plays inline.
+**[▶ Watch the tablet demo](https://david-chau.github.io/training-tracker/)** —
+40 seconds: starting a session, logging sets, adding an exercise. It plays
+inline at the top of the documentation site.
 
 ## Documentation
 
