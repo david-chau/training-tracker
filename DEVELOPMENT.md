@@ -135,6 +135,11 @@ the GIF.
 
 ## Testing
 
+`.github/workflows/checks.yml` runs all of this on every push and pull
+request: both test files, a template rebuild that must produce no diff (the
+build is byte-reproducible, so a diff means the committed `.xlsx` is stale),
+and a check that every image the docs reference exists.
+
 Two things run locally, neither needing a dependency:
 
 ```bash

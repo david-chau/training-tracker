@@ -92,6 +92,11 @@ Back in the spreadsheet, **reload the page**. A **Training** menu appears:
 That is how you know the code is attached to the right spreadsheet. Missing?
 See [troubleshooting](troubleshooting.html#the-training-menu-is-missing).
 
+{: .note }
+Dates follow **your spreadsheet's** time zone — *File → Settings → Time zone*
+in the sheet. Worth a glance if you train late in the evening, since that is
+when a wrong zone would file a session under the previous day.
+
 ---
 
 ## 3. Publish the web app

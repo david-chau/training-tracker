@@ -1,0 +1,32 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Queue and record logic
+        run: |
+          node test/queue.test.js
+          node test/records.test.js
+
+      # Rebuilds the .xlsx and asserts its shape. Also proves the committed
+      # copy is in step with the seed data, since the build is reproducible.
+      - name: Spreadsheet template is current
+        run: |
+          python3 data/build_template.py
+          git diff --exit-code -- docs/download/training-tracker-template.xlsx
+
+      - name: Docs reference files that exist
+        run: |
+          fail=0
+          for ref in $(grep -rhoE '/(img|download)/[A-Za-z0-9._-]+' docs/*.md | sort -u); do
+            [ -f "docs$ref" ] || { echo "missing: docs$ref"; fail=1; }
+          done
+          exit $fail

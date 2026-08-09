@@ -64,6 +64,21 @@ function renderApp(canEdit) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+// The spreadsheet's own time zone, not the script's.
+//
+// appsscript.json ships a fixed timeZone and pasting the code into a project
+// does not change it — so without this, someone in Sydney would have sessions
+// dated by Toronto's clock, and an evening workout could land on the previous
+// day. The spreadsheet's zone is the one its owner actually set.
+function logTimeZone() {
+  try {
+    return SpreadsheetApp.getActive().getSpreadsheetTimeZone() ||
+           Session.getScriptTimeZone();
+  } catch (e) {
+    return Session.getScriptTimeZone();
+  }
+}
+
 function logName() {
   return String(SpreadsheetApp.getActive().getName() || 'Training log').trim();
 }
@@ -1061,7 +1076,7 @@ function sameDay(a, b) {
 
 function dateKey(d) {
   const dt = (d instanceof Date) ? d : new Date(d);
-  return Utilities.formatDate(dt, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return Utilities.formatDate(dt, logTimeZone(), 'yyyy-MM-dd');
 }
 
 function parseKey(k) {
@@ -1085,6 +1100,10 @@ function setupExerciseValidation() {
   const list = ss.getSheetByName(CFG.exerciseSheet);
   if (!log || !list) {
     return SpreadsheetApp.getUi().alert('Need both "' + CFG.logSheet + '" and "' + CFG.exerciseSheet + '" sheets.');
+  }
+  if (list.getLastRow() < 2) {
+    return SpreadsheetApp.getUi().alert('The "' + CFG.exerciseSheet +
+      '" tab has no exercises in it yet.');
   }
   const rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(list.getRange('A2:A' + list.getLastRow()), true)

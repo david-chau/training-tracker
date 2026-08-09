@@ -207,6 +207,12 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
 - **Links must never navigate the app away.** `<base target="_blank">` is
   the backstop and anchors set `target`/`rel` themselves. The pending-write
   queue lives in memory; leaving the page can take it. It was `_top`.
+- **Dates use the spreadsheet's time zone, not the script's.**
+  `appsscript.json` ships a fixed `timeZone` and pasting the code into a
+  project does not change it, so `Session.getScriptTimeZone()` is whatever
+  this repo happened to commit. `logTimeZone()` prefers
+  `getSpreadsheetTimeZone()` and falls back. An evening session under the
+  wrong zone lands on the previous day, silently.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the

@@ -324,7 +324,13 @@ function load(create, source) {
   google.script.run
     .withSuccessHandler(render)
     .withFailureHandler(function (e) {
-      document.getElementById('body').innerHTML = '<div class="msg">' + e.message + '</div>';
+      // Server messages quote sheet values back, so this is text, not markup.
+      var body = document.getElementById('body');
+      body.innerHTML = '';
+      var m = document.createElement('div');
+      m.className = 'msg';
+      m.textContent = e.message;
+      body.appendChild(m);
     })
     .loadSession(S.day, S.date, !!create, KEY, source || 'auto');
 }
@@ -335,7 +341,10 @@ function render(res) {
 
   if (!res.exists) {
     if (!CAN_EDIT) {
-      body.innerHTML = '<div class="msg">No ' + S.day + ' session logged on ' + S.date + '.</div>';
+      var none = document.createElement('div');
+      none.className = 'msg';
+      none.textContent = 'No ' + S.day + ' session logged on ' + S.date + '.';
+      body.appendChild(none);          // day names come from the sheet
       return;
     }
     body.appendChild(starter(res));

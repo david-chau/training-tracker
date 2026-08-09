@@ -31,7 +31,8 @@ vm.runInContext(
 
 // `function` declarations land on the sandbox global but `const` ones do
 // not, so COL has to be read from inside the context.
-const { computeRecords, recordRows, epley, better, progress, isYes, isNo } = sandbox;
+const { computeRecords, recordRows, epley, better, progress, isYes, isNo,
+        resolveSource } = sandbox;
 const COL = vm.runInContext('COL', sandbox);
 
 // Arrays built inside the vm have that realm's prototype, which
@@ -301,6 +302,24 @@ test('untimed exercises keep the rep wording', () => {
 
   assert.ok(labels.includes('Est. 1RM'));
   assert.ok(labels.some(l => l.includes('reps')));
+});
+
+// ---------- how a new session is sourced ----------
+
+test('an explicit source is taken at its word', () => {
+  ['history', 'template', 'empty'].forEach(src => {
+    assert.strictEqual(resolveSource('Push', src), src);
+    assert.strictEqual(resolveSource('Custom', src), src,
+      'the blank day must not override an explicit choice');
+  });
+});
+
+test('no source means auto, except on the blank day', () => {
+  assert.strictEqual(resolveSource('Push', undefined), 'auto');
+  assert.strictEqual(resolveSource('Push', ''), 'auto');
+  assert.strictEqual(resolveSource('Push', 'nonsense'), 'auto');
+  assert.strictEqual(resolveSource('Custom', undefined), 'empty');
+  assert.strictEqual(resolveSource('custom', undefined), 'empty', 'case-insensitive');
 });
 
 // ---------- the sheet flag columns ----------
