@@ -107,15 +107,17 @@ The message after the colon is the real cause.
 
 ---
 
-## "No history and no template for Push"
+## "No earlier Push to build from" / "No template rows for Push"
 
-You are starting a day type that has never been logged and has no rows in the
-`Templates` tab. Either:
+You chose a way to start a session that has nothing to work from. The app only
+offers choices it can see are available, so this usually means the page has
+been open a while and the sheet has changed underneath it — reload it.
 
-- use the **Custom** button instead — it always starts empty and expects you
-  to add exercises by hand, or
-- add rows for that day to the `Templates` tab (`day | exercise | sets | reps
-  | weight`).
+Otherwise, pick a different way to start. **Empty** is always available.
+
+To make *From the template* work for a day, add rows for it to the `Templates`
+tab (`day | exercise | sets | reps | weight | include in new session`) and
+reload.
 
 Day-type buttons come from the `Templates` tab plus everything ever logged, so
 a new day type appears on the next page load once either exists. See

@@ -319,10 +319,10 @@ EXERCISES = [
 #
 # Five exercises per day is roughly an hour once rest is counted, so that is
 # what each day generates. A sixth accessory is listed against each day with
-# default = "no": it stays on the plan as a suggestion without being put in
-# the form, and doubles as a worked example of that column.
+# "include in new session" = no: it stays on the plan as a suggestion without
+# being generated, and doubles as a worked example of that column.
 TEMPLATES = [
-    ["day", "exercise", "sets", "reps", "weight", "default"],
+    ["day", "exercise", "sets", "reps", "weight", "include in new session"],
     ["Push", "Barbell Bench Press", 4, 8, 0],
     ["Push", "Incline Dumbbell Press", 3, 10, 0],
     ["Push", "Seated Dumbbell Shoulder Press", 3, 10, 0],
@@ -499,10 +499,10 @@ def check():
         tpl = z.read("xl/worksheets/sheet3.xml").decode()
         assert tpl.count("<row ") == len(TEMPLATES)
         assert "<v>4</v>" in tpl, "set counts must be numbers, not text"
-        assert ">default</t>" in tpl, "Templates needs the default column, F"
+        assert ">include in new session</t>" in tpl, "Templates needs column F"
 
         # Five per day is the shipped default — an hour of training. The
-        # sixth row of each day is the default="no" example.
+        # sixth row of each day is the "no" example.
         from collections import Counter
         per_day = Counter(r[0] for r in TEMPLATES[1:]
                           if not (len(r) > 5 and r[5] == "no"))

@@ -89,6 +89,13 @@
             border-radius:8px; font-size:14px; color:var(--warn); cursor:pointer; }
   .start { width:100%; padding:16px; border:0; background:var(--ink); color:#fff;
            border-radius:10px; font-size:17px; cursor:pointer; }
+  .choice { width:100%; display:flex; justify-content:space-between; align-items:center;
+            gap:12px; padding:15px 16px; margin-bottom:10px; border:1px solid var(--line);
+            background:#fff; border-radius:10px; font-size:16px; font-family:inherit;
+            color:var(--ink); cursor:pointer; text-align:left; }
+  .choice.primary { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .choice em { font-style:normal; font-size:13px; color:var(--muted); flex:0 0 auto; }
+  .choice.primary em { color:#c9c9c4; }
   .bar { position:fixed; left:0; right:0; bottom:0; z-index:5;
          padding:12px 16px; background:#faf9f7;
          border-top:1px solid var(--line); font-size:14px; color:var(--muted);
@@ -210,7 +217,7 @@ function markDay() {
   });
 }
 
-function load(create) {
+function load(create, source) {
   if (!S.day) return;
   document.getElementById('body').innerHTML = '<div class="msg">Loading…</div>';
   google.script.run.withSuccessHandler(function (d) { S.dates = d; }).listDates(S.day);
@@ -219,7 +226,7 @@ function load(create) {
     .withFailureHandler(function (e) {
       document.getElementById('body').innerHTML = '<div class="msg">' + e.message + '</div>';
     })
-    .loadSession(S.day, S.date, !!create, KEY);
+    .loadSession(S.day, S.date, !!create, KEY, source || 'auto');
 }
 
 function render(res) {
@@ -231,18 +238,7 @@ function render(res) {
       body.innerHTML = '<div class="msg">No ' + S.day + ' session logged on ' + S.date + '.</div>';
       return;
     }
-    var b = document.createElement('button');
-    b.className = 'start';
-    b.textContent = 'Start ' + S.day + ' session on ' + S.date;
-    b.onclick = function () { b.textContent = 'Building…'; load(true); };
-    body.appendChild(b);
-    if (res.blank) {
-      body.insertAdjacentHTML('beforeend',
-        '<div class="msg">Starts empty — add exercises as you go.</div>');
-    } else if (res.priorDate) {
-      body.insertAdjacentHTML('beforeend',
-        '<div class="msg">Will build from ' + res.priorDate + '.</div>');
-    }
+    body.appendChild(starter(res));
     return;
   }
 
@@ -266,6 +262,46 @@ function render(res) {
   if (CAN_EDIT) body.appendChild(addExerciseControl());
   flash(res.priorDate ? 'Comparing against ' + res.priorDate : 'First session', false);
   if (!res.sets.length) flash('Empty session', false);
+}
+
+// Three ways to begin, stated rather than inferred. The app used to pick
+// between last week and the template on its own; the rule was sound but
+// invisible, and there was no way to overrule it.
+function starter(res) {
+  var box = document.createElement('div');
+  box.insertAdjacentHTML('beforeend',
+    '<div class="msg">How should this ' + S.day + ' session on ' + S.date +
+    ' start?</div>');
+
+  var opts = [];
+  if (res.priorDate) {
+    opts.push(['history', 'From last time', res.priorDate + ' + progression']);
+  }
+  if (res.templateCount) {
+    opts.push(['template', 'From the template',
+               res.templateCount + (res.templateCount === 1 ? ' exercise' : ' exercises')]);
+  }
+  opts.push(['empty', 'Empty', 'add as you go']);
+
+  // The blank day defaults to empty; everything else prefers last week.
+  if (res.blank) opts.push(opts.shift());
+
+  opts.forEach(function (o, i) {
+    var b = document.createElement('button');
+    b.className = 'choice' + (i === 0 ? ' primary' : '');
+    b.appendChild(document.createTextNode(o[1]));
+    var hint = document.createElement('em');
+    hint.textContent = o[2];
+    b.appendChild(hint);
+    b.onclick = function () {
+      if (blockedByQueue()) return;
+      b.firstChild.nodeValue = 'Building…';
+      load(true, o[0]);
+    };
+    box.appendChild(b);
+  });
+
+  return box;
 }
 
 function addExerciseControl() {

@@ -163,41 +163,45 @@ what the admin wrote.
 The only branch that matters in the whole app:
 
 ```
-                  admin taps "Start <day> session on 2026-08-09"
+        admin picks one of the offered ways to start
                                      │
                                      ▼
-                       loadSession(day, date, create=true)
+             loadSession(day, date, create=true, key, source)
                                      │
                              assertEdit(key)
                                      │
-                        ┌────────────┴────────────┐
-                        │  day === CFG.blankDay?  │
-                        └────────────┬────────────┘
-                              yes    │    no
-              ┌──────────────────────┘    └───────────────┐
-              ▼                                           ▼
-      write nothing.                        ┌─────────────────────────┐
-      exists = true for this                │ any earlier <day> on    │
-      call only, so the UI                  │ record?                 │
-      renders "+ Add exercise"              └────────────┬────────────┘
-      with no cards                            yes       │       no
-              │                        ┌─────────────────┘└──────────────┐
-              │                        ▼                                 ▼
-              │                fromHistory()                     fromTemplate()
-              │                most recent <day>,                Templates tab,
-              │                progress() per set                sets × rows,
-              │                                                  "from template"
-              │                        └────────────┬────────────┘
-              │                                     ▼
-              │                        append rows to Log, flush()
-              └──────────────────────┬──────────────┘
-                                     ▼
-                        re-read and return the session
+                       resolveSource(day, source)
+                       explicit  → history | template | empty
+                       otherwise → empty if day is CFG.blankDay
+                                   else 'auto'
+                                     │
+        ┌────────────┬───────────────┼───────────────┐
+        ▼            ▼               ▼               ▼
+     empty        history        template          auto
+        │            │               │               │
+   write        most recent     Templates rows    history if any
+   nothing      <day>, with     for <day> where    earlier <day>
+        │       progress() per  column F is not    exists, else
+        │       set             "no"               template
+        │            │               │               │
+        │            └───────┬───────┴───────────────┘
+        │                    ▼
+        │       append rows to Log, flush(), refreshRecords()
+        └────────────────────┬──────────────────────┘
+                             ▼
+                 re-read and return the session
 ```
 
 Rows are written to the sheet **before** the admin touches anything. The
 proposal is data from the moment it appears, which is why there is no separate
 "save session" step and no unsaved state to lose.
+
+`history` and `template` fail loudly when they cannot deliver — *"No earlier
+Push to build from"* rather than silently falling back to the other. `auto`
+is the only mode that chooses, and it is what the day-type default resolves
+to. The browser only ever offers a source it can see is available
+(`priorDate`, `templateCount`), so the errors are a backstop for a stale
+page, not a normal path.
 
 Day types are not a fixed list. `getBootstrap()` builds them from the
 `Templates` tab plus every distinct value ever written to the `Log` tab's
@@ -205,9 +209,9 @@ Day types are not a fixed list. `getBootstrap()` builds them from the
 'Legs']` in that function is a fallback for a completely empty sheet, not a
 schema.
 
-The blank day is the one case with no persistent representation: an empty
-session has no rows, so "started" cannot be read back off the sheet. `exists`
-is therefore true only for the call that created it. Adding one exercise
+An empty start is the one case with no persistent representation: it has no
+rows, so "started" cannot be read back off the sheet. `exists` is therefore
+true only for the call that created it. Adding one exercise
 writes rows and makes it real; reloading before that returns to the Start
 button. Recording emptiness would mean either a placeholder row or a second
 place to keep state, and neither is worth it for a session with nothing in it

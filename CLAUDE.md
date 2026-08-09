@@ -70,9 +70,14 @@ Not hardcoded. `getBootstrap()` = `Templates.day` + every distinct
 Push/Pull/Legs is what the shipped template happens to contain; any split
 works. Don't reintroduce a fixed list anywhere.
 
-`CFG.blankDay` always starts empty and **never** carries the previous
-session forward — there's no way to remove an unwanted exercise, so
-inheriting would trap the user. An empty session has no rows, so `exists`
+`CFG.blankDay` *defaults* to starting empty. It's a default, not a rule:
+the browser offers history / template / empty explicitly and the user
+picks. `resolveSource(dayType, source)` maps an explicit source through,
+or falls back to 'empty' for the blank day and 'auto' otherwise.
+
+Only 'auto' chooses between history and template. Explicit 'history' and
+'template' throw rather than falling back — silently building the wrong
+thing is worse than an error. An empty session has no rows, so `exists`
 is true only for the call that created it; adding the first exercise makes
 it persist.
 
@@ -86,7 +91,7 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 │                weight field. Grows on use. Ships 256 rows including the
 │                `[Other]` placeholder and 52 unweighted ones.
 ├── Templates  — day | exercise | sets | reps | weight | default. Seeds a
-│                first session; F="no" keeps a row off the default form.
+│                first session; F="no" keeps a row out of generation.
 │                Ships 5 exercises / 16 sets per day (~1hr) plus one
 │                default="no" row per day as a worked example.
 ├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing

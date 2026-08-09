@@ -187,8 +187,9 @@ function allRows() {
     .filter(function (r) { return r[COL.date] && r[COL.exercise]; });
 }
 
-// Templates tab: A day | B exercise | C sets | D reps | E weight | F default.
-// F may not exist on an older sheet, hence the width clamp.
+// Templates tab: A day | B exercise | C sets | D reps | E weight |
+// F include in new session. F may not exist on an older sheet, hence the
+// width clamp.
 function templateRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.templateSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
@@ -211,16 +212,24 @@ function listDates(dayType) {
 }
 
 
+// How a new session gets its rows. 'auto' is what the Start button used to
+// do implicitly; the others are the browser saying which it wants.
+function resolveSource(dayType, source) {
+  if (source === 'history' || source === 'template' || source === 'empty') return source;
+  return sameDay(dayType, CFG.blankDay) ? 'empty' : 'auto';
+}
+
 // Load one session. Never writes unless create === true.
-function loadSession(dayType, dayKey, create, k) {
+function loadSession(dayType, dayKey, create, k, source) {
   if (create) assertEdit(k);
+  const from = resolveSource(dayType, source);
   let rows = allRows();
   let mine = rows.filter(function (r) {
     return dateKey(r[COL.date]) === dayKey && sameDay(r[COL.day], dayType);
   });
 
   if (!mine.length && create) {
-    generateInto(dayType, dayKey, rows);
+    generateInto(dayType, dayKey, rows, from);
     rows = allRows();
     mine = rows.filter(function (r) {
       return dateKey(r[COL.date]) === dayKey && sameDay(r[COL.day], dayType);
@@ -262,13 +271,15 @@ function loadSession(dayType, dayKey, create, k) {
 
   const lastNotes = priorKey ? notesOn(rows, dayType, priorKey) : {};
 
-  // A blank day has no rows until an exercise is added, so "started" can't be
-  // read back off the sheet — it only holds for the call that started it.
+  // An empty session has no rows until an exercise is added, so "started"
+  // can't be read back off the sheet — it only holds for the call that
+  // started it.
   const blank = sameDay(dayType, CFG.blankDay);
 
   return {
-    exists: mine.length > 0 || (blank && !!create),
+    exists: mine.length > 0 || (!!create && from === 'empty'),
     blank: blank,
+    templateCount: templateCount(dayType),
     sets: sets,
     priorDate: priorKey,
     lastNotes: lastNotes,
@@ -685,17 +696,32 @@ function deleteSession(k, dayType, dayKey) {
 }
 
 
-function generateInto(dayType, dayKey, rows) {
-  // The blank day is ad hoc by definition — never carry last time forward,
-  // because there is no way to remove an exercise you didn't want.
-  if (sameDay(dayType, CFG.blankDay)) return;
+// How many exercises the template would contribute to this day.
+function templateCount(dayType) {
+  return dedupe(templateRows()
+    .filter(function (r) { return sameDay(r[0], dayType) && !isNo(r[5]); })
+    .map(function (r) { return String(r[1]).trim(); })).length;
+}
+
+function generateInto(dayType, dayKey, rows, from) {
+  if (from === 'empty') return;
 
   const prior = rows.filter(function (r) {
     return sameDay(r[COL.day], dayType) && dateKey(r[COL.date]) < dayKey;
   });
-  const output = prior.length
-    ? fromHistory(prior, dayType, dayKey)
-    : fromTemplate(dayType, dayKey);
+
+  let output;
+  if (from === 'history') {
+    if (!prior.length) throw new Error('No earlier "' + dayType + '" to build from.');
+    output = fromHistory(prior, dayType, dayKey);
+  } else if (from === 'template') {
+    output = fromTemplate(dayType, dayKey);
+    if (!output.length) throw new Error('No template rows for "' + dayType + '".');
+  } else {
+    output = prior.length
+      ? fromHistory(prior, dayType, dayKey)
+      : fromTemplate(dayType, dayKey);
+  }
 
   if (!output.length) throw new Error('No history and no template for "' + dayType + '".');
 
@@ -719,9 +745,9 @@ function fromHistory(prior, dayType, dayKey) {
     });
 }
 
-// Column F says whether the row is part of the default session. Marking it
-// "no" keeps the exercise on the plan for that day without putting it in the
-// form every week — it stays a reminder you can add by hand.
+// Column F says whether the row is used when generating a session. Marking
+// it "no" keeps the exercise on the plan for that day without it being
+// generated — a reminder you can still add by hand.
 function fromTemplate(dayType, dayKey) {
   const when = parseKey(dayKey);
   const out = [];

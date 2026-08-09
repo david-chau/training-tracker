@@ -83,15 +83,36 @@ look at what happened three Pushes ago without scrolling the sheet.
 
 ### 3. Start it
 
-If nothing has been logged for that day and date yet, you get one button:
+If nothing has been logged for that day and date yet, you are asked how to
+begin:
 
-> **Start Push session on 2026-08-09**
-> *Will build from 2026-08-02.*
+```
+   How should this Push session on 2026-08-09 start?
 
-Tap it. The app copies the most recent Push, applies the progression rule to
-every set, and writes the new rows into the sheet. If there is no earlier Push
-at all, it builds from the `Templates` tab instead — five exercises and
-sixteen sets, roughly an hour, which you can change on that tab.
+   ┌──────────────────────────────────────────────────────┐
+   │ From last time                2026-08-02 + progression│  ← suggested
+   ├──────────────────────────────────────────────────────┤
+   │ From the template                        5 exercises  │
+   ├──────────────────────────────────────────────────────┤
+   │ Empty                                   add as you go │
+   └──────────────────────────────────────────────────────┘
+```
+
+| Choice | What you get |
+|---|---|
+| **From last time** | The most recent session of that day type, with the [progression rule](#how-next-weeks-numbers-are-worked-out) applied to every set from its own RPE. The normal week-to-week choice. |
+| **From the template** | A fresh copy of the `Templates` tab for that day — five exercises, sixteen sets, roughly an hour. Use it to reset after a layoff, or when last week was not representative. |
+| **Empty** | Nothing at all. Add exercises as you go. |
+
+Only the choices that are actually possible appear: no earlier session means
+no *From last time*, no template rows for that day means no *From the
+template*. The first one is highlighted as the suggestion — for a normal day
+that is *From last time*, and for **Custom** it is *Empty*.
+
+{: .tip }
+*From the template* is the escape hatch when progression has run away with
+itself — three weeks of optimistic RPE leaving you with numbers you cannot
+hit. Reset to the template and build up again.
 
 {: .note }
 Starting a session **writes to the sheet immediately** — the proposed numbers
@@ -99,21 +120,21 @@ are saved as rows before you touch anything. Changing a value during the
 session overwrites that row. What ends up in the sheet is what actually
 happened, not what was originally proposed.
 
-**Custom** is the exception. It starts with nothing, every time, and waits for
-you to add exercises:
-
-> **Start Custom session on 2026-08-09**
-> *Starts empty — add exercises as you go.*
-
-That is what it is for — a one-off, a class, a rehab session, anything that
-does not repeat. It never carries last week's exercises forward, because there
-is no way to remove one you did not want.
+**Custom** simply defaults to *Empty* instead of *From last time* — that is
+what it is for, a one-off, a class, a rehab session, anything that does not
+repeat. If you did do the same thing last Custom day, *From last time* is
+still offered and still works.
 
 {: .warning }
-An empty Custom session is not saved anywhere until you add the first
-exercise — there are no rows to save. If you tap away or reload before adding
-one, you get the Start button again. Nothing is lost, because nothing had been
-entered.
+An empty session is not saved anywhere until you add the first exercise —
+there are no rows to save. If you tap away or reload before adding one, you
+get the choices again. Nothing is lost, because nothing had been entered.
+
+{: .note }
+Remember there is no way to remove an exercise from a session. Choosing *From
+last time* on a day whose exercises change every week means dropping each
+unwanted one to a single set, or deleting its rows in the sheet — which is why
+**Custom** is not built that way by default.
 
 ### 4. Train and adjust
 
