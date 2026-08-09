@@ -213,6 +213,14 @@ google.script.run.withSuccessHandler(function (b) {
     d.appendChild(el);
   });
 
+  // Land on today's session when there is one — the common case is opening
+  // this mid-workout, not browsing.
+  if (b.openDay) {
+    S.day = b.openDay;
+    markDay();
+    load(false);
+  }
+
   // A viewer is only offered days that have sessions, so an empty list means
   // there is genuinely nothing to look at yet.
   if (!b.days.length) {
@@ -533,6 +541,7 @@ function card(name, sets) {
   var minus = document.createElement('button'); minus.textContent = '−';
   var label = document.createElement('span'); label.textContent = sets.length + ' sets';
   var plus = document.createElement('button'); plus.textContent = '+';
+  minus.title = sets.length === 1 ? 'Remove ' + name : 'One fewer set';
   minus.onclick = function () { resize(name, sets.length - 1, label); };
   plus.onclick = function () { resize(name, sets.length + 1, label); };
   cnt.appendChild(minus); cnt.appendChild(label); cnt.appendChild(plus);
@@ -636,12 +645,24 @@ function blockedByQueue() {
 }
 
 function resize(exercise, count, label) {
-  if (count < 1 || count > 10) return;
+  if (count < 0 || count > 10) return;
   if (blockedByQueue()) return;
+
+  // Going below one set is how an exercise is taken out of the session, so
+  // it asks first — this deletes rows rather than changing a number.
+  if (count === 0 &&
+      !confirm('Remove ' + exercise + ' from this session?\n\n' +
+               'Its sets are deleted from the sheet.')) {
+    return;
+  }
+
   label.textContent = '…';
-  flash('Updating sets…', false);
+  flash(count === 0 ? 'Removing…' : 'Updating sets…', false);
   google.script.run
-    .withSuccessHandler(function (res) { render(res); flash('Sets updated', true); })
+    .withSuccessHandler(function (res) {
+      render(res);
+      flash(count === 0 ? exercise + ' removed' : 'Sets updated', true);
+    })
     .withFailureHandler(function (e) { flash('Failed: ' + e.message, false, true); })
     .setSetCount(KEY, S.day, S.date, exercise, count);
 }

@@ -31,6 +31,12 @@ const COL = {
 
 const WIDTH = 9;
 
+// Must stay in step with LOG in data/build_template.py. Only used when
+// creating a sheet from scratch — reads go by position, never by heading.
+const HEADERS = ['Date', 'Day', 'Exercise', 'Set', 'Reps', 'Weight (LB)',
+                 'RPE', 'Auto note', 'Notes'];
+const RECORD_HEADERS = ['Exercise', 'Record', 'Value', 'Detail', 'Date', 'Day'];
+
 const BLANK_RPE = -1;   // sentinel: google.script.run is unreliable with null
 
 
@@ -155,6 +161,7 @@ function onOpen() {
     .addItem('Show shareable links', 'showLinks')
     .addItem('Set web app link…', 'setWebAppLink')
     .addItem('Rebuild records', 'showRecords')
+    .addItem('Archive old sessions…', 'archiveSessions')
     .addItem('Refresh exercise dropdown', 'setupExerciseValidation')
     .addToUi();
 }
@@ -188,8 +195,19 @@ function getBootstrap(k) {
     }
   }
 
+  // If something is already logged for today, the app opens straight into it
+  // rather than asking which day type you meant.
+  const today = dateKey(new Date());
+  const openToday = dedupe(allRows()
+    .filter(function (r) { return dateKey(r[COL.date]) === today; })
+    .map(function (r) { return String(r[COL.day]).trim(); }))
+    .filter(function (d) {
+      return days.some(function (x) { return sameDay(x, d); });
+    })[0] || '';
+
   return {
     days: days,
+    openDay: openToday,
     exercises: exerciseList(),
     images: exerciseImages(),
     noWeight: noWeightNames(),
@@ -560,9 +578,7 @@ function rebuildRecords() {
   const out = recordRows(computeRecords(allRows(), cfg, null), cfg);
 
   sheet.clear();
-  sheet.getRange(1, 1, 1, 6)
-    .setValues([['Exercise', 'Record', 'Value', 'Detail', 'Date', 'Day']])
-    .setFontWeight('bold');
+  sheet.getRange(1, 1, 1, 6).setValues([RECORD_HEADERS]).setFontWeight('bold');
   if (out.length) sheet.getRange(2, 1, out.length, 6).setValues(out);
   sheet.setFrozenRows(1);
   SpreadsheetApp.flush();
@@ -574,6 +590,108 @@ function showRecords() {
   SpreadsheetApp.getUi().alert('Records rebuilt — ' + n +
     ' on the "' + CFG.recordsSheet + '" tab.');
 }
+
+// ---------- archiving ----------
+//
+// A Log grows forever and every read pulls the whole sheet. Archiving lifts
+// a closed period out into its own spreadsheet and removes it from this one.
+function archiveSessions() {
+  const ui = SpreadsheetApp.getUi();
+
+  const asked = ui.prompt(
+    'Archive old sessions',
+    'Move every session up to and including this date into its own\n' +
+    'spreadsheet, and remove it from this one.\n\n' +
+    'Date (YYYY-MM-DD), e.g. 2024-12-31:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (asked.getSelectedButton() !== ui.Button.OK) return;
+
+  const cutoff = String(asked.getResponseText() || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cutoff)) {
+    return ui.alert('The date needs to look like 2024-12-31.');
+  }
+
+  const sheet = logSheet();
+  const last = sheet.getLastRow();
+  if (last < 2) return ui.alert('Nothing logged yet.');
+
+  // Read raw rather than through allRows(), so anything the sheet holds that
+  // is not a log row is left exactly where it is rather than being tidied
+  // away by the rewrite below.
+  const raw = sheet.getRange(2, 1, last - 1, WIDTH).getValues();
+  const isOld = function (r) {
+    return r[COL.date] && r[COL.exercise] && dateKey(r[COL.date]) <= cutoff;
+  };
+
+  const doomed = raw.filter(isOld);
+  if (!doomed.length) return ui.alert('Nothing logged on or before ' + cutoff + '.');
+
+  const dates = doomed.map(function (r) { return dateKey(r[COL.date]); }).sort();
+  const from = dates[0];
+  const to = dates[dates.length - 1];
+  const name = logName() + '_' + from + '_' + to;
+  const sessions = dedupe(doomed.map(function (r) {
+    return dateKey(r[COL.date]) + '|' + String(r[COL.day]).trim();
+  })).length;
+
+  const go = ui.alert(
+    'Archive ' + doomed.length + ' rows?',
+    doomed.length + ' rows, ' + sessions + ' sessions, ' + from + ' to ' + to + '.\n\n' +
+    'They are copied to a new spreadsheet in your Drive:\n' + name + '\n\n' +
+    'and then deleted from this one. Personal records are worked out from\n' +
+    'what is left, so bests set in that period will stop showing here — the\n' +
+    'archive keeps its own copy of them.\n\nContinue?',
+    ui.ButtonSet.YES_NO
+  );
+  if (go !== ui.Button.YES) return;
+
+  writeArchive(name, doomed);
+
+  const keep = raw.filter(function (r) { return !isOld(r); });
+  sheet.getRange(2, 1, last - 1, WIDTH).clearContent();
+  if (keep.length) {
+    sheet.getRange(2, 1, keep.length, WIDTH).setValues(keep);
+    sheet.getRange(2, 1, keep.length, 1).setNumberFormat('yyyy-mm-dd');
+  }
+  SpreadsheetApp.flush();
+  refreshRecords();
+
+  ui.alert(
+    'Archived',
+    doomed.length + ' rows moved to "' + name + '" in your Google Drive.\n\n' +
+    'This sheet now starts at ' + (keep.length ? nextDate(keep) : '(empty)') + '.',
+    ui.ButtonSet.OK
+  );
+}
+
+function nextDate(rows) {
+  return rows.map(function (r) { return r[COL.date] ? dateKey(r[COL.date]) : ''; })
+    .filter(Boolean).sort()[0] || '(empty)';
+}
+
+// The archive is a standalone spreadsheet: the rows, plus the records for
+// that period so they survive being taken out of the live log.
+function writeArchive(name, rows) {
+  const book = SpreadsheetApp.create(name);
+
+  const log = book.getSheets()[0].setName(CFG.logSheet);
+  log.getRange(1, 1, 1, WIDTH).setValues([HEADERS]).setFontWeight('bold');
+  log.getRange(2, 1, rows.length, WIDTH).setValues(rows);
+  log.getRange(2, 1, rows.length, 1).setNumberFormat('yyyy-mm-dd');
+  log.setFrozenRows(1);
+
+  const cfg = prConfig();
+  const out = recordRows(computeRecords(rows, cfg, null), cfg);
+  const rec = book.insertSheet(CFG.recordsSheet);
+  rec.getRange(1, 1, 1, 6).setValues([RECORD_HEADERS]).setFontWeight('bold');
+  if (out.length) rec.getRange(2, 1, out.length, 6).setValues(out);
+  rec.setFrozenRows(1);
+
+  SpreadsheetApp.flush();
+  return book;
+}
+
 
 // Called after the operations that change which rows exist. Never on the
 // save path, and never allowed to break the write that triggered it — a
@@ -654,10 +772,12 @@ function writeSet(sheet, it) {
 
 
 // Add or remove rows so this exercise has exactly `count` sets.
+// Zero is allowed and means "take it out of this session altogether" —
+// removing the rows is the same operation as shrinking to none of them.
 function setSetCount(k, dayType, dayKey, exercise, count) {
   assertEdit(k);
   const sheet = logSheet();
-  count = Math.max(1, Math.min(10, Math.round(count)));
+  count = Math.max(0, Math.min(10, Math.round(count)));
 
   const mine = allRows().filter(function (r) {
     return dateKey(r[COL.date]) === dayKey &&

@@ -192,6 +192,10 @@ derived from it.
               └──────────┴────────┴───────┴────────┴──────┴─────┘  only
 ```
 
+Removing an exercise from a session is `setSetCount` with a count of zero:
+shrinking to no sets and deleting the rows are the same operation, so there is
+no second code path for it.
+
 {: .warning }
 `Code.gs` reads columns **by position**, not by heading — `COL.reps` is
 literally index 4. Reordering or inserting a column silently corrupts every
@@ -485,9 +489,12 @@ controls distribution of one link, and the cost of a leak is one rotated key.
 
 ## Scaling to many logs
 
-One person tracking their own training needs exactly one installation. A
-trainer with twenty-five people has twenty-five of them — identical and fully
-independent. There is no multi-tenancy anywhere in the design.
+One person tracking their own training needs one installation. A trainer with
+twenty-five people has twenty-five, identical and fully independent. There is
+no multi-tenancy anywhere in the design.
+
+<details markdown="block">
+<summary>What that costs and buys</summary>
 
 ```
    David         Jill           Arden            each is:
@@ -510,17 +517,25 @@ it. At two hundred it would not be.
 Quotas are not a concern at this size — Apps Script allows thousands of
 executions a day per account, and a session is a few dozen calls.
 
+</details>
+
 ---
 
 ## Why this stack
 
-The original brief was a personal trainer with roughly twenty-five people,
-which is the hardest version of the problem — the solo case falls out of it
-for free. The implementation also had to leave control with the person using
-it: their data in their Workspace, and a copy they can tailor without relying
-on a product operator. Analytics were the first priority. Once the real
-workflow turned out to be "look at last week, do slightly more", the case for
-a database evaporated, and that reframing decided everything below.
+Analytics were the first priority. Once the real workflow turned out to be
+"look at last week, do slightly more", the case for a database evaporated —
+and that reframing decided everything else. If analytics ever come back as a
+requirement, revisit Supabase; nothing else on the list becomes right again.
+
+<details markdown="block">
+<summary>What was considered, and why it lost</summary>
+
+The original brief was a personal trainer with roughly twenty-five people —
+the hardest version of the problem, with the solo case falling out of it for
+free. It also had to leave control with the person using it: their data in
+their Workspace, a copy they can tailor without depending on a product
+operator.
 
 | Option | Why not |
 |---|---|
@@ -532,17 +547,15 @@ a database evaporated, and that reframing decided everything below.
 
 What the constraints actually demanded:
 
-```
-  free, no per-seat licence     ~25 people, not a commercial product
-  no upkeep burden on the user  may not be technical; a terminal is a
-                                non-starter
-  tablet-first                  entry happens standing up, mid-session
-  no typing into cells          too easy to mistype a weight on glass
-  stays in Sheets               the sheet IS the database, not a mirror
-```
+| Constraint | Why it matters |
+|---|---|
+| **Free, no per-seat licence** | About 25 people, not a commercial product. |
+| **No upkeep burden on the user** | They may not be technical; a terminal is a non-starter. |
+| **Tablet-first** | Entry happens standing up, mid-session. |
+| **No typing into cells** | It is too easy to mistype a weight on glass. |
+| **Stays in Sheets** | The sheet is the database, not a mirror. |
 
-If analytics ever come back as a requirement, revisit Supabase. Nothing else
-on that list becomes right again.
+</details>
 
 ---
 
@@ -550,9 +563,6 @@ on that list becomes right again.
 
 Accepted, documented, not accidental:
 
-- **No way to remove one exercise from a session.** Drop it to a single set,
-  or delete the rows in the sheet. This is also why the blank day never
-  carries the previous session forward.
 - **An empty session does not survive a reload**, because there is nothing to
   write. Only affects the blank day before its first exercise is added.
 - **Partial offline support.** Edits to an open session are queued and
@@ -564,9 +574,11 @@ Accepted, documented, not accidental:
   log at a time.
 - **Weights seeded at 0 stay at 0**, because `+2 reps, same weight` never
   moves them. Type the real weight in once.
-- **Nothing archives or deletes old data.** A `Log` tab grows forever, and
-  every read pulls the whole sheet. Fine for years at one session a day;
-  not fine forever.
-- **No test suite.** Apps Script has no local runtime, so testing is the
-  manual loop in
+- **Archiving is manual and one-way.** *Archive old sessions* moves a closed
+  period into its own spreadsheet, but nothing prompts for it and there is no
+  merge back. Until it is run, a `Log` grows forever and every read pulls the
+  whole sheet.
+- **No test suite for the Apps Script half.** The queue and the record maths
+  run under `node`; everything touching `SpreadsheetApp` is tested by hand.
+  The loop is in
   [DEVELOPMENT.md]({{ site.repo }}/blob/main/DEVELOPMENT.md#testing).

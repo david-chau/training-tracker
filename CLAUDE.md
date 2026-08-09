@@ -70,6 +70,9 @@ Not hardcoded. `getBootstrap()` = `Templates.day` + every distinct
 Push/Pull/Legs is what the shipped template happens to contain; any split
 works. Don't reintroduce a fixed list anywhere.
 
+Removal exists now (set count 0), so the blank day defaulting to empty is a
+convenience rather than a trap-avoidance measure.
+
 `CFG.blankDay` *defaults* to starting empty. It's a default, not a rule:
 the browser offers history / template / empty explicitly and the user
 picks. `resolveSource(dayType, source)` maps an explicit source through,
@@ -220,15 +223,19 @@ free of SpreadsheetApp so it stays testable — keep it that way.
 
 ## Known gaps
 
-- No way to remove a single exercise from a session (only set count → 1,
-  or edit the sheet).
+- Removing an exercise is `setSetCount(..., 0)` — same path as shrinking,
+  no separate delete. Don't add one.
 - Partial offline only. Edits to an open session queue and replay; starting
   a session, adding an exercise and set counts still need the server,
   because rows are server-assigned.
 - No roster view across logs. Deliberate — not needed yet.
 - Weights seed at 0 from templates, and `+2 reps, same weight` keeps 0 at
   0 forever. Real weights must be entered once per exercise.
-- Nothing removes a person's data or archives old sessions.
+- Archiving (`archiveSessions`) is manual and one-way: it writes a new
+  spreadsheet named `<log>_<from>_<to>` with `Log` + `Records` tabs, then
+  rewrites the source `Log` without those rows. Records are derived, so
+  archiving removes those bests from the live app — the archive keeps its
+  own copy. Nothing merges an archive back.
 
 ## Testing
 

@@ -4,55 +4,44 @@ nav_order: 4
 ---
 
 # Personal records
-{: .no_toc }
 
-Records are worked out from the log itself — nothing is entered twice, and
-nothing can drift out of step with what you actually lifted. Correct a row in
-the sheet and the records follow.
-
-1. TOC
-{:toc}
+Worked out from the log itself. Nothing is entered twice and nothing can drift
+— correct a row in the sheet and the records follow.
 
 ---
 
-## In the app, while you train
+## While you train
 
-Each exercise card carries one strip of records under its name:
+One strip under each exercise name:
 
 ```
   Barbell Bench Press                                   [− 4 sets +]
   Best 8 × 100 lb  ·  est 1RM 127  ·  on 2026-07-19
 ```
 
-That is the best set ever recorded for that exercise and, if there is enough
-to work from, an estimated one-rep max.
-
-When a set you are entering beats it, that set's boxes tint amber and the
-strip gains a tag:
+Beat it and that set's boxes tint amber, with a tag on the strip:
 
 ```
-  Barbell Bench Press                                   [− 4 sets +]
-  Best 8 × 100 lb  ·  est 1RM 127  ·  on 2026-07-19  ·  ★ personal best today
+  Best 8 × 100 lb · est 1RM 127 · on 2026-07-19 · ★ personal best today
 
      Reps    Weight (LB)    RPE
  1     8         100          8
- 2     8         105          9      ← boxes tinted: heavier than ever before
+ 2     8         105          9      ← tinted: heavier than ever before
 ```
 
-Both update as you tap, so you can see a record fall as it happens. It is
-judged against *everything except the session you are in*, so today's earlier
-sets do not become the bar for today's later ones.
+Both update as you tap. Judged against *everything except the session you are
+in*, so today's earlier sets do not become the bar for today's later ones.
 
 {: .note }
-For a loaded lift the star is a **weight** record. For an exercise marked
-`no weight` on the `Exercises` tab there is nothing to load, so the star and
-the `Best:` line both track **reps** instead — `Best: 20 reps · 2026-07-19`.
+For a loaded lift the marker is a **weight** record. For an exercise marked
+`no weight` there is nothing to load, so it tracks **reps** instead —
+`Best 20 reps · on 2026-07-19`.
 
 ---
 
 ## In the sheet
 
-The **`Records`** tab lists every record, one per row:
+The **`Records`** tab, one row per record:
 
 | Exercise | Record | Value | Detail | Date | Day |
 |---|---|---|---|---|---|
@@ -61,12 +50,9 @@ The **`Records`** tab lists every record, one per row:
 | Barbell Bench Press | Est. 1RM | 132.3 | 8 x 105 | 2026-08-09 | Push |
 | Pull-Up | Most reps | 12 | 12 x 0 | 2026-08-02 | Pull |
 
-Sort it, filter it, chart it — it is an ordinary sheet.
-
-It is rewritten whenever a session is started, deleted, or has an exercise or
-set added, and on demand from **Training → Rebuild records**. It is *not*
-rewritten on every value you tap, so that logging stays fast. If it looks a
-few sets behind, use the menu item.
+Rewritten when a session is started, deleted, or gains an exercise or set, and
+on demand from **Training → Rebuild records**. Not on every tap, so logging
+stays fast — the strip inside the app is live regardless.
 
 {: .warning }
 The `Records` tab is output. Anything you type there is erased on the next
@@ -74,57 +60,60 @@ rebuild.
 
 ---
 
-## Choosing which records to track
+## Choosing what to track
 
-The **`Settings`** tab, two columns that matter:
+Two rows on the **`Settings`** tab:
 
 | key | value |
 |---|---|
 | `pr_rep_targets` | `1,5,10` |
 | `pr_metrics` | `est1rm,volume,reps` |
 
-### `pr_rep_targets`
+**`pr_rep_targets`** — a rep count list. Each one gives a *"heaviest weight
+for a set of at least this many reps"* record. `1,3,5` for powerlifting,
+`8,12,20` for higher-rep work, whatever you like.
 
-A comma-separated list of rep counts. Each one produces a *"heaviest weight
-lifted for a set of at least this many reps"* record.
+Keep `1`: "at least 1 rep" is simply *heaviest ever*, and that is what the app
+shows on the card and marks against.
 
-`1,5,10` gives you a heaviest single, a heaviest set of 5+, and a heaviest set
-of 10+. Powerlifting-minded? `1,3,5`. Higher-rep work? `8,12,20`. Anything
-you like, as many as you like.
-
-`1` is worth keeping — "at least 1 rep" is just *heaviest ever*, and that is
-the one the app shows on the card and stars against.
-
-### `pr_metrics`
-
-Which of the other records to keep. Any combination of:
+**`pr_metrics`** — any combination of:
 
 | Value | Record |
 |---|---|
 | `est1rm` | Best estimated one-rep max |
-| `volume` | Best single set by reps × weight |
+| `volume` | Best single set, reps × weight |
 | `reps` | Most reps in one set — the useful one for bodyweight work |
-| `session` | Most total volume for that exercise in a single session |
+| `session` | Most total volume for that exercise in one session |
 
-Leave the cell blank to drop the lot and keep only the rep targets.
-
-After editing either row, use **Training → Rebuild records**.
+Blank drops them all and keeps only the rep targets. Rebuild after editing.
 
 {: .note }
 No `Settings` tab? Defaults apply — `1,5,10` and `est1rm,volume,reps`. An
-older spreadsheet keeps working untouched; add the tab if you want to change
-anything.
+older spreadsheet keeps working untouched.
 
 ---
 
-## About the estimated 1RM
+<details markdown="block">
+<summary>About the estimated 1RM</summary>
 
 Epley's formula: `weight × (1 + reps ÷ 30)`. Eight reps at 100 lb estimates
 127 lb.
 
 It exists to compare sets that are not otherwise comparable — is 5 × 100
 better than 10 × 80? — and it drifts optimistic above about ten reps. Treat it
-as a number for ranking your own sets against each other, not as a weight to
-walk up to and attempt.
+as a way of ranking your own sets against each other, not a weight to walk up
+to and attempt.
 
-Sets logged at 0 lb produce no estimate at all.
+Sets at 0 lb produce no estimate at all.
+
+</details>
+
+<details markdown="block">
+<summary>What happens to records when you archive</summary>
+
+Records come from what is in the `Log` tab, so
+[archiving](admin.html#archiving-old-sessions) a period removes its bests from
+the live app. The archive file keeps its own `Records` tab, so they are
+preserved — just no longer competing with current training.
+
+</details>

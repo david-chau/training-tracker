@@ -4,301 +4,210 @@ nav_order: 2
 ---
 
 # Setup guide
-{: .no_toc }
 
-Four steps, all in a web browser. No software to install, no command line.
-Budget about fifteen minutes the first time.
+Four steps, all in a browser. No software, no command line, about fifteen
+minutes the first time.
 
-You need a Google account. Anyone you share a viewer link with does not.
+You need a Google account. Anyone you send a viewer link to does not.
 
 ```
   1. Import the template      2. Paste in the code
-     one .xlsx file              two files, copy and paste
               │                          │
               ▼                          ▼
   4. Send out the links  ◀──  3. Publish the web app
-     admin + viewer              Deploy → Web app
 ```
-
-1. TOC
-{:toc}
 
 ---
 
-## Step 1 — Import the spreadsheet template
+## 1. Import the spreadsheet
 
-The template is one file containing every tab, already named and already
-filled with a starting exercise list. You import it once per person you are
-tracking.
+[Download the template]({{ site.baseurl }}/download/training-tracker-template.xlsx){: .btn .btn-primary }
 
-[Download the spreadsheet template]({{ site.baseurl }}/download/training-tracker-template.xlsx){: .btn .btn-primary }
+1. Go to [sheets.new](https://sheets.new).
+2. **File → Import → Upload**, drop the `.xlsx` in.
+3. Choose **Replace spreadsheet**, then **Import data**.
+4. Name it — **Training — Jane**, **Training — me**. One per person.
 
-1. Download the file above — it saves as `training-tracker-template.xlsx`.
-2. Go to [sheets.new](https://sheets.new) — a blank spreadsheet opens.
-3. **File → Import → Upload**, and drop the `.xlsx` file in.
-4. Under *Import location* choose **Replace spreadsheet**, then **Import
-   data**.
-5. Click the name in the top left and call it something like
-   **Training — Jane** or **Training — me**. One spreadsheet per person.
+{: .warning }
+Import it, do not open it. Double-clicking the file in Drive opens it in
+Office-compatibility mode, which cannot run Apps Script.
 
-The name matters: the app shows it as its heading and uses it as the browser
-tab title, so it is how you tell one person's log from another. You can rename
-the spreadsheet at any time and the app follows.
+The name becomes the app's heading and browser tab title, so it is how you
+tell one person's log from another. Rename any time; the app follows.
 
-You now have five tabs along the bottom:
+You now have five tabs:
 
 | Tab | What it is |
 |---|---|
-| `Log` | Empty apart from the headings. Every set ever logged lands here. |
-| `Exercises` | 250+ exercise names. Feeds the autocomplete, and grows on its own when you use a name that is not there yet. |
+| `Log` | Empty but for headings. Every set ever logged lands here. |
+| `Exercises` | 250+ names for autocomplete. Grows on use. |
 | `Templates` | The starting workout for each day type. |
-| `Settings` | Which [personal records](records.html) to track. Fine to ignore. |
-| `Records` | Output — your bests, rewritten from the log. Do not type in it. |
+| `Settings` | Which [records](records.html) to track. Fine to ignore. |
+| `Records` | Output. Do not type in it. |
 
-{: .warning }
-Import it, do not open it. Double-clicking the `.xlsx` in Google Drive opens
-it in Office-compatibility mode, which cannot run Apps Script. The
-*File → Import → Replace spreadsheet* route above converts it into a real
-Google Sheet, which can.
+<details markdown="block">
+<summary>Tailoring the template first (optional)</summary>
 
-{: .tip }
-Edit the `Templates` tab now if the first session should look different. It is
-read only for the very first session of each day type — after that the app
-works from history and stops looking at it.
+The `Templates` tab is read only for the *very first* session of each day
+type — after that the app works from history.
 
-Each day ships with **five exercises, sixteen sets** — about an hour once rest
-is counted. That is a starting point, not a rule; add or remove rows freely.
+Each day ships with **five exercises, sixteen sets** — about an hour with
+rest. Add or remove rows freely.
 
-Column **F**, `include in new session`, decides whether a row is used when a
-session is generated from the template. Leave it blank for yes. Put `no`
-against an exercise you want on the plan as a reminder without it being
-generated — the leg press you sometimes do, not the one you always do.
+Column **F**, `include in new session`, decides whether a row is generated.
+Blank means yes; `no` keeps it on the plan as a reminder without putting it in
+the session. Each day has one as a worked example — `Cable Chest Fly`,
+`Hammer Curl`, `Standing Calf Raise`.
 
-Each day already has one such row as a worked example — `Cable Chest Fly` on
-Push, `Hammer Curl` on Pull, `Standing Calf Raise` on Legs. They are listed but
-never generated. Clear the `no` and they join the session; add `no` to another
-row to take it out.
-
-The day names in that tab are what become the buttons in the app. The template
-ships with Push / Pull / Legs, but Upper / Lower, Full body, A / B or anything
-else works — put the names you want in the `day` column. A **Custom** button
-for ad-hoc sessions is always offered on top of whatever you choose. See
+The `day` column becomes the buttons in the app. Push / Pull / Legs is just
+what ships; Upper / Lower, A / B, anything works. A **Custom** button is
+always offered on top. See
 [day types are yours](admin.html#day-types-are-yours).
+
+</details>
 
 ---
 
-## Step 2 — Paste in the code
+## 2. Paste in the code
 
-1. In the spreadsheet menu: **Extensions → Apps Script**. A new browser tab
-   opens, titled *Untitled project*.
-2. Click that title and rename it **Training log**.
+**Extensions → Apps Script**, and rename the project **Training log**.
 
-### The server file
+**The server file** — click `Code.gs`, select all, delete. Open
+[`src/Code.gs`]({{ site.repo }}/blob/main/src/Code.gs), click **Raw**, copy,
+paste in.
 
-On the left is a file called `Code.gs` holding a few lines of sample code.
+**The interface file** — **+ → HTML**, name it exactly `Index` (no extension).
+Delete the sample. Open
+[`src/Index.html`]({{ site.repo }}/blob/main/src/Index.html), **Raw**, copy,
+paste in.
 
-1. Click `Code.gs`, select everything in the editor, delete it.
-2. Open [`src/Code.gs`]({{ site.repo }}/blob/main/src/Code.gs),
-   click **Raw**, select all, copy.
-3. Paste into the empty editor.
-
-### The interface file
-
-1. Next to *Files* on the left, click **+ → HTML**.
-2. Name it exactly `Index` — the editor adds `.html` itself, so do not type
-   the extension.
-3. Delete the sample content it created.
-4. Open [`src/Index.html`]({{ site.repo }}/blob/main/src/Index.html),
-   click **Raw**, select all, copy, paste in.
-
-### Save
-
-Click the save icon, or `Ctrl`/`Cmd` + `S`. It should now look like this — two
-files on the left, `Code.gs` and `Index.html`:
+Save. It should look like this:
 
 ![The Apps Script editor with Code.gs and Index.html]({{ site.baseurl }}/img/apps-script-editor.jpeg)
 
-Switch back to the spreadsheet tab and **reload the page**.
-
-A new **Training** menu appears to the right of *Help*:
+Back in the spreadsheet, **reload the page**. A **Training** menu appears:
 
 ![The Training menu open in Google Sheets]({{ site.baseurl }}/img/training-menu.jpeg)
 
-That is how you know the code is attached to the right spreadsheet. If it is
-missing, see
-[Troubleshooting](troubleshooting.html#the-training-menu-is-missing).
+That is how you know the code is attached to the right spreadsheet. Missing?
+See [troubleshooting](troubleshooting.html#the-training-menu-is-missing).
 
 ---
 
-## Step 3 — Publish the web app
+## 3. Publish the web app
 
-Back in the Apps Script tab:
+**Deploy → New deployment**, gear icon → **Web app**.
 
-1. Top right: **Deploy → New deployment**.
-2. Click the gear next to *Select type*, choose **Web app**.
-3. Fill in:
+| Field | Set to | Why |
+|---|---|---|
+| Execute as | **Me** | The app edits *your* sheet on everyone's behalf, so nobody else needs access to it |
+| Who has access | **Anyone** | Links open without signing in. What they can *do* is decided by the key in the URL |
 
-   | Field | Set it to | Why |
-   |---|---|---|
-   | Description | `initial` | Just a label for you |
-   | Execute as | **Me** | The app edits *your* sheet on everyone's behalf, so nobody else needs access to the spreadsheet itself |
-   | Who has access | **Anyone** | A link opens without signing in. What it can *do* is decided by the key in the URL, not by this setting |
+**Deploy**, then authorize — pick your account, **Advanced → Go to Training
+log (unsafe) → Allow**.
 
-4. Click **Deploy**.
+<details markdown="block">
+<summary>"Google hasn't verified this app"</summary>
 
-Google now asks for permission, because the script reads and writes your
-spreadsheet.
+Expected. This is your own script and was never submitted for review. It asks
+only to read and write the spreadsheet it is attached to, and to show its own
+web page.
 
-1. **Authorize access**, choose your Google account.
-2. You will see *Google hasn't verified this app*. That is expected — this is
-   your own script and it was never submitted for review.
-3. **Advanced → Go to Training log (unsafe) → Allow**.
+</details>
 
-When it finishes, the editor shows a **Web app URL** ending in `/exec`. Copy
-it now — step 4 needs it.
+When it finishes, copy the **Web app URL** ending in `/exec`. Step 4 needs it.
 
 ---
 
-## Step 4 — The two links
+## 4. The two links
 
-### Copy the deployment link
-
-At the end of step 3 the editor shows a **Web app URL** ending in `/exec`.
-Copy it. If you have closed that dialog, get it back with **Deploy → Manage
-deployments** — it is the URL shown against the active deployment.
-
-Then in the spreadsheet: **Training → Show shareable links**. The first time,
-it asks you to paste that URL. Paste it and click OK; it is remembered from
-then on.
+In the spreadsheet: **Training → Show shareable links**. The first time it
+asks you to paste that `/exec` URL. Paste, OK — it is remembered.
 
 {: .warning }
-It has to be the link ending in **`/exec`**. The editor also shows one ending
-in `/dev` — that is the test link, it only ever works while *you* are signed
-in, and it will not work for anyone you send it to. If you paste the wrong one
-the app tells you so.
-
-{: .note }
-Made a **new** deployment later? That mints a new URL, so run **Training → Set
-web app link** and paste the new one. *Editing* an existing deployment keeps
-the same URL and needs nothing.
-
-### The links themselves
-
-**Training → Show shareable links** now prints both:
+It must be the link ending in **`/exec`**. The `/dev` one is the editor's test
+link and only ever works for you. Made a *new* deployment later? That mints a
+new URL — run **Training → Set web app link**.
 
 ```
         …/exec?key=a1b2c3d4e5f6         …/exec
-        ─────────────────────────       ────────────────
         ADMIN                           VIEWER
         start sessions                  view any session
         change reps / weight / RPE      read notes
-        add + remove sets               ✗ cannot change anything
-        write notes
-        delete a day
+        add + remove exercises          ✗ cannot change anything
+        write notes, delete a day
 ```
 
-Keep the admin link if you log your own training. Give it to your trainer if
-they record your sessions for you. The viewer link is optional either way.
+Keep the admin link if you log your own training; give it to your trainer if
+they record your sessions. The viewer link is optional either way.
 
-Read-only is enforced on the server, not by hiding buttons. Every write checks
-the key before it touches the sheet, so someone who edits the page in their
-browser still cannot save anything.
+**Treat the admin link like a password** — anyone holding it can edit this
+log, with no sign-in. Send it privately. If it leaks, see
+[rotating the key](#rotating-the-admin-key).
 
-### About the admin link
-
-**Treat it like a password.** Anyone holding it can edit this log, with no
-sign-in of any kind. Send it privately — not in a shared document, a group
-chat, or a calendar invite.
-
-If it does leak, you can invalidate it in about thirty seconds — see
-[rotating the admin key](#rotating-the-admin-key). The viewer link is
-unaffected by that and never needs re-sending.
-
-### About the viewer link
-
-It is read-only but it is not secret: anyone who opens it sees the whole
-training history. Treat it like any other private link and do not post it
-publicly.
+The viewer link is read-only but not secret: it shows the whole training
+history to anyone who opens it.
 
 {: .tip }
-On the tablet, open the admin link and use *Share → Add to Home Screen*. It
-then behaves like an app icon, with no URL to mistype or lose.
+On a tablet, open the admin link and use *Share → Add to Home Screen*. It then
+behaves like an app icon.
 
 ---
 
 ## Check it works
 
-1. Open the admin link.
-2. Tap **Push**, then the **Start Push session on …** button (it shows
-   today's date).
-3. The exercises from the `Templates` tab appear, one card each.
-4. Tap **+** on a weight. The grey bar at the bottom should read something
-   like *Saved row 2: 8 x 2.5* — that is the row number and the values read
-   back **out of the sheet**, not a guess.
-5. Switch to the spreadsheet, look at the `Log` tab, confirm the number is
-   really there.
-6. Open the viewer link in a private window. Same session, no buttons, and a
-   *Read only* badge at the top.
-7. Back on the admin link: **Delete this day** to clear the test.
-
-That is a complete working install.
+1. Open the admin link, tap **Push**, then **From the template**.
+2. Tap **+** on a weight. The bottom bar should read *Saved row 2: 8 x 2.5* —
+   the row and the values read back **out of the sheet**.
+3. Confirm the number really is in the `Log` tab.
+4. Open the viewer link in a private window: same session, no buttons.
+5. Back on the admin link, **Delete this day** to clear the test.
 
 ---
 
-## Adding another person
+## Afterwards
 
-Relevant if you are a trainer tracking several people, or setting a log up for
-someone in your household. Each person gets their own everything.
+<details markdown="block">
+<summary>Adding another person</summary>
 
-Start from step 1 again with a fresh import — it is a clean sheet with no
-data to delete.
+Start from step 1 with a fresh import — a clean sheet with no data to delete.
 
-Alternatively, if you have customised the `Templates` tab and want to keep
-those changes: open the working spreadsheet, **File → Make a copy**, then in
-the copy delete every `Log` row from row 2 down (leave the headings).
+To keep `Templates` customisations instead: **File → Make a copy**, then
+delete every `Log` row from row 2 down.
 
-Either way, the copy still needs its own deployment:
+Either way the copy needs **its own deployment** (step 3) and its own link
+(step 4). *Make a copy* copies the code but not the deployment.
 
-- **Extensions → Apps Script → Deploy → New deployment**, same settings as
-  [step 3](#step-3--publish-the-web-app), authorize again.
-- **Training → Show shareable links** for that person's pair of links.
+Each copy is fully independent — own sheet, own deployment, own admin key.
 
-Each copy is completely independent: its own sheet, its own deployment, its
-own admin key. There is no shared server and nothing to keep in sync.
+</details>
 
-{: .warning }
-*Make a copy* copies the code but **not** the deployment. Skipping the deploy
-leaves the copy with no working links.
+<details markdown="block">
+<summary>Rotating the admin key</summary>
 
----
+1. **Extensions → Apps Script → Project Settings**.
+2. Under **Script Properties**, delete the `EDIT_KEY` row, save.
+3. **Training → Show shareable links** for the new one.
 
-## Rotating the admin key
+The old admin link stops editing. The viewer link is unaffected.
 
-1. **Extensions → Apps Script → Project Settings** (the gear on the left).
-2. Scroll to **Script Properties**.
-3. Delete the row called `EDIT_KEY` and save.
-4. In the spreadsheet: **Training → Show shareable links**. A new key has been
-   generated, and the old link can no longer change anything.
+</details>
 
----
+<details markdown="block">
+<summary>Updating to a newer version of the code</summary>
 
-## Updating to a newer version of the code
+1. Replace `Code.gs` and `Index.html` as in step 2, save.
+2. **Deploy → Manage deployments → pencil → Version: New version → Deploy.**
 
-1. **Extensions → Apps Script**.
-2. Replace the contents of `Code.gs` and `Index.html` as in
-   [step 2](#step-2--paste-in-the-code).
-3. Save.
-4. **Deploy → Manage deployments**, click the pencil, set *Version* to **New
-   version**, **Deploy**.
+The links stay the same. Skipping step 2 keeps serving the old version.
 
-The links stay the same. Skipping step 4 saves the code but keeps serving the
-old version to everyone.
+</details>
 
----
+<details markdown="block">
+<summary>For developers</summary>
 
-## For developers
-
-The browser route above is the supported path — it is what non-technical
-admins use and what these docs are tested against. Pushing code with `clasp`, regenerating
-the spreadsheet template, and the manual test loop are in
+The browser route above is the supported path. `clasp`, regenerating the
+template and the manual test loop are in
 [DEVELOPMENT.md]({{ site.repo }}/blob/main/DEVELOPMENT.md).
+
+</details>

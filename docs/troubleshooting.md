@@ -4,291 +4,250 @@ nav_order: 6
 ---
 
 # Troubleshooting
-{: .no_toc }
 
-Symptoms in the order people hit them.
-
-1. TOC
-{:toc}
+Find the symptom, open it.
 
 ---
 
-## The Training menu is missing
+## Setting up
 
-The **Training** menu is added by the script when the spreadsheet opens, so if
-it is absent one of three things is true.
+### The Training menu is missing
 
-1. **You did not reload.** The menu only appears on a fresh page load, not
-   when you switch back to the tab. Reload the spreadsheet.
-2. **The code was not saved.** Go to *Extensions → Apps Script* and press the
-   save icon, then reload the spreadsheet again.
-3. **The spreadsheet is in Office mode.** Look at the title bar: if it says
-   `.XLSX` next to the name, Google is editing the uploaded file rather than a
-   real Google Sheet, and Apps Script cannot attach to it. Redo
-   [step 1](setup.html#step-1--import-the-spreadsheet-template) using
-   *File → Import → Replace spreadsheet*, which converts it properly.
+One of three things:
 
----
+1. **You did not reload.** The menu is added when the spreadsheet opens.
+2. **The code was not saved.** *Extensions → Apps Script*, hit save, reload.
+3. **The spreadsheet is in Office mode.** If the title bar says `.XLSX`,
+   Apps Script cannot attach. Redo
+   [step 1](setup.html#step-1--import-the-spreadsheet-template) via
+   *File → Import → Replace spreadsheet*.
 
-## "Google hasn't verified this app"
+<details markdown="block">
+<summary>"Google hasn't verified this app"</summary>
 
-Expected, and not a problem. This is your own script, published from your own
-account, and it was never submitted to Google for review — there is no review
-process worth doing for a private script.
+Expected. It is your own script and was never submitted for review.
 
-Click **Advanced**, then **Go to Training log (unsafe)**, then **Allow**.
+**Advanced → Go to Training log (unsafe) → Allow.**
 
-The permissions it asks for are to read and write the spreadsheet it is
-attached to, and to show its own web page. Nothing else.
+It asks only to read and write the spreadsheet it is attached to, and to show
+its own web page.
 
----
+</details>
 
-## "Sorry, unable to open the file at present"
+<details markdown="block">
+<summary>"Sorry, unable to open the file at present"</summary>
 
-The link points at a deployment that is not live. Almost always one of:
-
-- **It is the `/dev` link.** That one is the editor's test link. It only works
-  while you are signed in as the owner, and never for anyone else. The link
-  you want ends in `/exec`.
-- **The stored link is out of date.** Creating a *new* deployment mints a new
-  URL and retires the old one. Run **Training → Set web app link** and paste
-  the current URL from **Deploy → Manage deployments**.
-- **Nothing has been deployed yet.** Saving the code in the editor is not
-  deploying it — see [step 3](setup.html#step-3--publish-the-web-app).
+The link points at a deployment that is not live.
 
 ```
-   ✓  https://script.google.com/macros/s/AKfy…/exec        share this
-   ✗  https://script.google.com/macros/s/AKfy…/dev         owner-only test link
+   ✓  https://script.google.com/macros/s/AKfy…/exec     share this
+   ✗  https://script.google.com/macros/s/AKfy…/dev      owner-only test link
 ```
 
-{: .note }
-The app cannot work the URL out for itself reliably — the Apps Script API for
-it returns the test link, or a deployment that has since been replaced. That
-is why it asks you to paste the real one once and remembers it.
+- **It is the `/dev` link** — the editor's test link, useless to anyone else.
+- **The stored link is stale.** A *new* deployment mints a new URL. Run
+  **Training → Set web app link** and paste the current one from
+  *Deploy → Manage deployments*.
+- **Nothing is deployed.** Saving is not deploying — see
+  [step 3](setup.html#step-3--publish-the-web-app).
+
+The app cannot work this URL out reliably for itself, which is why it asks you
+to paste it once.
+
+</details>
+
+<details markdown="block">
+<summary>The admin link says "Read only"</summary>
+
+The key is missing or mangled. It must end `?key=` + the key, nothing after:
+
+```
+   ✓  …/exec?key=a1b2c3d4e5f6g7h8
+   ✗  …/exec?key=a1b2c3d4e5f6g7h8/
+```
+
+Get a fresh copy from **Training → Show shareable links**. Chat apps and
+calendar invites are the usual culprits — they shorten links and drop the
+query string.
+
+</details>
+
+<details markdown="block">
+<summary>Changes to the code are not showing up</summary>
+
+Saving in the editor does not change what the links serve; a deployment is
+pinned to a version.
+
+**Deploy → Manage deployments → pencil → Version: New version → Deploy.**
+
+The sidebar (*Training → Open entry form*) always runs the latest saved code,
+which is why something can work there and not on the link.
+
+</details>
 
 ---
 
-## The admin link says "Read only"
+## During a session
 
-The key is missing or wrong. The URL must end with `?key=` followed by the
-key, with no space and nothing after it:
+### The bar says "N changes not saved yet"
 
-```
-   ✓  https://script.google.com/macros/s/AKfy…/exec?key=a1b2c3d4e5f6g7h8
-   ✗  https://script.google.com/macros/s/AKfy…/exec?key=a1b2c3d4e5f6g7h8/
-   ✗  https://script.google.com/macros/s/AKfy…/exec ?key=a1b2…
-```
-
-Get a fresh copy from the spreadsheet: **Training → Show shareable links**.
-Chat apps and calendar invites are the usual culprits — they truncate long
-URLs or turn them into shortened links that drop the query string.
-
----
-
-## The bar says "N changes not saved yet"
-
-Normal when the wifi is patchy, and not something you need to act on. Those
-changes are queued on the tablet and the app is retrying — on reconnect, when
-you return to the tab, and on a backoff up to every 30 seconds. **Retry now**
-forces an immediate attempt.
+Normal on patchy wifi, and nothing to act on. The changes are queued and being
+retried — on reconnect, on returning to the tab, and on a backoff up to 30
+seconds. **Retry now** forces an attempt.
 
 Keep training. The numbers on screen are what you entered.
 
-Two things not to do while it is amber:
+{: .warning }
+Do not close the tab while it is amber, and expect set counts, new exercises
+and *Delete this day* to be refused until it clears — they move rows around
+underneath the pending writes.
 
-- **Do not close the tab.** The browser warns you. Those changes have not
-  reached the spreadsheet, and the app cannot always keep them on the device —
-  storage inside a Google-hosted page is not guaranteed.
-- **Do not expect set counts, new exercises or Delete this day to work.**
-  They are deliberately refused until the queue drains, because they move rows
-  around underneath the pending writes.
+<details markdown="block">
+<summary>"Not saved: row 14 now holds something else"</summary>
 
-If it never clears, the connection is not coming back on its own — check the
-wifi, or switch the tablet to mobile data.
+A change was queued against a row that has since moved, usually because sets
+were added or removed elsewhere while it waited.
 
----
+That one change is dropped and the session reloads, because replaying it would
+write onto whatever occupies the row now. **Re-enter that one value.** Nothing
+else is affected.
 
-## "Not saved: row 14 now holds something else"
+</details>
 
-A change was queued against a row that has since moved — usually because sets
-were added or removed, or the day was deleted, somewhere else (another tab, or
-the spreadsheet itself) while that change was waiting.
+<details markdown="block">
+<summary>"Save failed …"</summary>
 
-The app drops that one change and reloads the session, because replaying it
-would write onto whatever occupies that row now. **Re-enter that one value.**
-Nothing else in the session is affected.
-
----
-
-## "Save failed" in the bottom bar
-
-The message after the colon is the real cause.
-
-| Message contains | Meaning | Fix |
+| Message | Meaning | Fix |
 |---|---|---|
-| `Read-only view` | The key stopped matching mid-session, usually because the key was rotated | Reopen the current admin link |
-| `No sheet named "Log"` | The tab was renamed or deleted | Rename it back to exactly `Log` |
-| `is no longer in that session` | A note was queued for an exercise that has since been removed | Re-add the note if you still want it |
+| `Read-only view` | The key was rotated mid-session | Reopen the current admin link |
+| `No sheet named "Log"` | The tab was renamed | Rename it back to exactly `Log` |
+| `is no longer in that session` | A note was queued for an exercise since removed | Re-add it if you still want it |
+
+</details>
+
+<details markdown="block">
+<summary>"No earlier Push to build from" / "No template rows for Push"</summary>
+
+You picked a way to start that has nothing behind it. The app only offers
+sources it can see are available, so this usually means the page has been open
+a while — reload it.
+
+**Empty** is always available. To make *From the template* work for a day, add
+rows for it to the `Templates` tab.
+
+</details>
+
+<details markdown="block">
+<summary>The numbers do not go up when I tap +</summary>
+
+- **You are on the viewer link** — check for the *Read only* badge.
+- **You tapped the number, not the button.** Tapping selects it for typing.
+- **It is at its limit.** RPE clamps to 1–10, set counts to 0–10.
+
+</details>
+
+<details markdown="block">
+<summary>The sheet shows values I did not enter</summary>
+
+Starting a session writes its proposed rows immediately, before anything is
+tapped — see
+[the progression rule](admin.html#how-next-weeks-numbers-are-worked-out).
+Change them freely; each row is overwritten as you go.
+
+</details>
 
 ---
 
-## "No earlier Push to build from" / "No template rows for Push"
+## Data and display
 
-You chose a way to start a session that has nothing to work from. The app only
-offers choices it can see are available, so this usually means the page has
-been open a while and the sheet has changed underneath it — reload it.
-
-Otherwise, pick a different way to start. **Empty** is always available.
-
-To make *From the template* work for a day, add rows for it to the `Templates`
-tab (`day | exercise | sets | reps | weight | include in new session`) and
-reload.
-
-Day-type buttons come from the `Templates` tab plus everything ever logged, so
-a new day type appears on the next page load once either exists. See
-[day types are yours](admin.html#day-types-are-yours).
-
----
-
-## A viewer sees no day buttons, or fewer than I do
-
-Deliberate. Whoever holds the admin link sees every day type they *could*
-start — everything on the `Templates` tab, everything ever logged, plus
-**Custom**. A viewer only sees day types that actually have sessions.
-
-Offering a viewer a day with nothing behind it just produces a button that
-always answers "No Push session logged". Log a session against a day type and
-it appears for viewers from then on.
-
-A brand-new log therefore shows a viewer *"Nothing has been logged yet."*
-
----
-
-## The numbers do not go up when I tap +
-
-Almost always one of:
-
-- **You are on the viewer link.** No buttons at all, just values. Check for
-  the *Read only* badge at the top.
-- **You tapped the number, not the button.** Tapping the number selects it for
-  typing. Tap elsewhere to commit, or use the `−` / `+` either side.
-- **RPE is already at its limit.** RPE clamps to 1–10, and set counts to 1–10.
-
----
-
-## The sheet shows values I did not enter
-
-Starting a session writes the proposed rows immediately, before anything is
-tapped. Those are the app's proposal, generated from last week's numbers and
-RPEs — see [the progression rule](admin.html#how-next-weeks-numbers-are-worked-out).
-
-Change them freely; the row is overwritten as you go.
-
----
-
-## I deleted the wrong day
-
-The app has no undo, but the spreadsheet does:
-
-1. Open the spreadsheet.
-2. **File → Version history → See version history**.
-3. Pick the version from before the deletion and **Restore this version**.
-
-Or, if the sheet tab is still open and nothing else has happened,
-*Edit → Undo* works normally.
-
----
-
-## Changes to the code are not showing up
-
-Saving in the Apps Script editor does not change what the published links
-serve. A deployment is pinned to a version.
-
-**Deploy → Manage deployments → pencil icon → Version: New version →
-Deploy.** The URLs stay the same.
-
-The exception is the sidebar (*Training → Open entry form*), which always runs
-the latest saved code. That is why it is useful for testing — and why
-something can work in the sidebar and not on the link.
-
----
-
-## Typing in the sidebar goes into the spreadsheet instead
-
-A known Google Sheets quirk: the grid steals keyboard focus from a sidebar.
-The app fights back by claiming focus on `mousedown`, but it is not perfect.
-
-The sidebar is a test harness. Use the deployed `/exec` link for real
-sessions — it is a normal web page and does not have this problem.
-
----
-
-## An exercise autocompletes to the wrong name, or not at all
-
-The autocomplete list is the `Exercises` tab. Anything typed into **+ Add
-exercise** that is not already there is appended to that tab automatically, so
-a typo becomes a permanent suggestion.
-
-Fix it by editing the `Exercises` tab directly — delete the bad row. Existing
-`Log` rows keep the name they were saved with; correct those in the `Log` tab
-if it matters.
-
-{: .note }
-The same exercise cannot be added to one session twice. *"Barbell Row is
-already in this session"* means it is already on the page, further up.
-
----
-
-## The Records tab looks out of date
-
-It is rewritten when a session is started or deleted, or an exercise or set is
-added — not on every value you tap, so that logging stays quick.
-
-**Training → Rebuild records** brings it up to date immediately.
-
-The `Best:` line and the ★ inside the app are always live regardless, because
-they are worked out fresh each time a session loads.
-
----
-
-## A record looks wrong
+### A record looks wrong
 
 Records are read straight from the `Log` tab, so a wrong record means a wrong
-row. Common causes:
+row. Usually a mistyped weight — `1000` for `100` wins every record it
+touches. Fix the row, then **Training → Rebuild records**.
 
-- **A typo in a weight** — `1000` instead of `100` will win every record it
-  touches. Fix the row in the `Log` tab and rebuild.
-- **A set logged under the wrong exercise name.** Two spellings are two
-  different exercises as far as records are concerned.
-- **Nothing at all for an exercise you have done.** Records need reps above
-  zero, and weight records need weight above zero — bodyweight work only ever
-  produces a *Most reps* record.
+Also worth knowing: two spellings of an exercise are two different exercises,
+and bodyweight work only ever produces a *Most reps* record.
 
-See [personal records](records.html) for what each record means.
+<details markdown="block">
+<summary>The Records tab looks out of date</summary>
 
----
+It is rewritten when a session is started or deleted, or an exercise or set is
+added — not on every tap, so logging stays quick.
+**Training → Rebuild records** catches it up.
 
-## An exercise picture does not show
+The `Best` strip inside the app is always live regardless.
 
-The `image` column has to hold a **direct link to the image file**, public,
-and reachable without signing in.
+</details>
 
-- A link to a page containing the image will not work. It should end in
-  `.jpg`, `.png`, `.gif` or `.webp`.
-- A Google Drive `/view` link is a web page. Convert it to
+<details markdown="block">
+<summary>An exercise picture does not show</summary>
+
+The `image` column needs a **direct link to the image file**, public, ending
+in `.jpg`, `.png`, `.gif` or `.webp`.
+
+- A link to a *page* containing the image will not work.
+- A Google Drive `/view` link is a page. Convert it to
   `https://drive.google.com/thumbnail?id=FILE_ID&sz=w640` — see
   [pictures of the exercises](admin.html#pictures-of-the-exercises).
-- The file has to be shared as *Anyone with the link*, not just with you.
-- Only `http://` and `https://` links are accepted; anything else is ignored.
+- Share it as *Anyone with the link*.
 
-Reload the app after editing the tab. A broken link shows no thumbnail rather
-than breaking the card.
+Reload the app after editing. A broken link shows no thumbnail rather than
+breaking the card.
+
+</details>
+
+<details markdown="block">
+<summary>A viewer sees no day buttons, or fewer than I do</summary>
+
+Deliberate. The admin sees every day type they *could* start — `Templates`,
+everything logged, and **Custom**. A viewer sees only day types that have
+sessions, because the rest would be buttons that always answer "nothing
+logged".
+
+A brand-new log shows a viewer *"Nothing has been logged yet."*
+
+</details>
+
+<details markdown="block">
+<summary>An exercise autocompletes to the wrong name, or not at all</summary>
+
+The list is the `Exercises` tab, and anything typed into **+ Add exercise**
+that is not already there gets appended — so a typo becomes a permanent
+suggestion. Delete the bad row from that tab.
+
+Existing `Log` rows keep the name they were saved with; correct those
+separately if it matters.
+
+</details>
 
 ---
 
-## Everything is fine but the page is blank
+## Recovery
 
-Reload once. If it is still blank, open the link in a private window — an
-extension or a signed-in second Google account is the usual cause. Apps Script
-web apps get confused when a browser is signed into several accounts at once,
-and the fix is to open the link in a window signed into only one.
+### I deleted the wrong day, or removed the wrong exercise
+
+The app has no undo. The spreadsheet does:
+
+**File → Version history → See version history**, pick the version from before
+it happened, **Restore this version**.
+
+If nothing else has happened since, *Edit → Undo* in the sheet works normally.
+
+<details markdown="block">
+<summary>Typing in the sidebar goes into the spreadsheet instead</summary>
+
+A Google Sheets quirk — the grid steals keyboard focus from a sidebar. The app
+fights back but not perfectly.
+
+The sidebar is a test harness. Use the deployed link for real sessions.
+
+</details>
+
+<details markdown="block">
+<summary>The page is blank</summary>
+
+Reload once. Still blank: open it in a private window. Apps Script web apps
+get confused when a browser is signed into several Google accounts at once.
+
+</details>
