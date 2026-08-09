@@ -11,11 +11,14 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-<video src="https://david-chau.github.io/training-tracker/img/tablet-demo.mp4"
-       autoplay loop muted playsinline controls width="360"
-       aria-label="Starting a Push session on a tablet, entering reps and weights, and adding an exercise">
-  <a href="https://david-chau.github.io/training-tracker/img/tablet-demo.mp4">Watch the tablet demo</a>
-</video>
+[![A Push session open on a tablet: exercise cards showing personal bests,
+last week's numbers under each field, and the status bar reporting an unsaved
+change](docs/img/tablet-demo-poster.png)](https://github.com/david-chau/training-tracker/blob/main/docs/img/tablet-demo.mp4)
+
+**[▶ Watch the tablet demo](https://github.com/david-chau/training-tracker/blob/main/docs/img/tablet-demo.mp4)** — 40 seconds: starting a
+session, logging sets, adding an exercise. Also on the
+[documentation home](https://david-chau.github.io/training-tracker/), where it
+plays inline.
 
 ## Documentation
 

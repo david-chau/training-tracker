@@ -110,6 +110,17 @@ ffmpeg -i example.mp4 -an -vf "crop=612:915:60:57,scale=540:-2" \
 The crop trims the desk around the tablet. `+faststart` moves the index to
 the front so it starts playing before it has finished downloading.
 
+`docs/img/tablet-demo-poster.png` is a still from it, used in the README.
+
+{: .note }
+The README cannot play the clip inline. GitHub's `media-src` CSP allows only
+its own hosts — `github.com`, `*.githubusercontent.com` user uploads, and its
+asset S3 bucket. Neither the Pages URL nor `raw.githubusercontent.com` is on
+that list, so a `<video>` pointing at a repo file renders as nothing. Only
+files uploaded through GitHub's browser attachment flow get a playable URL.
+Hence the poster image linking to the blob view, which does play it. The docs
+pages have no such restriction and use `<video>` directly.
+
 A GIF was tried and dropped. Hand-held footage is the worst case for the
 format — camera shake changes every pixel every frame, so inter-frame
 compression has nothing to work with. Even cropped, at 5 fps and 64 colours,
