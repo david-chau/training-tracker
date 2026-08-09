@@ -11,12 +11,9 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-**[Documentation →](https://david-chau.github.io/training-tracker/)**
+## Documentation
 
-## Try the read-only demo
-
-- [Open the demo viewer](https://script.google.com/macros/s/AKfycbxH2TaEs7AR-EeINAF9mTYqQ9Dc5-Cy1hST8BP4mw4arttqKQwOKpRMhq5yX7QMyu4BEQ/exec)
-- [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1fjs3pzBXt2AzUgrJWjDrNwbWoD0WaNhlwGPTqTbHaS8/edit?usp=sharing)
+**[Documentation home →](https://david-chau.github.io/training-tracker/)**
 
 - [Setup guide](https://david-chau.github.io/training-tracker/setup.html) — import
   the template, paste in the code, publish, share the links
@@ -26,5 +23,10 @@ trainer who records your sessions.
 - [Training terminology](https://david-chau.github.io/training-tracker/terminology.html)
 - [Architecture](https://david-chau.github.io/training-tracker/architecture.html)
 - [Troubleshooting](https://david-chau.github.io/training-tracker/troubleshooting.html)
+
+## Try the read-only demo
+
+- [Open the demo viewer](https://script.google.com/macros/s/AKfycbxH2TaEs7AR-EeINAF9mTYqQ9Dc5-Cy1hST8BP4mw4arttqKQwOKpRMhq5yX7QMyu4BEQ/exec)
+- [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1fjs3pzBXt2AzUgrJWjDrNwbWoD0WaNhlwGPTqTbHaS8/edit?usp=sharing)
 
 Working on the code: [DEVELOPMENT.md](DEVELOPMENT.md).
