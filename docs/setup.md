@@ -66,10 +66,18 @@ Edit the `Templates` tab now if the first session should look different. It is
 read only for the very first session of each day type — after that the app
 works from history and stops looking at it.
 
+Each day ships with **five exercises, sixteen sets** — about an hour once rest
+is counted. That is a starting point, not a rule; add or remove rows freely.
+
 Column **F**, `default`, decides whether a row is actually put into that first
 session. Leave it blank for yes. Put `no` against an exercise you want on the
 plan as a reminder without it appearing in the form every time — the leg press
 you sometimes do, not the one you always do.
+
+Each day already has one such row as a worked example — `Cable Chest Fly` on
+Push, `Hammer Curl` on Pull, `Standing Calf Raise` on Legs. They are listed but
+not generated. Clear the `no` and they join the session; add `no` to another
+row to take it out.
 
 The day names in that tab are what become the buttons in the app. The template
 ships with Push / Pull / Legs, but Upper / Lower, Full body, A / B or anything

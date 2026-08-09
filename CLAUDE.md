@@ -87,6 +87,8 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 │                `[Other]` placeholder and 52 unweighted ones.
 ├── Templates  — day | exercise | sets | reps | weight | default. Seeds a
 │                first session; F="no" keeps a row off the default form.
+│                Ships 5 exercises / 16 sets per day (~1hr) plus one
+│                default="no" row per day as a worked example.
 ├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing
 │                keys fall back to DEFAULTS in Code.gs.
 └── Records    — DERIVED OUTPUT. Rewritten wholesale; never a source.

@@ -90,7 +90,8 @@ If nothing has been logged for that day and date yet, you get one button:
 
 Tap it. The app copies the most recent Push, applies the progression rule to
 every set, and writes the new rows into the sheet. If there is no earlier Push
-at all, it builds from the `Templates` tab instead.
+at all, it builds from the `Templates` tab instead — five exercises and
+sixteen sets, roughly an hour, which you can change on that tab.
 
 {: .note }
 Starting a session **writes to the sheet immediately** — the proposed numbers

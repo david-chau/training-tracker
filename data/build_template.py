@@ -317,14 +317,16 @@ EXERCISES = [
 # Weights seed at 0 on purpose — the real number gets typed in once, during
 # the first session of that day.
 #
-# Column F ("default") is blank, which means yes. Put "no" against a row to
-# keep it on the plan without it appearing in the session automatically.
+# Five exercises per day is roughly an hour once rest is counted, so that is
+# what each day generates. A sixth accessory is listed against each day with
+# default = "no": it stays on the plan as a suggestion without being put in
+# the form, and doubles as a worked example of that column.
 TEMPLATES = [
     ["day", "exercise", "sets", "reps", "weight", "default"],
     ["Push", "Barbell Bench Press", 4, 8, 0],
     ["Push", "Incline Dumbbell Press", 3, 10, 0],
     ["Push", "Seated Dumbbell Shoulder Press", 3, 10, 0],
-    ["Push", "Cable Chest Fly", 3, 12, 0],
+    ["Push", "Cable Chest Fly", 3, 12, 0, "no"],
     ["Push", "Lateral Raise", 3, 15, 0],
     ["Push", "Triceps Rope Pushdown", 3, 12, 0],
     ["Pull", "Barbell Row", 4, 8, 0],
@@ -332,13 +334,13 @@ TEMPLATES = [
     ["Pull", "Seated Cable Row", 3, 10, 0],
     ["Pull", "Face Pull", 3, 15, 0],
     ["Pull", "Dumbbell Bicep Curl", 3, 12, 0],
-    ["Pull", "Hammer Curl", 3, 12, 0],
+    ["Pull", "Hammer Curl", 3, 12, 0, "no"],
     ["Legs", "Back Squat", 4, 6, 0],
     ["Legs", "Romanian Deadlift", 3, 8, 0],
     ["Legs", "Leg Press", 3, 12, 0],
     ["Legs", "Bulgarian Split Squat", 3, 10, 0],
     ["Legs", "Lying Leg Curl", 3, 12, 0],
-    ["Legs", "Standing Calf Raise", 4, 15, 0],
+    ["Legs", "Standing Calf Raise", 4, 15, 0, "no"],
 ]
 
 # Read as key/value from columns A and B; column C is for the human.
@@ -498,6 +500,15 @@ def check():
         assert tpl.count("<row ") == len(TEMPLATES)
         assert "<v>4</v>" in tpl, "set counts must be numbers, not text"
         assert ">default</t>" in tpl, "Templates needs the default column, F"
+
+        # Five per day is the shipped default — an hour of training. The
+        # sixth row of each day is the default="no" example.
+        from collections import Counter
+        per_day = Counter(r[0] for r in TEMPLATES[1:]
+                          if not (len(r) > 5 and r[5] == "no"))
+        assert set(per_day.values()) == {5}, "each day should generate 5: " + str(per_day)
+        assert len(TEMPLATES) - 1 == sum(per_day.values()) + len(per_day), \
+            "expected exactly one optional row per day"
 
         # Settings keys must match what Code.gs looks for, or the defaults
         # silently win and the tab looks decorative.
