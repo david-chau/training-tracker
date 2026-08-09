@@ -198,6 +198,7 @@ google.script.run.withSuccessHandler(function (b) {
   S.images = b.images || {};
   S.videos = b.videos || {};
   S.noWeight = b.noWeight || {};
+  S.timed = b.timed || {};
   var who = document.getElementById('who');
   if (b.name) who.textContent = b.name;
   if (b.sheetUrl) {
@@ -426,6 +427,7 @@ function addExercisePanel() {
   mini.className = 'mini';
   var fields = {}, wraps = {};
   [['sets', 'Sets', 3], ['reps', 'Reps', 10], ['weight', 'Weight (LB)', 0]].forEach(function (f) {
+    // label is re-set by syncUnits() once a name is chosen
     var wrap = document.createElement('div');
     wrap.innerHTML = '<label>' + f[1] + '</label>';
     var inp = document.createElement('input');
@@ -438,15 +440,21 @@ function addExercisePanel() {
 
   // Asking for the weight of a push-up is the same nonsense here as it was on
   // the card, so the field goes as soon as the name is one that carries none.
-  function syncWeight() {
-    var none = S.noWeight && S.noWeight[name.value.trim()];
+  function syncUnits() {
+    var chosen = name.value.trim();
+    var none = S.noWeight && S.noWeight[chosen];
     wraps.weight.style.display = none ? 'none' : '';
     mini.style.gridTemplateColumns = none ? '1fr 1fr' : '1fr 1fr 1fr';
     if (none) fields.weight.value = 0;
+
+    var t = isTimed(chosen);
+    wraps.reps.firstChild.textContent = t ? 'Seconds' : 'Reps';
+    fields.reps.setAttribute('aria-label', t ? 'Seconds' : 'Reps');
+    if (t && fields.reps.value === '10') fields.reps.value = 30;
   }
-  name.addEventListener('input', syncWeight);
-  name.addEventListener('change', syncWeight);
-  syncWeight();
+  name.addEventListener('input', syncUnits);
+  name.addEventListener('change', syncUnits);
+  syncUnits();
 
   var row = document.createElement('div');
   row.style.display = 'flex'; row.style.gap = '8px';
@@ -688,6 +696,13 @@ function resize(exercise, count, label) {
     .setSetCount(KEY, S.day, S.date, exercise, count);
 }
 
+// Column E of the Log means reps for most exercises and seconds for holds
+// and carries. Which one is a property of the exercise, so everything that
+// renders or steps that field has to ask.
+function isTimed(name) { return !!(S.timed && S.timed[name]); }
+
+function amount(name, n) { return isTimed(name) ? n + 's' : String(n); }
+
 // Personal records come from the server with this session excluded, so a
 // comparison here answers "better than anything before today". Judged in the
 // browser rather than shipped per set, so the star appears the moment a
@@ -728,12 +743,14 @@ function metaLine(el, name, sets) {
     row.appendChild(span);
   }
 
+  var t = isTimed(name);
   if (rec && rec.heaviest && rec.heaviest.weight > 0) {
-    cell('Best', rec.heaviest.reps + ' × ' + rec.heaviest.weight + ' lb');
-    if (rec.est1rm) cell('est 1RM', rec.est1rm);
+    cell('Best', amount(name, rec.heaviest.reps) + ' × ' + rec.heaviest.weight + ' lb');
+    if (rec.est1rm && !t) cell('est 1RM', rec.est1rm);   // meaningless for a hold
     cell('on', rec.heaviest.date);
   } else if (rec && rec.reps) {
-    cell('Best', rec.reps.reps + ' reps');
+    cell(t ? 'Longest' : 'Best', t ? amount(name, rec.reps.reps)
+                                   : rec.reps.reps + ' reps');
     cell('on', rec.reps.date);
   }
 
@@ -762,7 +779,8 @@ function setRow(s) {
   var n = document.createElement('div'); n.className = 'n'; n.textContent = s.set;
   row.appendChild(n);
   s.onChange = function () { markPr(row, s); };
-  row.appendChild(stepper(s, 'reps', 'Reps', 1, 0));
+  var t = isTimed(s.exercise);
+  row.appendChild(stepper(s, 'reps', t ? 'Seconds' : 'Reps', t ? 5 : 1, 0));
   if (S.noWeight && S.noWeight[s.exercise]) {
     row.classList.add('bw');
   } else {
@@ -781,7 +799,8 @@ function wasLine(s, key, dp) {
   var prev = s.last && s.last[key];
   if (prev === undefined || prev === null) return el;
   if (key === 'rpe' && prev === BLANK) { el.textContent = 'was —'; return el; }
-  el.textContent = 'was ' + Number(prev).toFixed(dp).replace(/\.0$/, '');
+  var shown = Number(prev).toFixed(dp).replace(/\.0$/, '');
+  el.textContent = 'was ' + (key === 'reps' ? amount(s.exercise, shown) : shown);
   return el;
 }
 

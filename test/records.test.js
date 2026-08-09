@@ -214,39 +214,93 @@ const done = (reps, weight, rpe) => {
 };
 
 test('an easy set earns reps and weight', () => {
-  const next = progress(done(8, 100, 6), false);
+  const next = progress(done(8, 100, 6), false, false);
   assert.strictEqual(next.reps, 10);
   assert.strictEqual(next.weight, 105);
   assert.strictEqual(next.note, 'was easy');
 });
 
 test('a hard set backs the weight off and rounds to 2.5', () => {
-  const next = progress(done(8, 100, 10), false);
+  const next = progress(done(8, 100, 10), false, false);
   assert.strictEqual(next.reps, 6);
   assert.strictEqual(next.weight, 95);
 });
 
 test('an unweighted exercise never gains load, only reps', () => {
-  const easy = progress(done(20, 0, 6), true);
+  const easy = progress(done(20, 0, 6), true, false);
   assert.strictEqual(easy.reps, 22);
   assert.strictEqual(easy.weight, 0, 'a push-up must not become a 5 lb push-up');
   assert.strictEqual(easy.note, 'was easy');
 
-  const hard = progress(done(20, 0, 10), true);
+  const hard = progress(done(20, 0, 10), true, false);
   assert.strictEqual(hard.reps, 18);
   assert.strictEqual(hard.weight, 0, 'nor may 5% come off nothing');
 });
 
 test('reps never fall below one', () => {
-  assert.strictEqual(progress(done(1, 50, 10), false).reps, 1);
-  assert.strictEqual(progress(done(1, 0, 10), true).reps, 1);
+  assert.strictEqual(progress(done(1, 50, 10), false, false).reps, 1);
+  assert.strictEqual(progress(done(1, 0, 10), true, false).reps, 1);
 });
 
 test('a blank RPE is treated as 8 — reps up, weight held', () => {
-  const next = progress(done(8, 100, ''), false);
+  const next = progress(done(8, 100, ''), false, false);
   assert.strictEqual(next.reps, 10);
   assert.strictEqual(next.weight, 100);
   assert.strictEqual(next.note, '');
+});
+
+// ---------- time-based exercises ----------
+
+test('a timed exercise moves in seconds, not reps', () => {
+  // A plank: no load, measured in time.
+  const easy = progress(done(30, 0, 6), true, true);
+  assert.strictEqual(easy.reps, 35, '+5 seconds, not +2');
+  assert.strictEqual(easy.weight, 0);
+
+  const hard = progress(done(30, 0, 10), true, true);
+  assert.strictEqual(hard.reps, 25, '-5 seconds');
+});
+
+test('a loaded carry gains weight while its time steps in seconds', () => {
+  const next = progress(done(45, 50, 6), false, true);
+  assert.strictEqual(next.reps, 50, 'seconds step by 5');
+  assert.strictEqual(next.weight, 55, 'and it still earns load');
+});
+
+test('rep-based exercises are unaffected by the timed step', () => {
+  assert.strictEqual(progress(done(8, 100, 6), false, false).reps, 10);
+  assert.strictEqual(progress(done(8, 100, 6), false, undefined).reps, 10);
+});
+
+test('the Records tab words timed exercises differently', () => {
+  const recs = computeRecords([
+    row('2026-08-01', 'Core', 'Plank', 1, 45, 0),
+    row('2026-08-01', 'Core', 'Farmer Carry', 1, 40, 50)
+  ], CFG, null);
+
+  const rows = recordRows(recs, CFG, { Plank: true, 'Farmer Carry': true });
+
+  // A hold has no weight record and no meaningful 1RM — just the duration.
+  const plank = rows.filter(r => r[0] === 'Plank');
+  assert.deepStrictEqual(plain(plank.map(r => r[1])), ['Longest hold']);
+  assert.strictEqual(plank[0][2], 45);
+
+  const carry = rows.filter(r => r[0] === 'Farmer Carry').map(r => r[1]);
+  assert.ok(!plain(carry).includes('Est. 1RM'), 'no 1RM for a timed lift');
+  assert.ok(plain(carry).some(l => l.includes('seconds')),
+    'rep targets read as seconds: ' + plain(carry).join(', '));
+
+  // Detail strings carry the unit.
+  assert.ok(plank[0][3].startsWith('45s'), plank[0][3]);
+});
+
+test('untimed exercises keep the rep wording', () => {
+  const recs = computeRecords(
+    [row('2026-08-01', 'Push', 'Bench', 1, 5, 100)], CFG, null);
+  const labels = plain(recordRows(recs, CFG, {}).map(r => r[1]));
+
+  assert.ok(labels.includes('Est. 1RM'));
+  assert.ok(labels.some(l => l.includes('reps')));
 });
 
 // ---------- the sheet flag columns ----------

@@ -164,7 +164,7 @@ derived from it.
    ┌────┬─────┬──────────┬────┬─────┬────────┬─────┬──────────┬───────┐
    │ A  │  B  │    C     │ D  │  E  │   F    │  G  │    H     │   I   │
    │Date│ Day │ Exercise │Set │Reps │Weight  │ RPE │Auto note │ Notes │
-   │    │     │          │    │     │  (LB)  │     │          │       │
+   │    │     │          │    │/Sec │  (LB)  │     │          │       │
    ├────┼─────┼──────────┼────┼─────┼────────┼─────┼──────────┼───────┤
    │8-09│Push │Bench     │ 1  │ 12  │  25    │ 8   │          │ elbow │
    │8-09│Push │Bench     │ 2  │ 10  │  30    │ 9   │ repeat   │ elbow │
@@ -175,13 +175,13 @@ derived from it.
           │            (the row is overwritten     progress()  the admin
           │             as the set is logged)
           │
-   Exercises  ┌──────────┬───────┬─────────┬───────┬───────────┬───────┐
-              │ exercise │ group │ pattern │ image │ no weight │ video │
-              └──────────┴───────┴─────────┴───────┴───────────┴───────┘
+   Exercises  ┌──────────┬───────┬─────────┬───────┬───────────┬───────┬────────────┐
+              │ exercise │ group │ pattern │ image │ no weight │ video │ time based │
+              └──────────┴───────┴─────────┴───────┴───────────┴───────┴────────────┘
               autocomplete source; grows when a new name is used.
               D optional picture URL, F a how-to link — both http(s)
               only. E hides the weight field and stops progress()
-              adding load
+              adding load. G makes column E of the Log mean seconds
 
    Templates  ┌─────┬──────────┬──────┬──────┬────────┬────────────────┐
               │ day │ exercise │ sets │ reps │ weight │ include in new │
@@ -297,7 +297,28 @@ the next at 6.5 progress differently — the exercise is not treated as a unit.
   Exercises flagged "no weight" take the same rep changes with the
   weight column passed straight through, untouched. Without that,
   an easy set of push-ups would prescribe 5 lb of push-up next week.
+
+  Exercises flagged "time based" step by CFG.timeStep (5 seconds)
+  instead of CFG.repStep (2). The rule keeps its shape; only the
+  unit and the step change.
 ```
+
+### One column, two units
+
+Column E of the `Log` holds repetitions for most exercises and seconds for
+the ones flagged `time based`. The unit is a property of the *exercise*, not
+of the row.
+
+That is a deliberate trade. Storing the unit per row would be more
+self-describing, but it costs a tenth Log column and a migration for every
+sheet already in use, to record something that is already knowable. The cost
+is that re-flagging an exercise re-reads its history in the new unit — which
+is the right answer anyway if the flag was wrong.
+
+Everything that renders or steps that field asks first: `progress()` takes a
+`timed` argument, `recordRows()` takes a name → timed map for its wording, and
+the browser has `isTimed()` behind the field label, the step size, the *was*
+line and the record strip.
 
 Blank RPE resolving to 8 is a safety property, not a convenience: a forgotten
 entry produces the dullest possible outcome rather than a wild jump.

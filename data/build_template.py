@@ -24,25 +24,26 @@ OUT = (Path(__file__).parent.parent
        / "docs" / "download" / "training-tracker-template.xlsx")
 
 LOG = [
-    ["Date", "Day", "Exercise", "Set", "Reps", "Weight (LB)", "RPE",
+    ["Date", "Day", "Exercise", "Set", "Reps / Secs", "Weight (LB)", "RPE",
      "Auto note", "Notes"],
 ]
 
-# name | group | day it belongs to | image URL | carries no weight | video
+# name | group | pattern | image | no weight | video | time based
 #
-# Column F is filled in below, by fill_videos(): a YouTube search for the
-# exercise name. A search rather than a fixed video id because a search never
-# rots, covers every row, and stays current — and because picking one video
-# per exercise is a judgement the person training should make. Replace any of
-# them with a specific link you trust.
+# Rows are authored with the first three columns; finish_rows() below pads
+# them and fills in the rest.
 #
-# Column D is left blank on purpose: an image URL has to be one the person
-# setting up is allowed to use, so there is nothing safe to ship here.
-#
-# Column E marks the exercises with no external load — push-ups, planks, the
-# rower. The app hides their weight field and never tries to add plates.
+#   D  image      blank on purpose — an image URL has to be one the person
+#                 setting up is allowed to use, so nothing is safe to ship
+#   E  no weight  no external load: push-ups, planks, the rower. The app
+#                 hides the weight field and never tries to add plates
+#   F  video      a YouTube search for the name, from finish_rows(). A search
+#                 rather than a fixed id: it never rots, covers every row, and
+#                 leaves picking a video to whoever is training
+#   G  time based measured in seconds, not reps. Column E of the Log then
+#                 holds seconds, and progression steps by CFG.timeStep
 EXERCISES = [
-    ["exercise", "group", "pattern", "image", "no weight", "video"],
+    ["exercise", "group", "pattern", "image", "no weight", "video", "time based"],
     # Placeholder
     ['[Other]', 'Placeholder', 'Any'],
     # Chest
@@ -369,20 +370,34 @@ RECORDS = [
 
 VIDEO_SEARCH = "https://www.youtube.com/results?search_query="
 
+# Measured in seconds rather than repetitions: holds, carries, and anything
+# on a machine with a timer. Column E of the Log holds seconds for these.
+TIMED = {
+    "Plank", "Side Plank", "RKC Plank", "Hollow Body Hold", "Copenhagen Plank",
+    "Wall Sit", "Mountain Climber",
+    "Farmer Carry", "Suitcase Carry", "Plate Pinch",
+    "Sled Push", "Sled Pull", "Battle Ropes",
+    "Rowing Machine", "Assault Bike", "Ski Erg", "Treadmill Run",
+    "Incline Treadmill Walk", "Stationary Bike", "Stair Climber", "Elliptical",
+    "Jump Rope", "Sprint Interval",
+}
 
-def fill_videos(rows):
-    """Pad every exercise row to six columns and add a how-to search link."""
+
+def finish_rows(rows):
+    """Pad every exercise row to seven columns, add the how-to link and unit."""
     out = [rows[0]]
     for row in rows[1:]:
-        row = list(row) + [""] * (6 - len(row))
+        row = list(row) + [""] * (7 - len(row))
         name = row[0]
         if not name.startswith("["):          # the [Other] placeholder has none
             row[5] = VIDEO_SEARCH + quote_plus(name + " proper form")
+        if name in TIMED:
+            row[6] = "yes"
         out.append(row)
     return out
 
 
-EXERCISES = fill_videos(EXERCISES)
+EXERCISES = finish_rows(EXERCISES)
 
 SHEETS = [
     ("Log", LOG),
@@ -510,6 +525,16 @@ def check():
         assert ">[Other]</t>" in ex, "the [Other] placeholder must ship"
         assert ">no weight</t>" in ex, "Exercises needs the no-weight column, E"
         assert ">video</t>" in ex, "Exercises needs the video column, F"
+        assert ">time based</t>" in ex, "Exercises needs the time column, G"
+
+        # Every name in TIMED has to exist, or the flag silently does nothing.
+        names = {r[0] for r in EXERCISES[1:]}
+        missing = TIMED - names
+        assert not missing, "TIMED names not in the catalogue: " + str(sorted(missing))
+
+        timed = [r[0] for r in EXERCISES[1:] if r[6] == "yes"]
+        assert len(timed) == len(TIMED), "timed flags lost"
+        assert "Plank" in timed and "Barbell Bench Press" not in timed
 
         # Every real exercise gets a how-to link; the placeholder does not.
         linked = [r[0] for r in EXERCISES[1:] if r[5]]

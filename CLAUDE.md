@@ -89,11 +89,11 @@ it persist.
 ```
 Google Sheet (named per person — the name is the app's heading and tab title)
 ├── Log        — one row per set. The only real data. 9 columns, A–I.
-├── Exercises  — name | group | pattern | image | no weight | video.
-│                Autocomplete + optional picture URL + a flag hiding the
-│                weight field + a how-to link. Both URLs http(s)-guarded.
-│                Ships 256 rows: the `[Other]` placeholder, 52 unweighted,
-│                255 video search links (generated, not stored by hand).
+├── Exercises  — name | group | pattern | image | no weight | video |
+│                time based. Autocomplete + optional picture URL + a flag
+│                hiding the weight field + a how-to link + the unit for
+│                Log column E. Both URLs http(s)-guarded. Ships 256 rows:
+│                `[Other]`, 52 unweighted, 23 timed, 255 video searches.
 ├── Templates  — day | exercise | sets | reps | weight | include in new
 │                session. Seeds a session; F="no" keeps a row out of
 │                generation. Ships 5 exercises / 16 sets per day (~1hr)
@@ -117,9 +117,14 @@ Repo
 ### Log columns (order matters — code reads by index, not header name)
 
 ```
-A Date | B Day | C Exercise | D Set | E Reps | F Weight (LB) | G RPE
-H Auto note | I Notes
+A Date | B Day | C Exercise | D Set | E Reps / Secs | F Weight (LB) |
+G RPE | H Auto note | I Notes
 ```
+
+Column E is reps, or seconds when the exercise is flagged `time based` on
+the Exercises tab. The unit is a property of the exercise, not the row —
+deliberately, to avoid a tenth column and a migration for every live sheet.
+Don't add a per-row unit column.
 
 There is no separate target/done pair — the row is overwritten as the set is
 logged, so it holds what actually happened. Column H is written by the
@@ -141,10 +146,12 @@ Per set, from that set's RPE:
 Blank RPE is treated as 8 (conservative middle) so a forgotten entry never
 produces a wild jump. Tunable via `CFG` at the top of `Code.gs`.
 
-`progress(set, noWeight)` — when `noWeight`, the rep changes are identical
-but weight passes through untouched. Otherwise an easy set of push-ups
-prescribes 5 lb of push-up. `fromHistory` looks the flag up by lowercased
-name via `noWeightLookup()`.
+`progress(set, noWeight, timed)` — `noWeight` keeps the rep changes but
+passes weight through untouched, or an easy set of push-ups prescribes 5 lb
+of push-up. `timed` swaps `CFG.repStep` (2) for `CFG.timeStep` (5), because
++2 seconds on a plank is not a session. The two are independent: a farmer
+carry is timed *and* loaded. `fromHistory` looks both up by lowercased name
+via `noWeightLookup()` / `timedLookup()`.
 
 ### Read-only mode
 

@@ -83,11 +83,15 @@ order is load-bearing — changing it means changing `COL` and `WIDTH` in
 `Code.gs` and `LOG` in `build_template.py` together.
 
 ```
-A Date | B Day | C Exercise | D Set | E Reps | F Weight (LB) | G RPE
-H Auto note | I Notes
+A Date | B Day | C Exercise | D Set | E Reps / Secs | F Weight (LB) |
+G RPE | H Auto note | I Notes
 ```
 
-The other tabs are looser. `Exercises` is read A–F with the width clamped, so
+Column E is reps, or seconds for exercises flagged `time based` on the
+`Exercises` tab. The unit is a property of the exercise rather than the row,
+which is what keeps this at nine columns.
+
+The other tabs are looser. `Exercises` is read A–G with the width clamped, so
 a sheet predating the `image`, `no weight` or `video` columns still works;
 `Templates` the same for `include in new session`. `Settings` is key/value
 from A and B. `Records` is output and cleared on every rebuild.

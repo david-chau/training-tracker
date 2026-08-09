@@ -33,9 +33,10 @@ Both update as you tap. Judged against *everything except the session you are
 in*, so today's earlier sets do not become the bar for today's later ones.
 
 {: .note }
-For a loaded lift the marker is a **weight** record. For an exercise marked
-`no weight` there is nothing to load, so it tracks **reps** instead —
-`Best 20 reps · on 2026-07-19`.
+For a loaded lift the marker is a **weight** record. With `no weight` there is
+nothing to load, so it tracks **reps** — `Best 20 reps`. With `time based` it
+tracks duration — `Longest 45s`. A timed exercise gets no estimated 1RM,
+since the number means nothing for a hold.
 
 ---
 
@@ -80,10 +81,13 @@ shows on the card and marks against.
 
 | Value | Record |
 |---|---|
-| `est1rm` | Best estimated one-rep max |
+| `est1rm` | Best estimated one-rep max. Skipped for timed exercises. |
 | `volume` | Best single set, reps × weight |
-| `reps` | Most reps in one set — the useful one for bodyweight work |
+| `reps` | Most reps in one set — or *Longest hold* for a timed one. The useful record for bodyweight work. |
 | `session` | Most total volume for that exercise in one session |
+
+Rep targets follow the same rule: for a timed exercise `pr_rep_targets` reads
+as seconds, so `Heaviest at 30+ seconds` is a loaded carry record.
 
 Blank drops them all and keeps only the rep targets. Rebuild after editing.
 

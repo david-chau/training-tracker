@@ -1,7 +1,11 @@
 // Workout log — server code
 // Sheet "Log" columns, in order:
-// A date | B day | C exercise | D set | E reps | F weight | G rpe
-// H auto note | I user note
+// A date | B day | C exercise | D set | E reps-or-seconds | F weight |
+// G rpe | H auto note | I user note
+//
+// Column E is reps for most exercises and seconds for the ones flagged
+// "time based" on the Exercises tab. The unit is a property of the exercise,
+// not of the row, which is why the Log needs no extra column.
 
 const CFG = {
   logSheet: 'Log',
@@ -11,6 +15,7 @@ const CFG = {
   recordsSheet: 'Records',
   weightStep: 5,
   repStep: 2,
+  timeStep: 5,        // seconds, for exercises measured in time
   roundTo: 2.5,
   defaultRpe: 8,
   blankDay: 'Custom'   // always offered, always starts empty
@@ -33,8 +38,8 @@ const WIDTH = 9;
 
 // Must stay in step with LOG in data/build_template.py. Only used when
 // creating a sheet from scratch — reads go by position, never by heading.
-const HEADERS = ['Date', 'Day', 'Exercise', 'Set', 'Reps', 'Weight (LB)',
-                 'RPE', 'Auto note', 'Notes'];
+const HEADERS = ['Date', 'Day', 'Exercise', 'Set', 'Reps / Secs',
+                 'Weight (LB)', 'RPE', 'Auto note', 'Notes'];
 const RECORD_HEADERS = ['Exercise', 'Record', 'Value', 'Detail', 'Date', 'Day'];
 
 const BLANK_RPE = -1;   // sentinel: google.script.run is unreliable with null
@@ -212,6 +217,7 @@ function getBootstrap(k) {
     images: exerciseImages(),
     videos: exerciseVideos(),
     noWeight: noWeightNames(),
+    timed: timedNames(),
     name: logName(),
     // Only for whoever can edit — a viewer has no access to the spreadsheet
     // itself, so the link would only ever land them on a request-access page.
@@ -221,11 +227,12 @@ function getBootstrap(k) {
 }
 
 // Exercises tab: A name | B group | C pattern | D image | E no weight |
-// F video. Anything past A may not exist on an older sheet, hence the clamp.
+// F video | G time based. Anything past A may not exist on an older sheet,
+// hence the clamp.
 function exerciseRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  const width = Math.min(6, Math.max(1, sheet.getLastColumn()));
+  const width = Math.min(7, Math.max(1, sheet.getLastColumn()));
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
     .filter(function (r) { return String(r[0]).trim(); });
 }
@@ -241,6 +248,24 @@ function noWeightNames() {
     if (isYes(r[4])) map[String(r[0]).trim()] = true;
   });
   return map;
+}
+
+// Exercises measured in seconds rather than reps — planks, carries, the
+// rower. Column E of the Log holds seconds for these; the unit is a property
+// of the exercise, not of the row, which is why the Log needs no extra
+// column and older sheets keep working.
+function timedNames() {
+  const map = {};
+  exerciseRows().forEach(function (r) {
+    if (isYes(r[6])) map[String(r[0]).trim()] = true;
+  });
+  return map;
+}
+
+function timedLookup() {
+  const lower = {};
+  Object.keys(timedNames()).forEach(function (n) { lower[n.toLowerCase()] = true; });
+  return lower;
 }
 
 function noWeightLookup() {
@@ -546,31 +571,41 @@ const RECORD_LABELS = {
 };
 
 // One row per exercise per record, for the Records tab.
-function recordRows(records, cfg) {
+//
+// `timed` maps exercise name -> true for the ones measured in seconds. Only
+// the wording changes: "most reps" is a longest hold, a rep target is a time
+// held, and an estimated 1RM means nothing for a plank so it is left out.
+function recordRows(records, cfg, timed) {
   const out = [];
+  const isTimed = function (name) { return !!(timed && timed[name]); };
 
   Object.keys(records).sort().forEach(function (name) {
     const rec = records[name];
+    const t = isTimed(name);
+    const unit = t ? 's' : '';
 
     cfg.targets.forEach(function (n) {
       const hit = rec.byReps[n];
       if (!hit || hit.weight <= 0) return;
       out.push([
         name,
-        n === 1 ? 'Heaviest' : 'Heaviest at ' + n + '+ reps',
-        hit.weight, hit.reps + ' x ' + hit.weight, hit.date, hit.day
+        n === 1 ? 'Heaviest'
+                : 'Heaviest at ' + n + '+ ' + (t ? 'seconds' : 'reps'),
+        hit.weight, hit.reps + unit + ' x ' + hit.weight, hit.date, hit.day
       ]);
     });
 
     cfg.metrics.forEach(function (m) {
+      if (t && m === 'est1rm') return;      // meaningless for a hold
       const hit = rec[m];
       if (!hit) return;
-      const label = RECORD_LABELS[m];
+      const label = (t && m === 'reps') ? 'Longest hold' : RECORD_LABELS[m];
       if (!label) return;
       out.push([
         name, label,
         m === 'reps' ? hit.reps : hit.value,
-        hit.reps + ' x ' + hit.weight + (m === 'session' ? ' … ' + hit.sets + ' sets' : ''),
+        hit.reps + unit + ' x ' + hit.weight +
+          (m === 'session' ? ' … ' + hit.sets + ' sets' : ''),
         hit.date, hit.day
       ]);
     });
@@ -587,7 +622,7 @@ function rebuildRecords() {
   const ss = SpreadsheetApp.getActive();
   const sheet = ss.getSheetByName(CFG.recordsSheet) || ss.insertSheet(CFG.recordsSheet);
   const cfg = prConfig();
-  const out = recordRows(computeRecords(allRows(), cfg, null), cfg);
+  const out = recordRows(computeRecords(allRows(), cfg, null), cfg, timedNames());
 
   sheet.clear();
   sheet.getRange(1, 1, 1, 6).setValues([RECORD_HEADERS]).setFontWeight('bold');
@@ -694,7 +729,7 @@ function writeArchive(name, rows) {
   log.setFrozenRows(1);
 
   const cfg = prConfig();
-  const out = recordRows(computeRecords(rows, cfg, null), cfg);
+  const out = recordRows(computeRecords(rows, cfg, null), cfg, timedNames());
   const rec = book.insertSheet(CFG.recordsSheet);
   rec.getRange(1, 1, 1, 6).setValues([RECORD_HEADERS]).setFontWeight('bold');
   if (out.length) rec.getRange(2, 1, out.length, 6).setValues(out);
@@ -942,9 +977,11 @@ function fromHistory(prior, dayType, dayKey) {
   const latest = prior.map(function (r) { return dateKey(r[COL.date]); }).sort().pop();
   const when = parseKey(dayKey);
   const noWeight = noWeightLookup();
+  const timed = timedLookup();
   return prior.filter(function (r) { return dateKey(r[COL.date]) === latest; })
     .map(function (set) {
-      const next = progress(set, noWeight[String(set[COL.exercise]).trim().toLowerCase()]);
+      const key = String(set[COL.exercise]).trim().toLowerCase();
+      const next = progress(set, noWeight[key], timed[key]);
       return buildRow(when, dayType, set[COL.exercise], set[COL.set],
                       next.reps, next.weight, next.note);
     });
@@ -969,26 +1006,30 @@ function fromTemplate(dayType, dayKey) {
 
 
 // The progression rule, applied per set from that set's RPE.
-function progress(set, noWeight) {
+// `reps` is whatever column E measures for this exercise — repetitions, or
+// seconds when it is a timed one. The rule is the same shape either way; only
+// the step size differs, because +2 seconds on a plank is not a session.
+function progress(set, noWeight, timed) {
   const reps = num(set[COL.reps]);
   const weight = num(set[COL.weight]);
   const rpe = num(set[COL.rpe]) || CFG.defaultRpe;
+  const step = timed ? CFG.timeStep : CFG.repStep;
 
-  // Nothing to add load to, so an easy set earns reps and a brutal one
-  // gives them back. Weight is passed straight through, untouched.
+  // Nothing to add load to, so an easy set earns reps (or seconds) and a
+  // brutal one gives them back. Weight passes straight through, untouched.
   if (noWeight) {
-    if (rpe <= 6.5) return { reps: reps + CFG.repStep, weight: weight, note: 'was easy' };
-    if (rpe <= 8.5) return { reps: reps + CFG.repStep, weight: weight, note: '' };
+    if (rpe <= 6.5) return { reps: reps + step, weight: weight, note: 'was easy' };
+    if (rpe <= 8.5) return { reps: reps + step, weight: weight, note: '' };
     if (rpe <= 9.5) return { reps: reps, weight: weight, note: 'repeat' };
-    return { reps: Math.max(1, reps - CFG.repStep), weight: weight, note: 'backed off' };
+    return { reps: Math.max(1, reps - step), weight: weight, note: 'backed off' };
   }
 
   if (rpe <= 6.5) {
-    return { reps: reps + CFG.repStep, weight: round(weight + CFG.weightStep), note: 'was easy' };
+    return { reps: reps + step, weight: round(weight + CFG.weightStep), note: 'was easy' };
   }
-  if (rpe <= 8.5) return { reps: reps + CFG.repStep, weight: weight, note: '' };
+  if (rpe <= 8.5) return { reps: reps + step, weight: weight, note: '' };
   if (rpe <= 9.5) return { reps: reps, weight: weight, note: 'repeat' };
-  return { reps: Math.max(1, reps - CFG.repStep), weight: round(weight * 0.95), note: 'backed off' };
+  return { reps: Math.max(1, reps - step), weight: round(weight * 0.95), note: 'backed off' };
 }
 
 

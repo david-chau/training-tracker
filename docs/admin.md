@@ -93,7 +93,7 @@ the same thing last Custom day, *From last time* is offered and works.
 
 | Field | Steps by | Range |
 |---|---|---|
-| **Reps** | 1 | 0 and up |
+| **Reps** *or* **Seconds** | 1 / 5 | 0 and up |
 | **Weight (LB)** | 2.5 | 0 and up |
 | **RPE** | 0.5 | 1–10, or blank |
 
@@ -162,7 +162,9 @@ then deletes those rows from the sheet.
 ### A different exercise
 
 **+ Add exercise**, type the name — it autocompletes from the `Exercises` tab,
-which ships with over 250 movements — then set sets, reps and weight.
+which ships with over 250 movements — then set sets, reps and weight. The
+second box asks for **Seconds** instead when the exercise is a timed one, and
+the weight box disappears for exercises that carry none.
 
 An unknown name is added to the `Exercises` tab automatically. The same
 exercise cannot be added twice.
@@ -197,6 +199,36 @@ stop typing, and when you tap out. Last week's note appears underneath.
 
 **Delete this day** removes every row for that day type and date. No undo in
 the app — but the spreadsheet has *File → Version history*.
+
+---
+
+## Exercises measured in time
+
+A plank is 30 seconds, not 30 reps. Exercises flagged as timed show
+**Seconds** where the others show **Reps**, and the field steps by 5:
+
+```
+      Seconds     RPE                  instead of
+   1 [− 30 +]  [− 7 +]                 Reps · RPE
+      was 25      was 8
+```
+
+Everything else follows: progression adds or removes **seconds** rather than
+reps, records read *Longest hold* instead of *Most reps*, and no estimated 1RM
+is offered — the number means nothing for a hold.
+
+Column **G** of the `Exercises` tab, headed `time based`, controls it — `yes`
+for seconds, blank for reps. 23 rows ship marked: the planks and holds, wall
+sits, carries, sled work, and every cardio machine.
+
+{: .note }
+Timed and loaded are independent. A farmer carry is *both* — seconds in the
+first field, and a weight that still progresses. A plank is timed with no
+weight, and a bench press is neither.
+
+The `Log` tab keeps one column for both, headed `Reps / Secs`. Which unit a
+row means is a property of the exercise, so changing that flag re-reads the
+history in the new unit.
 
 ---
 
