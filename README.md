@@ -18,6 +18,7 @@ trainer who records your sessions.
 - [Admin guide](https://david-chau.github.io/training-tracker/admin.html)
 - [Viewer guide](https://david-chau.github.io/training-tracker/viewer.html)
 - [Personal records](https://david-chau.github.io/training-tracker/records.html)
+- [Training terminology](https://david-chau.github.io/training-tracker/terminology.html)
 - [Architecture](https://david-chau.github.io/training-tracker/architecture.html)
 - [Troubleshooting](https://david-chau.github.io/training-tracker/troubleshooting.html)
 
