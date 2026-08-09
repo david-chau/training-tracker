@@ -81,10 +81,12 @@ it persist.
 ```
 Google Sheet (named per person — the name is the app's heading and tab title)
 ├── Log        — one row per set. The only real data. 9 columns, A–I.
-├── Exercises  — name | group | pattern | image. Autocomplete + optional
-│                picture URL (http(s) only). Grows on use. Ships ~256 rows
-│                including the `[Other]` placeholder.
-├── Templates  — day | exercise | sets | reps | weight. Seeds a first session.
+├── Exercises  — name | group | pattern | image | no weight. Autocomplete +
+│                optional picture URL (http(s) only) + a flag hiding the
+│                weight field. Grows on use. Ships 256 rows including the
+│                `[Other]` placeholder and 52 unweighted ones.
+├── Templates  — day | exercise | sets | reps | weight | default. Seeds a
+│                first session; F="no" keeps a row off the default form.
 ├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing
 │                keys fall back to DEFAULTS in Code.gs.
 └── Records    — DERIVED OUTPUT. Rewritten wholesale; never a source.
@@ -128,6 +130,11 @@ Per set, from that set's RPE:
 Blank RPE is treated as 8 (conservative middle) so a forgotten entry never
 produces a wild jump. Tunable via `CFG` at the top of `Code.gs`.
 
+`progress(set, noWeight)` — when `noWeight`, the rep changes are identical
+but weight passes through untouched. Otherwise an easy set of push-ups
+prescribes 5 lb of push-up. `fromHistory` looks the flag up by lowercased
+name via `noWeightLookup()`.
+
 ### Read-only mode
 
 `doGet` compares `?key=` against `EDIT_KEY` in script properties. Writes
@@ -151,6 +158,9 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   input. Test any stepper change at 390px wide.
 - **Notes losing text on blur.** Now saves three ways: explicit button,
   1.5s debounce while typing, and blur.
+- **`snapshot()` returns values, not a string.** The browser renders last
+  week under each field (`was 12`), so it needs `{reps, weight, rpe}` per
+  set. Don't fold it back into one line.
 - **Row indices go stale** after add/remove. Every mutation returns a fresh
   `loadSession()` rather than patching client state.
 - **Queued writes are addressed by row, and rows move.** `writeSet` verifies

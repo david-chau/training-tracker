@@ -42,8 +42,9 @@ is judged against *everything except the session you are in*, so today's
 earlier sets do not become the bar for today's later ones.
 
 {: .note }
-The star is a **weight** record. Bodyweight work sits at 0 lb, so it never
-stars — its record is reps, which you will find on the Records tab.
+For a loaded lift the star is a **weight** record. For an exercise marked
+`no weight` on the `Exercises` tab there is nothing to load, so the star and
+the `Best:` line both track **reps** instead — `Best: 20 reps · 2026-07-19`.
 
 ---
 

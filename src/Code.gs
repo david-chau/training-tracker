@@ -122,19 +122,39 @@ function getBootstrap() {
     days: days,
     exercises: exerciseList(),
     images: exerciseImages(),
+    noWeight: noWeightNames(),
     name: logName(),
     today: dateKey(new Date())
   };
 }
 
-// Exercises tab: A name | B group | C pattern | D image (optional).
-// Column D may not exist on an older sheet, hence the width clamp.
+// Exercises tab: A name | B group | C pattern | D image | E no weight.
+// D and E may not exist on an older sheet, hence the width clamp.
 function exerciseRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  const width = Math.min(4, Math.max(1, sheet.getLastColumn()));
+  const width = Math.min(5, Math.max(1, sheet.getLastColumn()));
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
     .filter(function (r) { return String(r[0]).trim(); });
+}
+
+function isYes(v) { return /^(y|yes|true|1|x)$/i.test(String(v == null ? '' : v).trim()); }
+
+// Exercises that carry no external load — push-ups, planks, the rower.
+// Their weight field is hidden and the progression rule leaves weight alone,
+// so "+5 lb" can never turn a push-up into a 5 lb push-up.
+function noWeightNames() {
+  const map = {};
+  exerciseRows().forEach(function (r) {
+    if (isYes(r[4])) map[String(r[0]).trim()] = true;
+  });
+  return map;
+}
+
+function noWeightLookup() {
+  const lower = {};
+  Object.keys(noWeightNames()).forEach(function (n) { lower[n.toLowerCase()] = true; });
+  return lower;
 }
 
 // Names from the Exercises tab, for the autocomplete list.
@@ -167,11 +187,18 @@ function allRows() {
     .filter(function (r) { return r[COL.date] && r[COL.exercise]; });
 }
 
+// Templates tab: A day | B exercise | C sets | D reps | E weight | F default.
+// F may not exist on an older sheet, hence the width clamp.
 function templateRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.templateSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 5).getValues()
+  const width = Math.min(6, Math.max(2, sheet.getLastColumn()));
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
     .filter(function (r) { return r[0] && r[1]; });
+}
+
+function isNo(v) {
+  return /^(n|no|false|0|off|skip|optional)$/i.test(String(v == null ? '' : v).trim());
 }
 
 
@@ -225,10 +252,11 @@ function loadSession(dayType, dayKey, create, k) {
   const shown = {};
   dedupe(mine.map(function (r) { return String(r[COL.exercise]); })).forEach(function (name) {
     const rec = records[name];
-    if (!rec || !rec.heaviest || rec.heaviest.weight <= 0) return;
+    if (!rec || !rec.heaviest) return;
     shown[name] = {
       heaviest: rec.heaviest,
-      est1rm: rec.est1rm ? rec.est1rm.value : null
+      est1rm: rec.est1rm ? rec.est1rm.value : null,
+      reps: rec.reps || null          // the only record an unweighted lift has
     };
   });
 
@@ -262,16 +290,18 @@ function notesOn(rows, dayType, dayKey) {
 }
 
 
+// Last week's numbers, per set, as values rather than a rendered string —
+// the browser shows them under the field they belong to.
 function snapshot(rows, dayType, dayKey) {
   const map = {};
   rows.filter(function (r) {
     return sameDay(r[COL.day], dayType) && dateKey(r[COL.date]) === dayKey;
   }).forEach(function (r) {
-    const reps = num(r[COL.reps]);
-    const wt = num(r[COL.weight]);
-    const rpe = r[COL.rpe] === '' ? null : num(r[COL.rpe]);
-    map[key(r[COL.exercise], num(r[COL.set]))] =
-      reps + ' x ' + wt + (rpe === null ? '' : ' @' + rpe);
+    map[key(r[COL.exercise], num(r[COL.set]))] = {
+      reps: num(r[COL.reps]),
+      weight: num(r[COL.weight]),
+      rpe: r[COL.rpe] === '' ? BLANK_RPE : num(r[COL.rpe])
+    };
   });
   return map;
 }
@@ -680,19 +710,23 @@ function generateInto(dayType, dayKey, rows) {
 function fromHistory(prior, dayType, dayKey) {
   const latest = prior.map(function (r) { return dateKey(r[COL.date]); }).sort().pop();
   const when = parseKey(dayKey);
+  const noWeight = noWeightLookup();
   return prior.filter(function (r) { return dateKey(r[COL.date]) === latest; })
     .map(function (set) {
-      const next = progress(set);
+      const next = progress(set, noWeight[String(set[COL.exercise]).trim().toLowerCase()]);
       return buildRow(when, dayType, set[COL.exercise], set[COL.set],
                       next.reps, next.weight, next.note);
     });
 }
 
-// Templates sheet: A day | B exercise | C sets | D reps | E weight
+// Column F says whether the row is part of the default session. Marking it
+// "no" keeps the exercise on the plan for that day without putting it in the
+// form every week — it stays a reminder you can add by hand.
 function fromTemplate(dayType, dayKey) {
   const when = parseKey(dayKey);
   const out = [];
-  templateRows().filter(function (r) { return sameDay(r[0], dayType); })
+  templateRows()
+    .filter(function (r) { return sameDay(r[0], dayType) && !isNo(r[5]); })
     .forEach(function (r) {
       const sets = Math.max(1, num(r[2]) || 3);
       for (var i = 1; i <= sets; i++) {
@@ -704,10 +738,19 @@ function fromTemplate(dayType, dayKey) {
 
 
 // The progression rule, applied per set from that set's RPE.
-function progress(set) {
+function progress(set, noWeight) {
   const reps = num(set[COL.reps]);
   const weight = num(set[COL.weight]);
   const rpe = num(set[COL.rpe]) || CFG.defaultRpe;
+
+  // Nothing to add load to, so an easy set earns reps and a brutal one
+  // gives them back. Weight is passed straight through, untouched.
+  if (noWeight) {
+    if (rpe <= 6.5) return { reps: reps + CFG.repStep, weight: weight, note: 'was easy' };
+    if (rpe <= 8.5) return { reps: reps + CFG.repStep, weight: weight, note: '' };
+    if (rpe <= 9.5) return { reps: reps, weight: weight, note: 'repeat' };
+    return { reps: Math.max(1, reps - CFG.repStep), weight: weight, note: 'backed off' };
+  }
 
   if (rpe <= 6.5) {
     return { reps: reps + CFG.repStep, weight: round(weight + CFG.weightStep), note: 'was easy' };

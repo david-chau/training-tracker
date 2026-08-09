@@ -122,16 +122,19 @@ derived from it.
           │            (the row is overwritten     progress()  the admin
           │             as the set is logged)
           │
-   Exercises  ┌──────────┬───────┬─────────┬───────┐
-              │ exercise │ group │ pattern │ image │  autocomplete source;
-              └──────────┴───────┴─────────┴───────┘  grows when a new name
-                                                      is used. D is an
-                                                      optional picture URL
+   Exercises  ┌──────────┬───────┬─────────┬───────┬───────────┐
+              │ exercise │ group │ pattern │ image │ no weight │
+              └──────────┴───────┴─────────┴───────┴───────────┘
+              autocomplete source; grows when a new name is used.
+              D is an optional picture URL. E hides the weight field
+              and stops progress() adding load
 
-   Templates  ┌─────┬──────────┬──────┬──────┬────────┐
-              │ day │ exercise │ sets │ reps │ weight │  first session only;
-              └─────┴──────────┴──────┴──────┴────────┘  `day` also defines
-                                                         the day-type buttons
+   Templates  ┌─────┬──────────┬──────┬──────┬────────┬─────────┐
+              │ day │ exercise │ sets │ reps │ weight │ default │
+              └─────┴──────────┴──────┴──────┴────────┴─────────┘
+              first session only; `day` also defines the day-type
+              buttons. F = "no" keeps a row on the plan without
+              putting it in the session
 
    Settings   ┌─────┬───────┬──────────────┐
               │ key │ value │ what it does │  key/value; C is for the human.
@@ -228,6 +231,10 @@ the next at 6.5 progress differently — the exercise is not treated as a unit.
     blank    →  treated as 8 (CFG.defaultRpe)
     weight   →  rounded to nearest 2.5 (CFG.roundTo)
     reps     →  floored at 1
+
+  Exercises flagged "no weight" take the same rep changes with the
+  weight column passed straight through, untouched. Without that,
+  an easy set of push-ups would prescribe 5 lb of push-up next week.
 ```
 
 Blank RPE resolving to 8 is a safety property, not a convenience: a forgotten
@@ -363,6 +370,19 @@ Two deliberate asymmetries:
   putting that on the save path would tax every tap to keep a view fresh that
   nobody is looking at mid-set. `refreshRecords()` also swallows its own
   errors: a failed rendering must never cost someone their logged set.
+
+---
+
+## Per-set history
+
+`snapshot()` returns the previous session's values as `{reps, weight, rpe}`
+per `exercise|set` key rather than a formatted string, because the browser
+renders each number under the field it belongs to. It used to be joined into
+one `Last time: 10 x 20 @8 · 8 x 30 @9` line at the top of the card, which
+made the reader match set to number by counting.
+
+`BLANK_RPE` travels here too — an unrecorded RPE last week shows as `was —`
+rather than `was 0`.
 
 ---
 

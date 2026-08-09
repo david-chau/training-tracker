@@ -1,10 +1,10 @@
-// Checks the personal-record maths in src/Code.gs.
+// Checks the pure rules in src/Code.gs — personal records, the progression
+// rule, and the Exercises/Templates flag helpers.
 //
 //     node test/records.test.js
 //
-// computeRecords is deliberately free of SpreadsheetApp, so it can be run
-// here against plain arrays. The Apps Script globals it does touch are
-// stubbed below.
+// These are deliberately free of SpreadsheetApp, so they can be run here
+// against plain arrays. The Apps Script globals they do touch are stubbed.
 
 const fs = require('fs');
 const path = require('path');
@@ -31,7 +31,7 @@ vm.runInContext(
 
 // `function` declarations land on the sandbox global but `const` ones do
 // not, so COL has to be read from inside the context.
-const { computeRecords, recordRows, epley, better } = sandbox;
+const { computeRecords, recordRows, epley, better, progress, isYes, isNo } = sandbox;
 const COL = vm.runInContext('COL', sandbox);
 
 // Arrays built inside the vm have that realm's prototype, which
@@ -203,6 +203,65 @@ test('better() is the single tie-break rule', () => {
   assert.strictEqual(better({ reps: 1, weight: 101 }, { reps: 10, weight: 100 }), true);
   assert.strictEqual(better({ reps: 6, weight: 100 }, { reps: 5, weight: 100 }), true);
   assert.strictEqual(better({ reps: 5, weight: 100 }, { reps: 5, weight: 100 }), false);
+});
+
+// ---------- the progression rule ----------
+
+const done = (reps, weight, rpe) => {
+  const r = new Array(9).fill('');
+  r[COL.reps] = reps; r[COL.weight] = weight; r[COL.rpe] = rpe;
+  return r;
+};
+
+test('an easy set earns reps and weight', () => {
+  const next = progress(done(8, 100, 6), false);
+  assert.strictEqual(next.reps, 10);
+  assert.strictEqual(next.weight, 105);
+  assert.strictEqual(next.note, 'was easy');
+});
+
+test('a hard set backs the weight off and rounds to 2.5', () => {
+  const next = progress(done(8, 100, 10), false);
+  assert.strictEqual(next.reps, 6);
+  assert.strictEqual(next.weight, 95);
+});
+
+test('an unweighted exercise never gains load, only reps', () => {
+  const easy = progress(done(20, 0, 6), true);
+  assert.strictEqual(easy.reps, 22);
+  assert.strictEqual(easy.weight, 0, 'a push-up must not become a 5 lb push-up');
+  assert.strictEqual(easy.note, 'was easy');
+
+  const hard = progress(done(20, 0, 10), true);
+  assert.strictEqual(hard.reps, 18);
+  assert.strictEqual(hard.weight, 0, 'nor may 5% come off nothing');
+});
+
+test('reps never fall below one', () => {
+  assert.strictEqual(progress(done(1, 50, 10), false).reps, 1);
+  assert.strictEqual(progress(done(1, 0, 10), true).reps, 1);
+});
+
+test('a blank RPE is treated as 8 — reps up, weight held', () => {
+  const next = progress(done(8, 100, ''), false);
+  assert.strictEqual(next.reps, 10);
+  assert.strictEqual(next.weight, 100);
+  assert.strictEqual(next.note, '');
+});
+
+// ---------- the sheet flag columns ----------
+
+test('the no-weight and default flags read the spellings people type', () => {
+  ['yes', 'Yes', 'Y', 'TRUE', '1', 'x'].forEach(v =>
+    assert.strictEqual(isYes(v), true, v));
+  ['', '  ', 'no', 'maybe', null, undefined].forEach(v =>
+    assert.strictEqual(isYes(v), false, String(v)));
+
+  ['no', 'No', 'N', 'false', '0', 'off', 'skip', 'optional'].forEach(v =>
+    assert.strictEqual(isNo(v), true, v));
+  // Blank means "include it" — the common case must not need filling in.
+  ['', '  ', 'yes', null, undefined].forEach(v =>
+    assert.strictEqual(isNo(v), false, String(v)));
 });
 
 console.log('\n' + passed + ' passed');

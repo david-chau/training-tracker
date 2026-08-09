@@ -66,6 +66,11 @@ Edit the `Templates` tab now if the first session should look different. It is
 read only for the very first session of each day type — after that the app
 works from history and stops looking at it.
 
+Column **F**, `default`, decides whether a row is actually put into that first
+session. Leave it blank for yes. Put `no` against an exercise you want on the
+plan as a reminder without it appearing in the form every time — the leg press
+you sometimes do, not the one you always do.
+
 The day names in that tab are what become the buttons in the app. The template
 ships with Push / Pull / Legs, but Upper / Lower, Full body, A / B or anything
 else works — put the names you want in the `day` column. A **Custom** button

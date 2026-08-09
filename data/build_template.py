@@ -27,12 +27,15 @@ LOG = [
      "Auto note", "Notes"],
 ]
 
-# name | muscle group | day it usually belongs to | optional image URL
+# name | group | day it belongs to | image URL | carries no weight
 #
 # Column D is left blank on purpose: an image URL has to be one the person
 # setting up is allowed to use, so there is nothing safe to ship here.
+#
+# Column E marks the exercises with no external load — push-ups, planks, the
+# rower. The app hides their weight field and never tries to add plates.
 EXERCISES = [
-    ["exercise", "group", "pattern", "image"],
+    ["exercise", "group", "pattern", "image", "no weight"],
     # Placeholder
     ['[Other]', 'Placeholder', 'Any'],
     # Chest
@@ -56,13 +59,13 @@ EXERCISES = [
     ['Incline Dumbbell Fly', 'Chest', 'Push'],
     ['Pec Deck', 'Chest', 'Push'],
     ['Svend Press', 'Chest', 'Push'],
-    ['Push-Up', 'Chest', 'Push'],
-    ['Incline Push-Up', 'Chest', 'Push'],
-    ['Decline Push-Up', 'Chest', 'Push'],
-    ['Diamond Push-Up', 'Chest', 'Push'],
-    ['Deficit Push-Up', 'Chest', 'Push'],
-    ['Chest Dip', 'Chest', 'Push'],
-    ['Ring Dip', 'Chest', 'Push'],
+    ['Push-Up', 'Chest', 'Push', "", "yes"],
+    ['Incline Push-Up', 'Chest', 'Push', "", "yes"],
+    ['Decline Push-Up', 'Chest', 'Push', "", "yes"],
+    ['Diamond Push-Up', 'Chest', 'Push', "", "yes"],
+    ['Deficit Push-Up', 'Chest', 'Push', "", "yes"],
+    ['Chest Dip', 'Chest', 'Push', "", "yes"],
+    ['Ring Dip', 'Chest', 'Push', "", "yes"],
     # Shoulders
     ['Overhead Barbell Press', 'Shoulders', 'Push'],
     ['Seated Barbell Shoulder Press', 'Shoulders', 'Push'],
@@ -99,7 +102,7 @@ EXERCISES = [
     ['JM Press', 'Triceps', 'Push'],
     ['Tate Press', 'Triceps', 'Push'],
     ['Triceps Kickback', 'Triceps', 'Push'],
-    ['Bench Dip', 'Triceps', 'Push'],
+    ['Bench Dip', 'Triceps', 'Push', "", "yes"],
     ['Machine Triceps Extension', 'Triceps', 'Push'],
     # Back
     ['Deadlift', 'Back', 'Pull'],
@@ -120,7 +123,7 @@ EXERCISES = [
     ['Wide-Grip Seated Row', 'Back', 'Pull'],
     ['Single-Arm Cable Row', 'Back', 'Pull'],
     ['Machine Row', 'Back', 'Pull'],
-    ['Inverted Row', 'Back', 'Pull'],
+    ['Inverted Row', 'Back', 'Pull', "", "yes"],
     # Lats
     ['Lat Pulldown', 'Lats', 'Pull'],
     ['Wide-Grip Lat Pulldown', 'Lats', 'Pull'],
@@ -128,11 +131,11 @@ EXERCISES = [
     ['Reverse-Grip Lat Pulldown', 'Lats', 'Pull'],
     ['Single-Arm Lat Pulldown', 'Lats', 'Pull'],
     ['Straight-Arm Pulldown', 'Lats', 'Pull'],
-    ['Pull-Up', 'Lats', 'Pull'],
+    ['Pull-Up', 'Lats', 'Pull', "", "yes"],
     ['Weighted Pull-Up', 'Lats', 'Pull'],
-    ['Chin-Up', 'Lats', 'Pull'],
+    ['Chin-Up', 'Lats', 'Pull', "", "yes"],
     ['Weighted Chin-Up', 'Lats', 'Pull'],
-    ['Neutral-Grip Pull-Up', 'Lats', 'Pull'],
+    ['Neutral-Grip Pull-Up', 'Lats', 'Pull', "", "yes"],
     ['Assisted Pull-Up', 'Lats', 'Pull'],
     ['Machine Pullover', 'Lats', 'Pull'],
     ['Dumbbell Pullover', 'Lats', 'Pull'],
@@ -199,8 +202,8 @@ EXERCISES = [
     ['Step-Up', 'Quads', 'Legs'],
     ['Leg Extension', 'Quads', 'Legs'],
     ['Single-Leg Extension', 'Quads', 'Legs'],
-    ['Sissy Squat', 'Quads', 'Legs'],
-    ['Wall Sit', 'Quads', 'Legs'],
+    ['Sissy Squat', 'Quads', 'Legs', "", "yes"],
+    ['Wall Sit', 'Quads', 'Legs', "", "yes"],
     # Hamstrings
     ['Romanian Deadlift', 'Hamstrings', 'Legs'],
     ['Dumbbell Romanian Deadlift', 'Hamstrings', 'Legs'],
@@ -209,7 +212,7 @@ EXERCISES = [
     ['Lying Leg Curl', 'Hamstrings', 'Legs'],
     ['Seated Leg Curl', 'Hamstrings', 'Legs'],
     ['Standing Leg Curl', 'Hamstrings', 'Legs'],
-    ['Nordic Curl', 'Hamstrings', 'Legs'],
+    ['Nordic Curl', 'Hamstrings', 'Legs', "", "yes"],
     ['Glute-Ham Raise', 'Hamstrings', 'Legs'],
     ['Good Morning', 'Hamstrings', 'Legs'],
     ['Back Extension', 'Hamstrings', 'Legs'],
@@ -226,14 +229,14 @@ EXERCISES = [
     ['Frog Pump', 'Glutes', 'Legs'],
     # Adductors
     ['Adductor Machine', 'Adductors', 'Legs'],
-    ['Copenhagen Plank', 'Adductors', 'Legs'],
+    ['Copenhagen Plank', 'Adductors', 'Legs', "", "yes"],
     ['Sumo Squat', 'Adductors', 'Legs'],
-    ['Cossack Squat', 'Adductors', 'Legs'],
+    ['Cossack Squat', 'Adductors', 'Legs', "", "yes"],
     # Abductors
     ['Abductor Machine', 'Abductors', 'Legs'],
     ['Cable Hip Abduction', 'Abductors', 'Legs'],
-    ['Banded Lateral Walk', 'Abductors', 'Legs'],
-    ['Clamshell', 'Abductors', 'Legs'],
+    ['Banded Lateral Walk', 'Abductors', 'Legs', "", "yes"],
+    ['Clamshell', 'Abductors', 'Legs', "", "yes"],
     # Calves
     ['Standing Calf Raise', 'Calves', 'Legs'],
     ['Seated Calf Raise', 'Calves', 'Legs'],
@@ -243,31 +246,31 @@ EXERCISES = [
     ['Donkey Calf Raise', 'Calves', 'Legs'],
     ['Tibialis Raise', 'Calves', 'Legs'],
     # Core
-    ['Plank', 'Core', 'Core'],
-    ['Side Plank', 'Core', 'Core'],
-    ['RKC Plank', 'Core', 'Core'],
-    ['Hollow Body Hold', 'Core', 'Core'],
-    ['Dead Bug', 'Core', 'Core'],
-    ['Bird Dog', 'Core', 'Core'],
-    ['Hanging Leg Raise', 'Core', 'Core'],
-    ['Hanging Knee Raise', 'Core', 'Core'],
-    ["Captain's Chair Leg Raise", 'Core', 'Core'],
-    ['Lying Leg Raise', 'Core', 'Core'],
-    ['Toes-to-Bar', 'Core', 'Core'],
-    ['Dragon Flag', 'Core', 'Core'],
-    ['V-Up', 'Core', 'Core'],
-    ['Sit-Up', 'Core', 'Core'],
-    ['Decline Sit-Up', 'Core', 'Core'],
-    ['Crunch', 'Core', 'Core'],
-    ['Bicycle Crunch', 'Core', 'Core'],
-    ['Reverse Crunch', 'Core', 'Core'],
+    ['Plank', 'Core', 'Core', "", "yes"],
+    ['Side Plank', 'Core', 'Core', "", "yes"],
+    ['RKC Plank', 'Core', 'Core', "", "yes"],
+    ['Hollow Body Hold', 'Core', 'Core', "", "yes"],
+    ['Dead Bug', 'Core', 'Core', "", "yes"],
+    ['Bird Dog', 'Core', 'Core', "", "yes"],
+    ['Hanging Leg Raise', 'Core', 'Core', "", "yes"],
+    ['Hanging Knee Raise', 'Core', 'Core', "", "yes"],
+    ["Captain's Chair Leg Raise", 'Core', 'Core', "", "yes"],
+    ['Lying Leg Raise', 'Core', 'Core', "", "yes"],
+    ['Toes-to-Bar', 'Core', 'Core', "", "yes"],
+    ['Dragon Flag', 'Core', 'Core', "", "yes"],
+    ['V-Up', 'Core', 'Core', "", "yes"],
+    ['Sit-Up', 'Core', 'Core', "", "yes"],
+    ['Decline Sit-Up', 'Core', 'Core', "", "yes"],
+    ['Crunch', 'Core', 'Core', "", "yes"],
+    ['Bicycle Crunch', 'Core', 'Core', "", "yes"],
+    ['Reverse Crunch', 'Core', 'Core', "", "yes"],
     ['Cable Crunch', 'Core', 'Core'],
     ['Ab Wheel Rollout', 'Core', 'Core'],
     ['Russian Twist', 'Core', 'Core'],
     ['Pallof Press', 'Core', 'Core'],
     ['Landmine Twist', 'Core', 'Core'],
     ['Woodchopper', 'Core', 'Core'],
-    ['Mountain Climber', 'Core', 'Core'],
+    ['Mountain Climber', 'Core', 'Core', "", "yes"],
     ['Farmer Carry', 'Core', 'Core'],
     ['Suitcase Carry', 'Core', 'Core'],
     # Neck
@@ -289,32 +292,35 @@ EXERCISES = [
     ['Kettlebell Clean', 'Full body', 'Full body'],
     ['Kettlebell Snatch', 'Full body', 'Full body'],
     ['Turkish Get-Up', 'Full body', 'Full body'],
-    ['Burpee', 'Full body', 'Full body'],
+    ['Burpee', 'Full body', 'Full body', "", "yes"],
     ['Man Maker', 'Full body', 'Full body'],
     ['Sled Push', 'Full body', 'Full body'],
     ['Sled Pull', 'Full body', 'Full body'],
-    ['Battle Ropes', 'Full body', 'Full body'],
-    ['Box Jump', 'Full body', 'Full body'],
-    ['Broad Jump', 'Full body', 'Full body'],
+    ['Battle Ropes', 'Full body', 'Full body', "", "yes"],
+    ['Box Jump', 'Full body', 'Full body', "", "yes"],
+    ['Broad Jump', 'Full body', 'Full body', "", "yes"],
     ['Medicine Ball Slam', 'Full body', 'Full body'],
     ['Medicine Ball Chest Pass', 'Full body', 'Full body'],
     # Conditioning
-    ['Rowing Machine', 'Conditioning', 'Conditioning'],
-    ['Assault Bike', 'Conditioning', 'Conditioning'],
-    ['Ski Erg', 'Conditioning', 'Conditioning'],
-    ['Treadmill Run', 'Conditioning', 'Conditioning'],
-    ['Incline Treadmill Walk', 'Conditioning', 'Conditioning'],
-    ['Stationary Bike', 'Conditioning', 'Conditioning'],
-    ['Stair Climber', 'Conditioning', 'Conditioning'],
-    ['Elliptical', 'Conditioning', 'Conditioning'],
-    ['Jump Rope', 'Conditioning', 'Conditioning'],
-    ['Sprint Interval', 'Conditioning', 'Conditioning'],
+    ['Rowing Machine', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Assault Bike', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Ski Erg', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Treadmill Run', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Incline Treadmill Walk', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Stationary Bike', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Stair Climber', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Elliptical', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Jump Rope', 'Conditioning', 'Conditioning', "", "yes"],
+    ['Sprint Interval', 'Conditioning', 'Conditioning', "", "yes"],
 ]
 
 # Weights seed at 0 on purpose — the real number gets typed in once, during
 # the first session of that day.
+#
+# Column F ("default") is blank, which means yes. Put "no" against a row to
+# keep it on the plan without it appearing in the session automatically.
 TEMPLATES = [
-    ["day", "exercise", "sets", "reps", "weight"],
+    ["day", "exercise", "sets", "reps", "weight", "default"],
     ["Push", "Barbell Bench Press", 4, 8, 0],
     ["Push", "Incline Dumbbell Press", 3, 10, 0],
     ["Push", "Seated Dumbbell Shoulder Press", 3, 10, 0],
@@ -476,6 +482,11 @@ def check():
         assert ex.count("<row ") == len(EXERCISES)
         assert ">image</t>" in ex, "Exercises needs the image column, D"
         assert ">[Other]</t>" in ex, "the [Other] placeholder must ship"
+        assert ">no weight</t>" in ex, "Exercises needs the no-weight column, E"
+
+        flagged = [r[0] for r in EXERCISES[1:] if len(r) > 4 and r[4] == "yes"]
+        assert "Push-Up" in flagged and "Plank" in flagged, "bodyweight flags lost"
+        assert "Barbell Bench Press" not in flagged, "a loaded lift got flagged"
 
         # Duplicate names would show twice in autocomplete and split a
         # exercise's history in two.
@@ -486,6 +497,7 @@ def check():
         tpl = z.read("xl/worksheets/sheet3.xml").decode()
         assert tpl.count("<row ") == len(TEMPLATES)
         assert "<v>4</v>" in tpl, "set counts must be numbers, not text"
+        assert ">default</t>" in tpl, "Templates needs the default column, F"
 
         # Settings keys must match what Code.gs looks for, or the defaults
         # silently win and the tab looks decorative.

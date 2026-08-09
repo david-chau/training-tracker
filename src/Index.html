@@ -49,12 +49,18 @@
   .cnt span { min-width:46px; text-align:center; font-size:13px; color:var(--muted); }
   .set { display:grid; grid-template-columns:18px 1fr 1fr 1fr; gap:6px;
          align-items:end; margin-bottom:14px; }
-  .n { font-size:14px; color:var(--muted); padding-bottom:14px; }
+  .set.bw { grid-template-columns:18px 1fr 1fr; }
+  .n { font-size:14px; color:var(--muted); padding-bottom:28px; }
   .fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
+  /* Last week's value for this field, directly under the field. Always
+     rendered, even when empty, so the rows stay aligned. */
+  .was { font-size:11px; color:var(--muted); text-align:center;
+         margin-top:4px; min-height:14px; font-variant-numeric:tabular-nums; }
   @media (max-width: 430px) {
     .step button { flex:0 0 26px; width:26px; font-size:17px; }
     .step input { font-size:17px; min-width:34px; }
     .set { grid-template-columns:14px 1fr 1fr 1fr; gap:5px; }
+    .set.bw { grid-template-columns:14px 1fr 1fr; }
   }
   .step { display:flex; align-items:center; border:1px solid var(--line);
           border-radius:10px; overflow:hidden; background:#fff; }
@@ -153,6 +159,7 @@ google.script.run.withSuccessHandler(function (b) {
   S.date = b.today;
   document.getElementById('date').value = b.today;
   S.images = b.images || {};
+  S.noWeight = b.noWeight || {};
   if (b.name) document.getElementById('who').textContent = b.name;
   var dl = document.getElementById('exlist');
   (b.exercises || []).forEach(function (name) {
@@ -380,8 +387,6 @@ function card(name, sets) {
     tag.textContent = sets.length + ' sets';
     head.appendChild(tag);
     el.appendChild(head);
-    var refRo = sets.map(function (x) { return x.last; }).filter(Boolean).join(' · ');
-    if (refRo) el.insertAdjacentHTML('beforeend', '<div class="ref">Last time: ' + refRo + '</div>');
     bestLine(el, name);
     sets.forEach(function (x) { el.appendChild(setRow(x)); });
     if (sets[0] && sets[0].note) {
@@ -402,8 +407,6 @@ function card(name, sets) {
   head.appendChild(cnt);
   el.appendChild(head);
 
-  var ref = sets.map(function (s) { return s.last; }).filter(Boolean).join(' · ');
-  if (ref) el.insertAdjacentHTML('beforeend', '<div class="ref">Last time: ' + ref + '</div>');
   bestLine(el, name);
 
   sets.forEach(function (s) { el.appendChild(setRow(s)); });
@@ -509,18 +512,31 @@ function resize(exercise, count, label) {
 // weight is typed rather than on the next reload.
 function isPr(name, reps, weight) {
   var rec = S.records && S.records[name];
-  if (!rec || !rec.heaviest || !(weight > 0) || !(reps > 0)) return false;
-  if (weight !== rec.heaviest.weight) return weight > rec.heaviest.weight;
-  return reps > rec.heaviest.reps;
+  if (!rec || !(reps > 0)) return false;
+
+  var loaded = weight > 0 || (rec.heaviest && rec.heaviest.weight > 0);
+  if (loaded) {
+    if (!rec.heaviest) return false;
+    if (weight !== rec.heaviest.weight) return weight > rec.heaviest.weight;
+    return reps > rec.heaviest.reps;
+  }
+  return rec.reps ? reps > rec.reps.reps : false;   // unweighted: reps are the record
 }
 
 function bestLine(el, name) {
   var rec = S.records && S.records[name];
-  if (!rec || !rec.heaviest) return;
-  var h = rec.heaviest;
-  var txt = 'Best: <b>' + h.reps + ' x ' + h.weight + '</b>' +
-            (rec.est1rm ? ' · est 1RM ' + rec.est1rm : '') +
-            ' · ' + h.date;
+  if (!rec) return;
+
+  var txt;
+  if (rec.heaviest && rec.heaviest.weight > 0) {
+    var h = rec.heaviest;
+    txt = 'Best: <b>' + h.reps + ' x ' + h.weight + '</b>' +
+          (rec.est1rm ? ' · est 1RM ' + rec.est1rm : '') + ' · ' + h.date;
+  } else if (rec.reps) {
+    txt = 'Best: <b>' + rec.reps.reps + ' reps</b> · ' + rec.reps.date;
+  } else {
+    return;
+  }
   el.insertAdjacentHTML('beforeend', '<div class="best">' + txt + '</div>');
 }
 
@@ -543,10 +559,26 @@ function setRow(s) {
   row.appendChild(n);
   s.onChange = function () { markPr(row, s); };
   row.appendChild(stepper(s, 'reps', 'Reps', 1, 0));
-  row.appendChild(stepper(s, 'weight', 'Weight (LB)', 2.5, 1));
+  if (S.noWeight && S.noWeight[s.exercise]) {
+    row.classList.add('bw');
+  } else {
+    row.appendChild(stepper(s, 'weight', 'Weight (LB)', 2.5, 1));
+  }
   row.appendChild(stepper(s, 'rpe', 'RPE', 0.5, 1));
   markPr(row, s);
   return row;
+}
+
+// "was 12" under the field it refers to, so the comparison sits next to the
+// number being changed rather than summarised at the top of the card.
+function wasLine(s, key, dp) {
+  var el = document.createElement('div');
+  el.className = 'was';
+  var prev = s.last && s.last[key];
+  if (prev === undefined || prev === null) return el;
+  if (key === 'rpe' && prev === BLANK) { el.textContent = 'was —'; return el; }
+  el.textContent = 'was ' + Number(prev).toFixed(dp).replace(/\.0$/, '');
+  return el;
 }
 
 function stepper(s, key, label, step, dp) {
@@ -561,6 +593,7 @@ function stepper(s, key, label, step, dp) {
     ro.textContent = (key === 'rpe' && v === BLANK)
       ? '—' : Number(v).toFixed(dp).replace(/\.0$/, '');
     wrap.appendChild(ro);
+    wrap.appendChild(wasLine(s, key, dp));
     return wrap;
   }
 
@@ -627,6 +660,7 @@ function stepper(s, key, label, step, dp) {
   plus.onclick = function () { bump(step); };
   box.appendChild(minus); box.appendChild(val); box.appendChild(plus);
   wrap.appendChild(box);
+  wrap.appendChild(wasLine(s, key, dp));
   show();
   return wrap;
 }

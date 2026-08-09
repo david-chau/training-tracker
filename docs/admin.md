@@ -33,12 +33,13 @@ read it as "whoever holds the admin link".
 │                                              │
 │  ┌────────────────────────────────────────┐  │
 │  │ Barbell Bench Press        [− 4 sets +]│  │  ← one card
-│  │ Last time: 10 x 20 @8 · 8 x 30 @9      │  │    per exercise
 │  │ Best: 8 x 30 · est 1RM 38 · 2026-07-19 │  │  ← personal record
 │  │                                        │  │
 │  │    Reps    Weight (LB)    RPE          │  │
 │  │ 1 [− 12 +]  [− 25 +]    [− 8 +]        │  │
+│  │    was 10    was 20      was 8         │  │  ← last time, per field
 │  │ 2 [− 10 +]  [− 30 +]    [−   +]        │  │
+│  │    was 8     was 30      was 9         │  │
 │  │                                        │  │
 │  │ Notes …                     [Save note]│  │
 │  └────────────────────────────────────────┘  │
@@ -126,6 +127,40 @@ Each card is one exercise. Each numbered row is one set, with three fields:
 Use **−** and **+**. You can also tap the number and type into it — the field
 selects itself so you overwrite rather than edit, and it tidies the value up
 when you tap away.
+
+Under each field is **what you did for that same set last time** — `was 10`
+under the reps, `was 20` under the weight, `was 8` under the RPE. The
+comparison sits against the number you are about to change rather than being
+summarised at the top of the card, so there is nothing to hold in your head
+while you decide.
+
+A blank means there was no matching set last time — a set you have added
+since, or the first session of that day.
+
+### Exercises with no weight
+
+Push-ups, planks, pull-ups, the rower: there is nothing to load, so the weight
+field is hidden entirely and the card shows just reps and RPE.
+
+```
+        Reps       RPE                 instead of
+     1 [− 20 +]  [− 7 +]               Reps · Weight · RPE
+        was 18     was 8
+```
+
+The progression rule adapts too — an easy set earns **reps** rather than
+weight, so a push-up can never quietly become a 5 lb push-up. Records for
+these track most reps rather than heaviest.
+
+Which exercises count is column **E** of the `Exercises` tab, headed
+`no weight`. Put `yes` against a row to hide its weight field; leave it blank
+otherwise. The template ships with 52 already marked — every push-up and plank
+variation, pull-ups and chin-ups, and all the cardio machines.
+
+{: .note }
+Doing weighted pull-ups or dips? Clear the `yes` on that row and the weight
+field comes back. `Weighted Pull-Up` and `Weighted Chin-Up` already ship
+unflagged, so both options are there.
 
 Every change saves on its own about half a second later. There is no save
 button for the numbers.
