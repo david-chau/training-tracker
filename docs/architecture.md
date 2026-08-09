@@ -16,9 +16,16 @@ someone about to change the code.
 
 ## Ownership model: bring your own Google Workspace
 
-This repository is a **starting point, not a hosted service**. It does not
-operate a shared web app, database, account system, or central copy of anyone's
-training data.
+This repository is a **starting point, not a hosted service**. The tracker is
+free to copy and run: there is no subscription, per-user charge, or separate
+hosting bill from this project. It does not operate a shared web app, database,
+account system, or central copy of anyone's training data.
+
+{: .note }
+**Free does not mean a new Google account is supplied.** The implementation
+runs inside the Google account or Workspace you choose. Any cost for that
+account, its storage, or its Workspace plan remains between you and Google;
+the tracker itself adds no fee.
 
 When you implement the tracker, you make a copy of the spreadsheet template,
 paste in the code, and publish the Apps Script web app from **your own Google

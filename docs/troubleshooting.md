@@ -19,7 +19,7 @@ One of three things:
 2. **The code was not saved.** *Extensions → Apps Script*, hit save, reload.
 3. **The spreadsheet is in Office mode.** If the title bar says `.XLSX`,
    Apps Script cannot attach. Redo
-   [step 1](setup.html#step-1--import-the-spreadsheet-template) via
+   [step 1](setup.html#1-import-the-spreadsheet) via
    *File → Import → Replace spreadsheet*.
 
 <details markdown="block">
@@ -49,7 +49,7 @@ The link points at a deployment that is not live.
   **Training → Set web app link** and paste the current one from
   *Deploy → Manage deployments*.
 - **Nothing is deployed.** Saving is not deploying — see
-  [step 3](setup.html#step-3--publish-the-web-app).
+  [step 3](setup.html#3-publish-the-web-app).
 
 The app cannot work this URL out reliably for itself, which is why it asks you
 to paste it once.
