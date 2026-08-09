@@ -17,29 +17,31 @@ the sheet and the records follow.
 
 ## In the app, while you train
 
-Each exercise card carries a line under *Last time*:
+Each exercise card carries one strip of records under its name:
 
 ```
-  Barbell Bench Press                        4 sets
-  Last time: 10 x 20 @8 · 8 x 30 @9
-  Best: 8 x 100 · est 1RM 127 · 2026-07-19
+  Barbell Bench Press                                   [− 4 sets +]
+  Best 8 × 100 lb  ·  est 1RM 127  ·  on 2026-07-19
 ```
 
-That is the best set ever recorded for that exercise, and — if there is enough
-to work from — an estimated one-rep max.
+That is the best set ever recorded for that exercise and, if there is enough
+to work from, an estimated one-rep max.
 
-When a set you are entering beats it, the row highlights and a **★** appears
-next to the set number:
+When a set you are entering beats it, that set's boxes tint amber and the
+strip gains a tag:
 
 ```
+  Barbell Bench Press                                   [− 4 sets +]
+  Best 8 × 100 lb  ·  est 1RM 127  ·  on 2026-07-19  ·  ★ personal best today
+
      Reps    Weight (LB)    RPE
  1     8         100          8
- 2 ★   8         105          9      ← heavier than anything before today
+ 2     8         105          9      ← boxes tinted: heavier than ever before
 ```
 
-The star updates as you tap, so you can see a record fall as it happens. It
-is judged against *everything except the session you are in*, so today's
-earlier sets do not become the bar for today's later ones.
+Both update as you tap, so you can see a record fall as it happens. It is
+judged against *everything except the session you are in*, so today's earlier
+sets do not become the bar for today's later ones.
 
 {: .note }
 For a loaded lift the star is a **weight** record. For an exercise marked

@@ -14,10 +14,41 @@ someone about to change the code.
 
 ---
 
+## Ownership model: bring your own Google Workspace
+
+This repository is a **starting point, not a hosted service**. It does not
+operate a shared web app, database, account system, or central copy of anyone's
+training data.
+
+When you implement the tracker, you make a copy of the spreadsheet template,
+paste in the code, and publish the Apps Script web app from **your own Google
+account or Workspace**. That account owns the spreadsheet, the bound script,
+the deployment, and the sharing decisions. The project supplies templates and
+source code that you can change to fit your own training, clients, terminology,
+and workflow.
+
+```
+  THIS REPOSITORY                         YOUR GOOGLE WORKSPACE
+  ───────────────                         ─────────────────────
+  template + source code  ── copy ──▶     Sheet + training data
+                                             bound Apps Script
+                                             web-app deployment
+                                             admin/viewer links
+                                             your customisations
+```
+
+There is deliberately nothing to sign up for, no common database to migrate
+from, and no platform operator with access to all logs. Each implementation is
+independent; keeping it current or changing it is the responsibility of the
+person or organisation that owns that copy.
+
+---
+
 ## Where it lives in Google Workspace
 
-There is no server, no hosting bill and no deploy pipeline. Every moving part
-is something Google already runs for you:
+There is no project-hosted server, common database, or deployment pipeline to
+join. Every moving part in your implementation is something Google already
+runs for you:
 
 ```
   GOOGLE DRIVE (the admin's Google account)
@@ -455,10 +486,11 @@ independent. There is no multi-tenancy anywhere in the design.
    2 links       2 links       2 links           nothing to migrate
 ```
 
-The cost of that is real: a code change means re-pasting into every project.
-The benefit is that one person's data cannot leak into another's, there is no
-database to administer, and deleting someone is deleting a file. At
-twenty-five logs the trade is worth it. At two hundred it would not be.
+The cost of that is real: a code change means updating each project separately.
+The benefit is that each owner retains control of their own copy, one person's
+data cannot leak into another's, there is no database to administer, and
+deleting someone is deleting a file. At twenty-five logs the trade is worth
+it. At two hundred it would not be.
 
 Quotas are not a concern at this size — Apps Script allows thousands of
 executions a day per account, and a session is a few dozen calls.
@@ -469,9 +501,11 @@ executions a day per account, and a session is a few dozen calls.
 
 The original brief was a personal trainer with roughly twenty-five people,
 which is the hardest version of the problem — the solo case falls out of it
-for free. Analytics were the first priority. Once the real workflow turned out
-to be "look at last week, do slightly more", the case for a database
-evaporated, and that reframing decided everything below.
+for free. The implementation also had to leave control with the person using
+it: their data in their Workspace, and a copy they can tailor without relying
+on a product operator. Analytics were the first priority. Once the real
+workflow turned out to be "look at last week, do slightly more", the case for
+a database evaporated, and that reframing decided everything below.
 
 | Option | Why not |
 |---|---|

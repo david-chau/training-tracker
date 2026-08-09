@@ -17,13 +17,24 @@
          border-bottom:1px solid var(--line); }
   h1 { font-size:20px; font-weight:600; margin:0 0 2px;
        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  h1 a { color:inherit; text-decoration:none; border-bottom:1px dotted var(--line); }
+  h1 a:hover { border-bottom-color:var(--muted); }
   .kicker { font-size:12px; color:var(--muted); letter-spacing:0.06em;
             text-transform:uppercase; margin:0; }
   .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .day { flex:1; min-width:84px; padding:13px 8px; border:1px solid var(--line);
          background:#fff; border-radius:10px; font-size:17px; cursor:pointer; }
   .day.on { background:var(--ink); color:#fff; border-color:var(--ink); }
-  .datebar { display:flex; gap:8px; align-items:center; margin-bottom:16px; }
+  .datebar { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  /* Two different kinds of stepping, so they get two different controls:
+     the arrows beside the date move one calendar day, these jump to a day
+     that actually has a session. One pair of arrows meaning both was the
+     confusing part. */
+  .sessnav { display:flex; gap:8px; margin-bottom:14px; }
+  .sess { flex:1; padding:9px 8px; border:1px solid var(--line); background:#fff;
+          border-radius:9px; font-size:13px; font-family:inherit;
+          color:var(--muted); cursor:pointer; }
+  .sess:disabled { opacity:0.4; cursor:default; }
   .datebar input { flex:1; padding:12px; font-size:16px; border:1px solid var(--line);
                    border-radius:10px; background:#fff; font-family:inherit; }
   .nav { width:44px; height:46px; border:1px solid var(--line); background:#fff;
@@ -38,10 +49,17 @@
   .demo { display:block; width:100%; max-width:420px; margin:10px 0 4px;
           border:1px solid var(--line); border-radius:10px; background:#f4f3f0; }
   .ref { font-size:14px; color:var(--muted); margin:2px 0 4px; }
-  .best { font-size:13px; color:var(--muted); margin:0 0 12px; }
-  .best b { color:var(--ink); font-weight:600; }
-  .star { color:#b8860b; font-size:13px; margin-left:4px; }
+  /* One strip of facts about the exercise, under its name. Everything that
+     used to be scattered — the best set, the estimate, the PR marker — reads
+     left to right here instead. */
+  .meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px;
+          font-size:13px; color:var(--muted); margin:6px 0 12px; }
+  .meta b { color:var(--ink); font-weight:600; }
+  .meta .sep { color:var(--line); }
+  .meta .prtag { color:#8a6100; background:#fff5d6; border:1px solid #e8d9a8;
+                 border-radius:999px; padding:1px 9px; font-size:12px; }
   .pr .step { border-color:#e0c97a; background:#fffdf4; }
+  .pr .val { border-color:#e0c97a; background:#fffdf4; }
   .cnt { display:flex; align-items:center; border:1px solid var(--line);
          border-radius:8px; overflow:hidden; flex-shrink:0; }
   .cnt button { width:34px; height:34px; border:0; background:#f4f3f0; font-size:18px;
@@ -139,12 +157,16 @@
   <div class="kicker">Training log</div>
 </header>
 <div id="robanner"></div>
-<div class="days" id="days"></div>
 <div class="datebar">
-  <button class="nav" id="prev" title="Previous session">‹</button>
+  <button class="nav" id="dayback" title="Previous day">‹</button>
   <input type="date" id="date">
-  <button class="nav" id="next" title="Next session">›</button>
+  <button class="nav" id="dayfwd" title="Next day">›</button>
 </div>
+<div class="sessnav">
+  <button class="sess" id="prevsess">‹ Previous session</button>
+  <button class="sess" id="nextsess">Next session ›</button>
+</div>
+<div class="days" id="days"></div>
 <div class="tools" id="tools">
   <button class="danger" id="wipe">Delete this day</button>
 </div>
@@ -167,7 +189,18 @@ google.script.run.withSuccessHandler(function (b) {
   document.getElementById('date').value = b.today;
   S.images = b.images || {};
   S.noWeight = b.noWeight || {};
-  if (b.name) document.getElementById('who').textContent = b.name;
+  var who = document.getElementById('who');
+  if (b.name) who.textContent = b.name;
+  if (b.sheetUrl) {
+    var a = document.createElement('a');
+    a.href = b.sheetUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.title = 'Open the spreadsheet';
+    a.textContent = who.textContent;
+    who.textContent = '';
+    who.appendChild(a);
+  }
   var dl = document.getElementById('exlist');
   (b.exercises || []).forEach(function (name) {
     var o = document.createElement('option'); o.value = name; dl.appendChild(o);
@@ -206,17 +239,56 @@ document.getElementById('wipe').onclick = function () {
     .deleteSession(KEY, S.day, S.date);
 };
 
-document.getElementById('prev').onclick = function () { hop(1); };
-document.getElementById('next').onclick = function () { hop(-1); };
+document.getElementById('dayback').onclick = function () { shiftDay(-1); };
+document.getElementById('dayfwd').onclick = function () { shiftDay(1); };
+document.getElementById('prevsess').onclick = function () { hop(1); };
+document.getElementById('nextsess').onclick = function () { hop(-1); };
 
+// One calendar day, whether or not anything was logged on it.
+function shiftDay(n) {
+  var p = S.date.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  d.setDate(d.getDate() + n);
+  S.date = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
+  document.getElementById('date').value = S.date;
+  load(false);
+}
+
+function two(n) { return (n < 10 ? '0' : '') + n; }
+
+// Jump to a date that has a session of this day type. S.dates is newest
+// first, so dir = 1 goes back in time.
 function hop(dir) {
   if (!S.dates.length) return;
   var i = S.dates.indexOf(S.date);
-  var j = (i === -1 ? 0 : i + dir);
+  var j = (i === -1 ? nearest(dir) : i + dir);
   if (j < 0 || j >= S.dates.length) return;
   S.date = S.dates[j];
   document.getElementById('date').value = S.date;
   load(false);
+}
+
+// The current date has no session, so step to the closest one in that
+// direction. S.dates is newest first, so going back is the first older entry
+// and going forward is the *last* newer one.
+function nearest(dir) {
+  var found = -1;
+  for (var i = 0; i < S.dates.length; i++) {
+    if (dir > 0) {
+      if (S.dates[i] < S.date) return i;
+    } else if (S.dates[i] > S.date) {
+      found = i;
+    }
+  }
+  return found;
+}
+
+function markSessNav() {
+  var i = S.dates.indexOf(S.date);
+  var back = i === -1 ? nearest(1) !== -1 : i + 1 < S.dates.length;
+  var fwd = i === -1 ? nearest(-1) !== -1 : i - 1 >= 0;
+  document.getElementById('prevsess').disabled = !back;
+  document.getElementById('nextsess').disabled = !fwd;
 }
 
 function markDay() {
@@ -228,7 +300,9 @@ function markDay() {
 function load(create, source) {
   if (!S.day) return;
   document.getElementById('body').innerHTML = '<div class="msg">Loading…</div>';
-  google.script.run.withSuccessHandler(function (d) { S.dates = d; }).listDates(S.day);
+  google.script.run.withSuccessHandler(function (d) {
+    S.dates = d; markSessNav();
+  }).listDates(S.day);
   google.script.run
     .withSuccessHandler(render)
     .withFailureHandler(function (e) {
@@ -266,6 +340,7 @@ function render(res) {
 
   S.lastNotes = res.lastNotes || {};
   S.records = res.records || {};
+  PEND.watchers = {};          // the old elements are about to be discarded
   order.forEach(function (name) { body.appendChild(card(name, groups[name])); });
   if (CAN_EDIT) body.appendChild(addExerciseControl());
   flash(res.priorDate ? 'Comparing against ' + res.priorDate : 'First session', false);
@@ -332,17 +407,29 @@ function addExercisePanel() {
 
   var mini = document.createElement('div');
   mini.className = 'mini';
-  var fields = {};
-  [['sets', 'Sets', 3], ['reps', 'Reps', 10], ['weight', 'Weight', 0]].forEach(function (f) {
+  var fields = {}, wraps = {};
+  [['sets', 'Sets', 3], ['reps', 'Reps', 10], ['weight', 'Weight (LB)', 0]].forEach(function (f) {
     var wrap = document.createElement('div');
     wrap.innerHTML = '<label>' + f[1] + '</label>';
     var inp = document.createElement('input');
     inp.type = 'text'; inp.inputMode = 'decimal'; inp.value = f[2];
     inp.setAttribute('aria-label', f[1]);
     wrap.appendChild(inp); mini.appendChild(wrap);
-    fields[f[0]] = inp;
+    fields[f[0]] = inp; wraps[f[0]] = wrap;
   });
   p.appendChild(mini);
+
+  // Asking for the weight of a push-up is the same nonsense here as it was on
+  // the card, so the field goes as soon as the name is one that carries none.
+  function syncWeight() {
+    var none = S.noWeight && S.noWeight[name.value.trim()];
+    wraps.weight.style.display = none ? 'none' : '';
+    mini.style.gridTemplateColumns = none ? '1fr 1fr' : '1fr 1fr 1fr';
+    if (none) fields.weight.value = 0;
+  }
+  name.addEventListener('input', syncWeight);
+  name.addEventListener('change', syncWeight);
+  syncWeight();
 
   var row = document.createElement('div');
   row.style.display = 'flex'; row.style.gap = '8px';
@@ -431,8 +518,9 @@ function card(name, sets) {
     tag.textContent = sets.length + ' sets';
     head.appendChild(tag);
     el.appendChild(head);
-    bestLine(el, name);
+    var refreshRo = metaLine(el, name, sets);
     sets.forEach(function (x) { el.appendChild(setRow(x)); });
+    refreshRo();
     if (sets[0] && sets[0].note) {
       el.insertAdjacentHTML('beforeend', '<div class="rotext"></div>');
       el.lastChild.textContent = sets[0].note;
@@ -451,9 +539,16 @@ function card(name, sets) {
   head.appendChild(cnt);
   el.appendChild(head);
 
-  bestLine(el, name);
+  var refresh = metaLine(el, name, sets);
 
-  sets.forEach(function (s) { el.appendChild(setRow(s)); });
+  sets.forEach(function (s) {
+    var row = setRow(s);
+    var own = s.onChange;
+    s.onChange = function () { if (own) own(); refresh(); };
+    el.appendChild(row);
+  });
+  refresh();
+
   el.appendChild(noteField(name, sets));
   return el;
 }
@@ -494,7 +589,8 @@ function noteField(name, sets) {
     if (!dirty()) return;
     saved = box.value;
     sets.forEach(function (s) { s.note = saved; });
-    queueNote(name, saved);
+    var key = queueNote(name, saved);
+    watch(key, function (result) { state.textContent = result; });
     btn.classList.remove('dirty');
     state.textContent = 'Queued';
     if (!silent) flash('Note queued', true);
@@ -567,33 +663,55 @@ function isPr(name, reps, weight) {
   return rec.reps ? reps > rec.reps.reps : false;   // unweighted: reps are the record
 }
 
-function bestLine(el, name) {
+// The record strip. Returns a function that re-checks whether anything on
+// the card is currently a personal best, so the tag can appear as a value is
+// typed rather than on the next reload.
+function metaLine(el, name, sets) {
   var rec = S.records && S.records[name];
-  if (!rec) return;
+  var row = document.createElement('div');
+  row.className = 'meta';
 
-  var txt;
-  if (rec.heaviest && rec.heaviest.weight > 0) {
-    var h = rec.heaviest;
-    txt = 'Best: <b>' + h.reps + ' x ' + h.weight + '</b>' +
-          (rec.est1rm ? ' · est 1RM ' + rec.est1rm : '') + ' · ' + h.date;
-  } else if (rec.reps) {
-    txt = 'Best: <b>' + rec.reps.reps + ' reps</b> · ' + rec.reps.date;
-  } else {
-    return;
+  function cell(label, value) {
+    var span = document.createElement('span');
+    span.appendChild(document.createTextNode(label + ' '));
+    var b = document.createElement('b');
+    b.textContent = value;
+    span.appendChild(b);
+    if (row.children.length) {
+      var sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = '·';
+      row.appendChild(sep);
+    }
+    row.appendChild(span);
   }
-  el.insertAdjacentHTML('beforeend', '<div class="best">' + txt + '</div>');
+
+  if (rec && rec.heaviest && rec.heaviest.weight > 0) {
+    cell('Best', rec.heaviest.reps + ' × ' + rec.heaviest.weight + ' lb');
+    if (rec.est1rm) cell('est 1RM', rec.est1rm);
+    cell('on', rec.heaviest.date);
+  } else if (rec && rec.reps) {
+    cell('Best', rec.reps.reps + ' reps');
+    cell('on', rec.reps.date);
+  }
+
+  var tag = document.createElement('span');
+  tag.className = 'prtag';
+  tag.textContent = '★ personal best today';
+  tag.hidden = true;
+  row.appendChild(tag);
+
+  el.appendChild(row);
+
+  return function () {
+    var hit = sets.some(function (x) { return isPr(name, x.reps, x.weight); });
+    tag.hidden = !hit;
+    row.style.display = row.children.length > 1 || hit ? '' : 'none';
+  };
 }
 
 function markPr(row, s) {
-  var on = isPr(s.exercise, s.reps, s.weight);
-  row.classList.toggle('pr', on);
-  var tag = row.querySelector('.star');
-  if (on && !tag) {
-    var n = row.firstChild;
-    n.insertAdjacentHTML('beforeend', '<span class="star" title="Personal best">★</span>');
-  } else if (!on && tag) {
-    tag.remove();
-  }
+  row.classList.toggle('pr', isPr(s.exercise, s.reps, s.weight));
 }
 
 function setRow(s) {
@@ -720,7 +838,18 @@ function stepper(s, key, label, step, dp) {
 // is last-value-wins against a fixed row the server verifies first.
 
 var STORE = 'wl.pending.v1';
-var PEND = { items: {}, sending: false, timer: null, backoff: 1000, note: '', last: null };
+var PEND = { items: {}, sending: false, timer: null, backoff: 1000, note: '',
+             last: null, watchers: {} };
+
+// A note field wants to know when its own write reaches the sheet, so it can
+// stop saying "Queued". Registered by pending-key and cleared on every
+// render, since the elements they close over are thrown away too.
+function watch(key, fn) { PEND.watchers[key] = fn; }
+
+function tellWatcher(key, state) {
+  var fn = PEND.watchers[key];
+  if (fn) fn(state);
+}
 
 // localStorage is not guaranteed inside the Apps Script iframe — some
 // browsers partition or block storage for framed content. Without it the
@@ -759,11 +888,13 @@ function pendPersist() {
 }
 
 function enqueue(it) {
-  PEND.items[pendKey(it)] = it;
+  var key = pendKey(it);
+  PEND.items[key] = it;
   PEND.backoff = 1000;
   pendPersist();
   paint();
   schedule(600);
+  return key;
 }
 
 function schedule(ms) {
@@ -816,9 +947,11 @@ function accept(keys, results) {
     if (r.ok) {
       delete PEND.items[k];
       saved++;
+      tellWatcher(k, 'Saved');
       if (r.set) PEND.last = r.set;
     } else {
       delete PEND.items[k];
+      tellWatcher(k, 'Failed');
       rejected.push(r.error);
     }
   });
@@ -840,7 +973,7 @@ function accept(keys, results) {
   paint();
   flash(w ? 'Saved row ' + w.row + ': ' + w.reps + ' x ' + w.weight +
             (w.rpe === BLANK ? '' : ' @ RPE ' + w.rpe)
-          : 'Saved ' + saved + ' changes', true);
+          : 'Saved ' + saved + (saved === 1 ? ' change' : ' changes'), true);
 }
 
 function retryLater(err) {
@@ -875,7 +1008,8 @@ function queueSave(s) {
 }
 
 function queueNote(exercise, text) {
-  enqueue({ kind: 'note', day: S.day, date: S.date, exercise: exercise, text: text });
+  return enqueue({ kind: 'note', day: S.day, date: S.date,
+                   exercise: exercise, text: text });
 }
 
 // Queued values are the truth on screen — a reload must not show the older

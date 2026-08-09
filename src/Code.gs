@@ -194,6 +194,9 @@ function getBootstrap(k) {
     images: exerciseImages(),
     noWeight: noWeightNames(),
     name: logName(),
+    // Only for whoever can edit — a viewer has no access to the spreadsheet
+    // itself, so the link would only ever land them on a request-access page.
+    sheetUrl: canEdit ? SpreadsheetApp.getActive().getUrl() : '',
     today: dateKey(new Date())
   };
 }

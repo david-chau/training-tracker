@@ -24,17 +24,18 @@ read it as "whoever holds the admin link".
 ```
 ┌──────────────────────────────────────────────┐
 │  Training — David                            │  ← the spreadsheet's name,
-│  TRAINING LOG                                │    stays put as you scroll
+│  TRAINING LOG                                │    links to the sheet
 │                                              │
-│  [ Push ]  [ Pull ]  [ Legs ]                │  ← day type
+│  [ ‹ ]  [ 2026-08-09 ]  [ › ]                │  ← one calendar day
+│  [ ‹ Previous session ][ Next session › ]    │  ← jump to a logged session
 │                                              │
-│  [ ‹ ]  [ 2026-08-09 ]  [ › ]                │  ← which session
+│  [ Push ]  [ Pull ]  [ Legs ]  [ Custom ]    │  ← day type
 │                                              │
 │  [ Delete this day ]                         │
 │                                              │
 │  ┌────────────────────────────────────────┐  │
 │  │ Barbell Bench Press        [− 4 sets +]│  │  ← one card
-│  │ Best: 8 x 30 · est 1RM 38 · 2026-07-19 │  │  ← personal record
+│  │ Best 8 × 30 lb · est 1RM 38 · on …     │  │  ← records, one strip
 │  │                                        │  │
 │  │    Reps    Weight (LB)    RPE          │  │
 │  │ 1 [− 12 +]  [− 25 +]    [− 8 +]        │  │
@@ -54,6 +55,10 @@ read it as "whoever holds the admin link".
 The heading is the **name of the spreadsheet**, so if you keep several logs
 open — one per person — you can tell them apart at a glance, and the browser
 tab is named after it too. Rename the spreadsheet and the app follows.
+
+It is also a link: tap it to open the spreadsheet behind the app in a new tab.
+That link only appears on the admin view, because a viewer has no access to
+the spreadsheet itself.
 
 Both the heading and the bar at the bottom stay put while you scroll, so you
 always know which log you are in and whether it has saved.
@@ -78,9 +83,16 @@ The last button, **Custom**, is always there and always starts empty.
 
 The date box shows today. Leave it alone for a normal session.
 
-The **‹** and **›** arrows skip between sessions that actually exist for that
-day type — **‹** goes back in time, **›** forward. They are the fastest way to
-look at what happened three Pushes ago without scrolling the sheet.
+There are two ways to move, because there are two things you might mean:
+
+| Control | Moves |
+|---|---|
+| **‹ ›** either side of the date | One calendar day, logged or not |
+| **‹ Previous session** / **Next session ›** | To the nearest date that actually has a session of this day type |
+
+The session buttons are the fast way to see what happened three Pushes ago
+without scrolling the sheet. They grey out when there is nothing further in
+that direction.
 
 ### 3. Start it
 
@@ -180,6 +192,9 @@ Which exercises count is column **E** of the `Exercises` tab, headed
 otherwise. The template ships with 52 already marked — every push-up and plank
 variation, pull-ups and chin-ups, and all the cardio machines.
 
+**+ Add exercise** follows the same flag: pick `Push-Up` there and the weight
+box disappears, leaving just sets and reps.
+
 {: .note }
 Doing weighted pull-ups or dips? Clear the `yes` on that row and the weight
 field comes back. `Weighted Pull-Up` and `Weighted Chin-Up` already ship
@@ -239,9 +254,19 @@ as 8 next week, which is deliberately unexciting.
 
 ### 6. Watch for records
 
-Each card shows the best you have ever done on that exercise, and a **★**
-appears beside any set that beats it. Which records get kept is configurable —
-see [personal records](records.html).
+Under each exercise name is a single strip of what you have done before:
+
+```
+   Barbell Bench Press                          [− 4 sets +]
+   Best 8 × 30 lb  ·  est 1RM 38  ·  on 2026-07-19
+```
+
+When a set you are entering beats it, that set's boxes tint amber and a
+**★ personal best today** tag joins the strip. Both update as you tap, so you
+see a record fall as it happens.
+
+Which records are kept is configurable — see
+[personal records](records.html).
 
 ---
 
