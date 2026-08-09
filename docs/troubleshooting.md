@@ -183,17 +183,31 @@ The `Best` strip inside the app is always live regardless.
 <details markdown="block">
 <summary>An exercise picture does not show</summary>
 
-The `image` column needs a **direct link to the image file**, public, ending
-in `.jpg`, `.png`, `.gif` or `.webp`.
+Column **D** needs a **direct link to the image file**, public, ending in
+`.jpg`, `.png`, `.gif` or `.webp`.
 
-- A link to a *page* containing the image will not work.
+- A link to a *page* containing the image will not work. That is what the
+  video column is for.
 - A Google Drive `/view` link is a page. Convert it to
   `https://drive.google.com/thumbnail?id=FILE_ID&sz=w640` — see
-  [pictures of the exercises](admin.html#pictures-of-the-exercises).
+  [showing what the movement is](admin.html#showing-what-the-movement-is).
 - Share it as *Anyone with the link*.
 
 Reload the app after editing. A broken link shows no thumbnail rather than
 breaking the card.
+
+</details>
+
+<details markdown="block">
+<summary>The ▶ How to link is missing on an exercise</summary>
+
+It comes from column **F** of the `Exercises` tab. Rows added by the app
+itself — a name typed into *+ Add exercise* that was not on the list — get no
+link, because the app only appends the name.
+
+Paste one in: a YouTube search works, and so does a link to a specific video.
+
+Reload the app after editing; the list is read when the page loads.
 
 </details>
 

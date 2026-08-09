@@ -87,7 +87,7 @@ Save. It should look like this:
 
 Back in the spreadsheet, **reload the page**. A **Training** menu appears:
 
-![The Training menu open in Google Sheets]({{ site.baseurl }}/img/training-menu.jpeg)
+![The Training menu open in Google Sheets]({{ site.baseurl }}/img/training-menu.png)
 
 That is how you know the code is attached to the right spreadsheet. Missing?
 See [troubleshooting](troubleshooting.html#the-training-menu-is-missing).

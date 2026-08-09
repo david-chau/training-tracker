@@ -81,7 +81,7 @@ runs for you:
   ║   │  "Training — Jane Doe"         │                             ║
   ║   │                                │                             ║
   ║   │   Log         every set ever   │                             ║
-  ║   │   Exercises   names + images   │                             ║
+  ║   │   Exercises   names + links    │                             ║
   ║   │   Templates   first session    │                             ║
   ║   │   Settings    which records    │                             ║
   ║   │   Records     derived output   │                             ║
@@ -175,12 +175,13 @@ derived from it.
           │            (the row is overwritten     progress()  the admin
           │             as the set is logged)
           │
-   Exercises  ┌──────────┬───────┬─────────┬───────┬───────────┐
-              │ exercise │ group │ pattern │ image │ no weight │
-              └──────────┴───────┴─────────┴───────┴───────────┘
+   Exercises  ┌──────────┬───────┬─────────┬───────┬───────────┬───────┐
+              │ exercise │ group │ pattern │ image │ no weight │ video │
+              └──────────┴───────┴─────────┴───────┴───────────┴───────┘
               autocomplete source; grows when a new name is used.
-              D is an optional picture URL. E hides the weight field
-              and stops progress() adding load
+              D optional picture URL, F a how-to link — both http(s)
+              only. E hides the weight field and stops progress()
+              adding load
 
    Templates  ┌─────┬──────────┬──────┬──────┬────────┬────────────────┐
               │ day │ exercise │ sets │ reps │ weight │ include in new │
@@ -447,20 +448,41 @@ rather than `was 0`.
 
 ---
 
-## Exercise images
+## Showing the movement
 
-Column D of the `Exercises` tab, optional, one URL per exercise. Sent to the
-browser by `getBootstrap()` as a name → URL map, rendered as a thumbnail on
-the card and expanded on tap.
+Two optional columns on `Exercises`, both shipped to the browser by
+`getBootstrap()` as name → URL maps.
 
-Only `http(s)` URLs are accepted (`exerciseImages()` filters), and the value
-reaches the DOM as `img.src` via a property assignment rather than through
-`innerHTML` — a URL from the sheet is user-supplied data and is never parsed
-as markup. Exercise names get the same treatment: `textContent`, not string
-concatenation into HTML.
+**Column F, `video`** — rendered as a *▶ How to* link beside the exercise
+name. Every shipped row has one: a YouTube search for the exercise, generated
+by `fill_videos()` in `build_template.py` rather than stored per row.
 
-A broken link removes its own thumbnail via `onerror` rather than leaving a
-grey box on the card.
+A search rather than a video id is a deliberate trade. Ids rot, need curating
+255 times, and amount to the project picking someone's coaching. A search is
+none of those and is trivially replaceable per row.
+
+{: .note }
+Images were tried first and rejected on quality. Matching the catalogue
+against `yuhonas/free-exercise-db` (873 exercises, Unlicense, so licensing
+was never the obstacle) reached about 58%, and produced matches like
+*Barbell Bench Press → Barbell Guillotine Bench Press* — a different and
+riskier lift. A wrong picture is worse than none.
+
+**Column D, `image`** — a thumbnail on the card, expanded on tap. Blank by
+default, since a shippable image URL would have to be one the project has
+rights to.
+
+Both are user-supplied data reaching the DOM, so both are guarded: only
+`http(s)` passes (`exerciseImages()`, `exerciseVideos()`), and the value is
+assigned to `img.src` / `a.href` as a property rather than concatenated into
+`innerHTML`. Exercise names get the same treatment — `textContent`, never
+markup. A dead image link removes its own thumbnail via `onerror`.
+
+{: .warning }
+`<base target="_blank">`. Every link leaves in a new tab, because the
+pending-write queue lives in memory and navigating away can take it. It was
+`_top` — inherited from the Apps Script scaffold — which would have done
+exactly that.
 
 ---
 

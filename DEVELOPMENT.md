@@ -87,10 +87,10 @@ A Date | B Day | C Exercise | D Set | E Reps | F Weight (LB) | G RPE
 H Auto note | I Notes
 ```
 
-The other tabs are looser: `Exercises` is read A–D with the width clamped,
-so a sheet without the `image` column still works; `Settings` is read as
-key/value from A and B; `Records` is output and is cleared on every
-rebuild.
+The other tabs are looser. `Exercises` is read A–F with the width clamped, so
+a sheet predating the `image`, `no weight` or `video` columns still works;
+`Templates` the same for `include in new session`. `Settings` is key/value
+from A and B. `Records` is output and cleared on every rebuild.
 
 Column H is written by the generator (`from template`, `was easy`, `repeat`,
 `backed off`). Column I is the admin's free text. They are separate on

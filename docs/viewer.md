@@ -65,6 +65,10 @@ Last time: 10 x 20 @8 · 8 x 30 @9
 
 Any note left against an exercise appears underneath it.
 
+Beside each exercise name is a **▶ How to** link — it opens a video search for
+that movement in a new tab. If a picture has been added, the name has a
+thumbnail too; tap it to see it full width.
+
 ---
 
 ## What RPE means

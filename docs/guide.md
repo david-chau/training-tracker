@@ -22,7 +22,7 @@ Which one you were sent decides which guide you want.
 
 - **[Admin](admin.html)** — you are the one recording sets, whether that is
   your own training or someone else's. Running a session, changing the
-  workout, day types, exercise pictures, what happens when the wifi drops.
+  workout, day types, how-to links, what happens when the wifi drops.
 - **[Viewer](viewer.html)** — you were sent a read-only link and want to look
   something up.
 

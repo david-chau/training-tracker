@@ -78,8 +78,9 @@ genuinely cannot write.
   weight on a tablet mid-set is the thing this design exists to prevent.
 - **Tracks personal bests.** Worked out from the log, shown on the card as you
   train, and listed on their own tab. [Configurable](records.html).
-- **Shows you the movement.** Drop a picture or GIF link next to an exercise
-  and it appears on the card — worth a lot if you are new to it.
+- **Shows you the movement.** Every exercise carries a **▶ How to** link, and
+  you can add your own picture or GIF beside it — worth a lot if you are new
+  to a lift.
 - **Survives bad wifi.** Changes queue on the device and save themselves when
   the connection comes back.
 - **Scales by copying.** A trainer with twenty-five people runs twenty-five
