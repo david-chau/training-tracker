@@ -14,6 +14,15 @@ proposes slightly more.
 
 ---
 
+## Try the read-only demo
+
+- [Open the demo viewer](https://script.google.com/macros/s/AKfycbxH2TaEs7AR-EeINAF9mTYqQ9Dc5-Cy1hST8BP4mw4arttqKQwOKpRMhq5yX7QMyu4BEQ/exec)
+- [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1fjs3pzBXt2AzUgrJWjDrNwbWoD0WaNhlwGPTqTbHaS8/edit?usp=sharing)
+
+Both links are read-only and use the same sample training log.
+
+---
+
 ## Two roles, one link each
 
 Every log has an **admin link** and a **viewer link**.

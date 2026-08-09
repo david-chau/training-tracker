@@ -13,6 +13,11 @@ trainer who records your sessions.
 
 **[Documentation →](https://david-chau.github.io/training-tracker/)**
 
+## Try the read-only demo
+
+- [Open the demo viewer](https://script.google.com/macros/s/AKfycbxH2TaEs7AR-EeINAF9mTYqQ9Dc5-Cy1hST8BP4mw4arttqKQwOKpRMhq5yX7QMyu4BEQ/exec)
+- [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1fjs3pzBXt2AzUgrJWjDrNwbWoD0WaNhlwGPTqTbHaS8/edit?usp=sharing)
+
 - [Setup guide](https://david-chau.github.io/training-tracker/setup.html) — import
   the template, paste in the code, publish, share the links
 - [Admin guide](https://david-chau.github.io/training-tracker/admin.html)
