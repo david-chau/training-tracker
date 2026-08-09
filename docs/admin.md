@@ -15,36 +15,23 @@ Applies whether you are logging your own training or recording someone else's
 
 ## The screen
 
-```
-┌──────────────────────────────────────────────┐
-│  Training — David                            │  ← sheet name, links to it
-│  TRAINING LOG                                │
-│                                              │
-│  [ ‹ ]  [ 2026-08-09 ]  [ › ]                │  ← one calendar day
-│  [ ‹ Previous session ][ Next session › ]    │  ← jump to a logged session
-│                                              │
-│  [ Push ]  [ Pull ]  [ Legs ]  [ Custom ]    │  ← day type
-│  [ Delete this day ]                         │
-│                                              │
-│  ┌────────────────────────────────────────┐  │
-│  │ Barbell Bench Press        [− 4 sets +]│  │
-│  │ Best 8 × 30 lb · est 1RM 38 · on …     │  │  ← records
-│  │                                        │  │
-│  │    Reps    Weight (LB)    RPE          │  │
-│  │ 1 [− 12 +]  [− 25 +]    [− 8 +]        │  │
-│  │    was 10    was 20      was 8         │  │  ← last time, per field
-│  │                                        │  │
-│  │ Notes …                     [Save note]│  │
-│  └────────────────────────────────────────┘  │
-│  [ + Add exercise ]                          │
-├──────────────────────────────────────────────┤
-│  Saved row 14: 12 x 25 @ RPE 8               │  ← status bar
-└──────────────────────────────────────────────┘
-```
+![A Push session open in the admin view, showing the date and session
+navigation, day-type buttons, and two exercise cards with their records and
+last-time values]({{ site.baseurl }}/img/admin-session.png)
 
-The heading is the spreadsheet's name — tap it to open the sheet itself. The
-bottom bar reports the row and the values read back **out of the spreadsheet**
-after saving. Both stay put as you scroll.
+Top to bottom:
+
+| | |
+|---|---|
+| **Training — David** | The spreadsheet's name. Tap it to open the sheet itself. |
+| **‹ date ›** | One calendar day at a time. |
+| **‹ Previous session** / **Next session ›** | The nearest date that has a session of this day type. Greyed out when there is none. |
+| **Push / Pull / Legs / Custom** | Day type. |
+| **Best 8 × 15 lb · est 1RM 19** | [Records](records.html) for that exercise, with a **★ personal best today** tag when a set beats them. |
+| **was 8 · was 5 · was 7** | What you did for that same set last time, under the field it belongs to. |
+| **Comparing against 2026-08-09** | The status bar. After a save it reports the row and the values read back **out of the spreadsheet**. |
+
+The heading and the status bar stay put as you scroll.
 
 {: .note }
 Every link in the app opens in a **new tab**, on purpose. Navigating away
@@ -69,15 +56,7 @@ always offered.
 
 If nothing is logged for that day and date, you choose how to begin:
 
-```
-   ┌──────────────────────────────────────────────────────┐
-   │ From last time                2026-08-02 + progression│  ← suggested
-   ├──────────────────────────────────────────────────────┤
-   │ From the template                        5 exercises  │
-   ├──────────────────────────────────────────────────────┤
-   │ Empty                                   add as you go │
-   └──────────────────────────────────────────────────────┘
-```
+![The start chooser: From last time, From the template, and Empty]({{ site.baseurl }}/img/admin-session-start.png)
 
 | Choice | What you get |
 |---|---|

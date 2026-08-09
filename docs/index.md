@@ -12,6 +12,9 @@ Open it on a tablet at the rack, tap numbers up and down, and the sheet fills
 itself in. Next week it looks at what was lifted and how hard it felt, then
 proposes slightly more.
 
+![A Push session open in the app, showing exercise cards with records, set
+rows, and last week's numbers under each field]({{ site.baseurl }}/img/admin-session.png)
+
 ---
 
 ## Try the read-only demo

@@ -22,6 +22,9 @@ A grey badge at the top says **Read only — you can look, not change**. That is
 normal. This link is for looking things up; the numbers are entered through
 the admin link, which someone else holds.
 
+![A Push session in the read-only view: values shown as plain boxes with no
+buttons]({{ site.baseurl }}/img/viewer-session.png)
+
 {: .tip }
 To keep it handy, open the link and use *Share → Add to Home Screen* on
 iPhone or iPad, or the browser menu → *Add to Home screen* on Android. It
@@ -47,27 +50,22 @@ just means you did not train that day.
 
 ## Reading a card
 
-```
-Barbell Bench Press                       4 sets
-Last time: 10 x 20 @8 · 8 x 30 @9
-
-     Reps    Weight (LB)    RPE
- 1     12         25          8
- 2     10         30          9
-```
+One card per exercise, one numbered row per set.
 
 - **Reps** — how many you did.
-- **Weight (LB)** — in pounds.
+- **Weight (LB)** — in pounds. Missing entirely for exercises with no weight,
+  like push-ups or the rower.
 - **RPE** — how hard the set felt, out of 10. A dash means it was not
   recorded.
-- **Last time** — the same sets from your previous session of that day, so you
-  can see the progression.
+- **was 8** under a field — what you did for that same set last time, so you
+  can see the progression. Blank on a first session.
+- **Best 8 × 15 lb · est 1RM 19** — the best ever recorded for that exercise.
+
+Beside each exercise name is a **▶ How to** link, which opens a video search
+for that movement in a new tab. If a picture has been added, the name has a
+thumbnail too — tap it to see it full width.
 
 Any note left against an exercise appears underneath it.
-
-Beside each exercise name is a **▶ How to** link — it opens a video search for
-that movement in a new tab. If a picture has been added, the name has a
-thumbnail too; tap it to see it full width.
 
 ---
 
