@@ -60,6 +60,41 @@ URLs or turn them into shortened links that drop the query string.
 
 ---
 
+## The bar says "N changes not saved yet"
+
+Normal when the wifi is patchy, and not something you need to act on. Those
+changes are queued on the tablet and the app is retrying — on reconnect, when
+you return to the tab, and on a backoff up to every 30 seconds. **Retry now**
+forces an immediate attempt.
+
+Keep training. The numbers on screen are what you entered.
+
+Two things not to do while it is amber:
+
+- **Do not close the tab.** The browser warns you. Those changes have not
+  reached the spreadsheet, and the app cannot always keep them on the device —
+  storage inside a Google-hosted page is not guaranteed.
+- **Do not expect set counts, new exercises or Delete this day to work.**
+  They are deliberately refused until the queue drains, because they move rows
+  around underneath the pending writes.
+
+If it never clears, the connection is not coming back on its own — check the
+wifi, or switch the tablet to mobile data.
+
+---
+
+## "Not saved: row 14 now holds something else"
+
+A change was queued against a row that has since moved — usually because sets
+were added or removed, or the day was deleted, somewhere else (another tab, or
+the spreadsheet itself) while that change was waiting.
+
+The app drops that one change and reloads the session, because replaying it
+would write onto whatever occupies that row now. **Re-enter that one value.**
+Nothing else in the session is affected.
+
+---
+
 ## "Save failed" in the bottom bar
 
 The message after the colon is the real cause.
@@ -67,12 +102,8 @@ The message after the colon is the real cause.
 | Message contains | Meaning | Fix |
 |---|---|---|
 | `Read-only view` | The key stopped matching mid-session, usually because the key was rotated | Reopen the current admin link |
-| `Timeout`, `Failed to fetch`, or nothing at all | The connection dropped | Reconnect and change the value again — the app does not queue writes |
 | `No sheet named "Log"` | The tab was renamed or deleted | Rename it back to exactly `Log` |
-
-{: .warning }
-There is no offline queue. A change made with no connection is lost, not
-delayed. If the bar does not turn green, the number is not in the sheet.
+| `is no longer in that session` | A note was queued for an exercise that has since been removed | Re-add the note if you still want it |
 
 ---
 

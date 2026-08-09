@@ -229,13 +229,58 @@ function snapshot(rows, dayType, dayKey) {
 
 // ---------- writes ----------
 
-// Returns what is actually in the sheet after writing, so the client can
-// prove the save landed rather than trusting a silent success.
-function saveSet(k, row, reps, weight, rpe) {
+// The browser queues edits locally and replays them here, so this takes a
+// batch: one round trip on reconnect instead of one per changed set.
+// Each item is judged on its own — a single bad row must not discard the
+// rest of a session's work.
+function saveBatch(k, items) {
   assertEdit(k);
   const sheet = logSheet();
+  const list = items || [];
+
+  const out = list.map(function (it) {
+    try {
+      if (it.kind === 'note') {
+        return { ok: true, text: writeNote(sheet, it.day, it.date, it.exercise, it.text) };
+      }
+      return { ok: true, set: writeSet(sheet, it) };
+    } catch (err) {
+      // Permanent: replaying will not help, so the client drops it and says so.
+      return { ok: false, error: String(err && err.message || err) };
+    }
+  });
+
+  SpreadsheetApp.flush();
+  return out;
+}
+
+
+// Returns what is actually in the sheet after writing, so the browser can
+// prove the save landed rather than trusting a silent success.
+//
+// Verifies the row still holds the same date, day, exercise and set number
+// the browser thought it did. A queued edit can outlive the layout it was
+// made against — rows shift when sets are added or a day is deleted — and
+// writing blind would silently overwrite someone else's set.
+//
+// All four matter. Exercise and set number alone are not unique: the same
+// bench press set 2 exists for every week logged, so a shifted row could
+// pass that check and take the write meant for a different date.
+function writeSet(sheet, it) {
+  const row = Math.round(num(it.row));
+  if (row < 2) throw new Error('Bad row ' + it.row + '.');
+  if (row > sheet.getLastRow()) throw new Error('Row ' + row + ' no longer exists.');
+
+  const guard = sheet.getRange(row, 1, 1, 4).getValues()[0];   // A–D
+  if (dateKey(guard[COL.date]) !== String(it.date) ||
+      !sameDay(guard[COL.day], it.day) ||
+      String(guard[COL.exercise]).trim() !== String(it.exercise).trim() ||
+      num(guard[COL.set]) !== num(it.set)) {
+    throw new Error('Row ' + row + ' now holds something else — reload and re-enter.');
+  }
+
   const target = sheet.getRange(row, COL.reps + 1, 1, 3);
-  target.setValues([[reps, weight, rpe === BLANK_RPE ? '' : rpe]]);
+  target.setValues([[num(it.reps), num(it.weight), it.rpe === BLANK_RPE ? '' : num(it.rpe)]]);
   SpreadsheetApp.flush();
 
   const back = target.getValues()[0];
@@ -284,16 +329,17 @@ function setSetCount(k, dayType, dayKey, exercise, count) {
 
 // Notes are per exercise, not per set. Written to every row of that
 // exercise so adding or removing sets never loses the text.
-function saveNote(k, dayType, dayKey, exercise, text) {
-  assertEdit(k);
-  const sheet = logSheet();
+function writeNote(sheet, dayType, dayKey, exercise, text) {
   const clean = String(text == null ? '' : text).slice(0, 500);
 
-  allRows().filter(function (r) {
+  const rows = allRows().filter(function (r) {
     return dateKey(r[COL.date]) === dayKey &&
       sameDay(r[COL.day], dayType) &&
       String(r[COL.exercise]) === exercise;
-  }).forEach(function (r) {
+  });
+  if (!rows.length) throw new Error(exercise + ' is no longer in that session.');
+
+  rows.forEach(function (r) {
     sheet.getRange(r.sheetRow, COL.userNote + 1).setValue(clean);
   });
 

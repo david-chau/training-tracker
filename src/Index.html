@@ -65,8 +65,15 @@
   .start { width:100%; padding:16px; border:0; background:var(--ink); color:#fff;
            border-radius:10px; font-size:17px; cursor:pointer; }
   .bar { position:fixed; left:0; right:0; bottom:0; padding:12px 16px; background:#faf9f7;
-         border-top:1px solid var(--line); font-size:14px; color:var(--muted); }
+         border-top:1px solid var(--line); font-size:14px; color:var(--muted);
+         display:flex; align-items:center; gap:10px; }
+  .bar span { flex:1; min-width:0; }
   .saved { color:var(--ok); } .failed { color:var(--warn); }
+  .bar.pending { background:#fff8e6; border-top-color:#e8d9a8; color:#7a5c14; }
+  .retry { flex:0 0 auto; padding:7px 12px; border:1px solid #d8c483; background:#fff;
+           border-radius:8px; font-size:13px; font-family:inherit; color:#7a5c14;
+           cursor:pointer; }
+  .retry[hidden] { display:none; }
   .msg { padding:16px; color:var(--muted); }
   .ro { display:inline-block; padding:6px 12px; border-radius:8px; background:#eef1ee;
         color:var(--muted); font-size:13px; margin-bottom:12px; }
@@ -107,10 +114,10 @@
 </div>
 <datalist id="exlist"></datalist>
 <div id="body"><div class="msg">Pick a day to start.</div></div>
-<div class="bar" id="bar">Ready</div>
+<div class="bar" id="bar"><span id="barmsg">Ready</span><button class="retry" id="retry" hidden>Retry now</button></div>
 
 <script>
-var S = { day:null, date:null, dates:[], timers:{} };
+var S = { day:null, date:null, dates:[] };
 var BLANK = -1;
 
 if (!CAN_EDIT) {
@@ -140,6 +147,7 @@ document.getElementById('date').onchange = function () {
 };
 document.getElementById('wipe').onclick = function () {
   if (!S.day || !S.date) return;
+  if (blockedByQueue()) return;
   if (!confirm('Delete every ' + S.day + ' set logged on ' + S.date + '?')) return;
   flash('Deleting…', false);
   google.script.run
@@ -212,6 +220,8 @@ function render(res) {
       'nothing is saved until you do.</div>');
   }
 
+  overlayPending(res.sets);
+
   var order = [], groups = {};
   res.sets.forEach(function (s) {
     if (!groups[s.exercise]) { groups[s.exercise] = []; order.push(s.exercise); }
@@ -266,6 +276,7 @@ function addExercisePanel() {
 
   go.onclick = function () {
     if (!name.value.trim()) { name.focus(); return; }
+    if (blockedByQueue()) return;
     go.textContent = 'Adding…'; go.disabled = true;
     google.script.run
       .withSuccessHandler(function (res) { render(res); flash('Exercise added', true); })
@@ -355,24 +366,18 @@ function noteField(name, sets) {
     return d;
   }
 
+  // Queued like everything else, so a note survives a dropped connection.
+  // The button clears as soon as it is queued — the bottom bar owns the
+  // "has it reached the sheet yet" question for the whole page.
   function commit(silent) {
     clearTimeout(timer);
     if (!dirty()) return;
-    var text = box.value;
-    state.textContent = 'Saving…';
-    google.script.run
-      .withSuccessHandler(function (res) {
-        saved = res;
-        sets.forEach(function (s) { s.note = res; });
-        btn.classList.remove('dirty');
-        state.textContent = 'Saved';
-        if (!silent) flash('Note saved', true);
-      })
-      .withFailureHandler(function (e) {
-        state.textContent = 'Failed';
-        flash('Note failed: ' + e.message, false, true);
-      })
-      .saveNote(KEY, S.day, S.date, name, text);
+    saved = box.value;
+    sets.forEach(function (s) { s.note = saved; });
+    queueNote(name, saved);
+    btn.classList.remove('dirty');
+    state.textContent = 'Queued';
+    if (!silent) flash('Note queued', true);
   }
 
   box.addEventListener('mousedown', function (e) {
@@ -403,8 +408,20 @@ function noteField(name, sets) {
   return wrap;
 }
 
+// Adding, removing and deleting all shift row numbers, which is exactly what
+// a queued edit is addressed by. Rather than race, get the queue empty first.
+function blockedByQueue() {
+  if (!pendCount()) return false;
+  flush();
+  paint();
+  alert('Some changes have not saved yet. They are being retried — try this '
+        + 'again once the bar at the bottom clears.');
+  return true;
+}
+
 function resize(exercise, count, label) {
   if (count < 1 || count > 10) return;
+  if (blockedByQueue()) return;
   label.textContent = '…';
   flash('Updating sets…', false);
   google.script.run
@@ -506,23 +523,207 @@ function stepper(s, key, label, step, dp) {
   return wrap;
 }
 
-function queueSave(s) {
-  clearTimeout(S.timers[s.row]);
-  flash('Saving…', false);
-  S.timers[s.row] = setTimeout(function () {
-    google.script.run
-      .withSuccessHandler(function (w) {
-        flash('Saved row ' + w.row + ': ' + w.reps + ' x ' + w.weight +
-              (w.rpe === BLANK ? '' : ' @ RPE ' + w.rpe), true);
-      })
-      .withFailureHandler(function (e) { flash('Save failed: ' + e.message, false, true); })
-      .saveSet(KEY, s.row, s.reps, s.weight, s.rpe);
-  }, 600);
+// ---------- pending queue ----------
+//
+// Gym wifi drops. Every edit goes into a queue first and is replayed until
+// the sheet confirms it, so a tap is never lost to a dead connection — the
+// worst case is that it saves later.
+//
+// Entries are keyed by what they overwrite rather than appended, so holding
+// down [+] leaves one entry, not fifteen. Replay is safe because each write
+// is last-value-wins against a fixed row the server verifies first.
+
+var STORE = 'wl.pending.v1';
+var PEND = { items: {}, sending: false, timer: null, backoff: 1000, note: '', last: null };
+
+// localStorage is not guaranteed inside the Apps Script iframe — some
+// browsers partition or block storage for framed content. Without it the
+// queue still works for this page view; only surviving a reload is lost,
+// and the unload warning covers that case.
+var STORAGE = (function () {
+  try {
+    localStorage.setItem(STORE + '.probe', '1');
+    localStorage.removeItem(STORE + '.probe');
+    return localStorage;
+  } catch (e) { return null; }
+})();
+
+function pendKey(it) {
+  return it.kind === 'note'
+    ? 'n|' + it.day + '|' + it.date + '|' + it.exercise
+    : 's|' + it.row;
 }
 
-function flash(text, ok, bad) {
+function pendCount() { return Object.keys(PEND.items).length; }
+
+function pendLoad() {
+  if (!STORAGE) return;
+  try {
+    var raw = STORAGE.getItem(STORE);
+    if (raw) PEND.items = JSON.parse(raw) || {};
+  } catch (e) { PEND.items = {}; }
+}
+
+function pendPersist() {
+  if (!STORAGE) return;
+  try {
+    if (pendCount()) STORAGE.setItem(STORE, JSON.stringify(PEND.items));
+    else STORAGE.removeItem(STORE);
+  } catch (e) { /* full or blocked — the in-memory queue still works */ }
+}
+
+function enqueue(it) {
+  PEND.items[pendKey(it)] = it;
+  PEND.backoff = 1000;
+  pendPersist();
+  paint();
+  schedule(600);
+}
+
+function schedule(ms) {
+  clearTimeout(PEND.timer);
+  PEND.timer = setTimeout(flush, ms);
+}
+
+function flush() {
+  clearTimeout(PEND.timer);
+  if (PEND.sending || !CAN_EDIT) return;
+
+  var keys = Object.keys(PEND.items);
+  if (!keys.length) { paint(); return; }
+
+  if (navigator.onLine === false) { PEND.note = 'offline'; paint(); schedule(5000); return; }
+
+  var batch = keys.map(function (k) { return PEND.items[k]; });
+  PEND.sending = true;
+  PEND.note = 'saving';
+  paint();
+
+  // google.script.run can hang rather than fail on a dead connection, so
+  // this timeout is what actually gets us back to retrying.
+  var settled = false;
+  var guard = setTimeout(function () { settle(null, 'timed out'); }, 20000);
+
+  function settle(results, err) {
+    if (settled) return;
+    settled = true;
+    clearTimeout(guard);
+    PEND.sending = false;
+    if (results) accept(keys, results); else retryLater(err);
+  }
+
+  google.script.run
+    .withSuccessHandler(function (r) { settle(r || [], null); })
+    .withFailureHandler(function (e) { settle(null, (e && e.message) || 'save failed'); })
+    .saveBatch(KEY, batch);
+}
+
+// Per-item verdicts. A rejected item is permanent — replaying cannot fix a
+// row that has moved — so it is dropped and reported rather than retried
+// forever against the wrong cell.
+function accept(keys, results) {
+  var saved = 0, rejected = [];
+
+  keys.forEach(function (k, i) {
+    var r = results[i];
+    if (!r) return;                       // no verdict: leave queued, try again
+    if (r.ok) {
+      delete PEND.items[k];
+      saved++;
+      if (r.set) PEND.last = r.set;
+    } else {
+      delete PEND.items[k];
+      rejected.push(r.error);
+    }
+  });
+
+  PEND.backoff = 1000;
+  PEND.note = '';
+  pendPersist();
+
+  if (rejected.length) {
+    paint();
+    flash('Not saved: ' + rejected[0], false, true);
+    load(false);
+    return;
+  }
+
+  if (pendCount()) { paint(); schedule(300); return; }
+
+  var w = PEND.last;
+  paint();
+  flash(w ? 'Saved row ' + w.row + ': ' + w.reps + ' x ' + w.weight +
+            (w.rpe === BLANK ? '' : ' @ RPE ' + w.rpe)
+          : 'Saved ' + saved + ' changes', true);
+}
+
+function retryLater(err) {
+  PEND.note = err || 'no connection';
+  paint();
+  PEND.backoff = Math.min(PEND.backoff * 2, 30000);
+  schedule(PEND.backoff);
+}
+
+function paint() {
+  var n = pendCount();
   var bar = document.getElementById('bar');
-  bar.textContent = text;
+  var msg = document.getElementById('barmsg');
+  document.getElementById('retry').hidden = !n;
+
+  if (!n) { bar.className = 'bar'; return; }
+
+  var what = n + (n === 1 ? ' change' : ' changes') + ' not saved yet';
+  msg.textContent =
+    PEND.note === 'saving' ? 'Saving ' + n + '…' :
+    PEND.note === 'offline' ? what + ' — waiting for a connection' :
+    PEND.note ? what + ' — ' + PEND.note + ', retrying' : what;
+  bar.className = 'bar pending';
+}
+
+function queueSave(s) {
+  enqueue({
+    kind: 'set', row: s.row, exercise: s.exercise, set: s.set,
+    reps: s.reps, weight: s.weight, rpe: s.rpe, day: S.day, date: S.date
+  });
+}
+
+function queueNote(exercise, text) {
+  enqueue({ kind: 'note', day: S.day, date: S.date, exercise: exercise, text: text });
+}
+
+// Queued values are the truth on screen — a reload must not show the older
+// numbers the sheet still holds.
+function overlayPending(sets) {
+  sets.forEach(function (s) {
+    var p = PEND.items['s|' + s.row];
+    if (p && p.exercise === s.exercise && p.set === s.set) {
+      s.reps = p.reps; s.weight = p.weight; s.rpe = p.rpe;
+    }
+    var n = PEND.items['n|' + S.day + '|' + S.date + '|' + s.exercise];
+    if (n) s.note = n.text;
+  });
+}
+
+window.addEventListener('online', function () { PEND.backoff = 1000; flush(); });
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && pendCount()) flush();
+});
+window.addEventListener('beforeunload', function (e) {
+  if (!pendCount()) return;
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
+document.getElementById('retry').onclick = function () { PEND.backoff = 1000; flush(); };
+
+pendLoad();
+paint();
+if (pendCount()) schedule(500);
+
+function flash(text, ok, bad) {
+  if (pendCount()) return;          // the pending state outranks a transient message
+  var bar = document.getElementById('bar');
+  document.getElementById('barmsg').textContent = text;
   bar.className = 'bar' + (ok ? ' saved' : '') + (bad ? ' failed' : '');
 }
 </script>

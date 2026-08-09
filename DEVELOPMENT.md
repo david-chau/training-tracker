@@ -14,6 +14,7 @@ src/Code.gs        server logic — reads, writes, the progression rule
 src/Index.html     the entire UI (a template, uses <?= ?>)
 src/appsscript.json  manifest
 data/build_template.py       seed data + the .xlsx generator
+test/queue.test.js           pending-write queue, run with plain node
 docs/              the GitHub Pages site
 docs/download/training-tracker-template.xlsx   generated; what users import
 ```
@@ -91,7 +92,20 @@ purpose.
 
 ## Testing
 
-There is no test suite. The manual loop, against a scratch sheet:
+Two things run locally, neither needing a dependency:
+
+```bash
+node test/queue.test.js          # the pending-write queue
+python3 data/build_template.py   # rebuilds and self-checks the .xlsx
+```
+
+`test/queue.test.js` pulls the real script block out of `src/Index.html`,
+runs it against a stubbed DOM and a fake `google.script.run`, and drives the
+queue by hand — dedupe, retry and backoff, permanent rejection, partial
+results, offline deferral, and the pending-over-server overlay. It is worth
+keeping honest: a bug there loses a logged set.
+
+Everything else needs the live sheet. The manual loop, against a scratch one:
 
 1. **Training → Delete this day** — wipe the session under test.
 2. Start a **Custom** session → confirm it opens empty, that adding one

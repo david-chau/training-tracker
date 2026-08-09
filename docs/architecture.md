@@ -230,43 +230,88 @@ a known and accepted gap — see below.
 
 ## Saving a value
 
-The trap this design exists to avoid: Apps Script batches writes, so a write
-can appear to succeed and never land. Every save therefore ends by reading the
-cell back.
+Two traps shape this path. Apps Script batches writes, so a write can appear
+to succeed and never land — hence the read-back. And gym wifi drops mid-set,
+so nothing is sent directly: every edit is queued first and replayed until the
+sheet confirms it.
 
 ```
   admin taps [+] on a weight
         │
-        │  optimistic: the number on screen changes immediately
+        │  the number on screen changes immediately
         ▼
-  queueSave(set) ── 600 ms debounce ──▶ holding down [+] sends one call,
-        │                               not fifteen
-        ▼
-  google.script.run.saveSet(key, row, reps, weight, rpe)
+  enqueue({kind:'set', row, date, day, exercise, set, reps, weight, rpe})
         │
-        ▼  ┌────────────────────────────────────────────┐
-           │ assertEdit(key)          ← server-side     │
-           │ range(row, E:G).setValues(...)             │
-           │ SpreadsheetApp.flush()   ← forces the write│
-           │ return range.getValues() ← reads it BACK   │
-           └────────────────────┬───────────────────────┘
+        │  keyed by row, so holding [+] down leaves ONE entry, not fifteen
+        ▼
+  ┌───────────────────────────────┐
+  │ PEND.items  (+ localStorage)  │◀── reloaded on next page load
+  └───────────────┬───────────────┘
+                  │ 600 ms debounce · retry with backoff to 30 s
+                  │ also fires on: online event, tab refocus, Retry now
+                  ▼
+        navigator.onLine === false ? ──yes──▶ hold, repaint, wait
+                  │ no
+                  ▼
+  google.script.run.saveBatch(key, [items])   one round trip for the lot
+        │                                     20 s timeout — the bridge can
+        │                                     hang rather than fail
+        ▼  ┌──────────────────────────────────────────────┐
+           │ assertEdit(key)            ← server-side     │
+           │ per item, independently:                     │
+           │   verify A–D still match (date, day,         │
+           │     exercise, set) ── mismatch ▶ {ok:false}  │
+           │   range(row, E:G).setValues(...)             │
+           │   SpreadsheetApp.flush()   ← forces the write│
+           │   read range.getValues()   ← reads it BACK   │
+           └────────────────────┬─────────────────────────┘
+                                ▼
+              per-item verdicts, in the order sent
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        ▼                       ▼                       ▼
+   {ok:true}               {ok:false}              no verdict
+   drop from queue         drop + tell the         leave queued,
+                           user, reload            send again
                                 ▼
   status bar: "Saved row 14: 12 x 25 @ RPE 8"
               └──────────────┬─────────────┘
                     these are the sheet's values, not the browser's
 ```
 
-The bottom bar is a receipt. If it shows the number, the number is in the
-spreadsheet.
+The bottom bar is a receipt, and it is also the honest answer to "is my
+session safe to close". While anything is outstanding it turns amber and reads
+*"3 changes not saved yet"*, with a **Retry now** button; `beforeunload` warns
+if the tab is closed in that state. Notes go through the same queue, keeping
+their three triggers — the **Save note** button, a 1.5 s debounce, and blur.
 
-Notes save on the same principle but with three triggers — the **Save note**
-button, a 1.5 s debounce while typing, and blur — because text was being lost
-when the tablet was put down mid-sentence.
+### Why the queue verifies four columns
+
+A queued write is addressed by row number, and row numbers move — deleting a
+day or shrinking a set count shifts everything below. Checking that the row
+still holds the expected exercise and set number is **not** enough, because
+the same "bench press, set 2" exists for every week ever logged; a shifted row
+could pass that test and swallow a write meant for a different date. So
+`writeSet` compares all of A–D, and a mismatch is a permanent rejection rather
+than a retry.
+
+For the same reason, adding or removing sets, adding an exercise and deleting
+a day are all refused while the queue is non-empty. Those operations move rows
+out from under queued writes, and the honest fix is to drain first rather than
+race.
 
 {: .note }
 Blank RPE crosses the bridge as the sentinel `-1` (`BLANK_RPE`), never `null`.
 `null` through `google.script.run` is unreliable and arrives as `undefined` or
 not at all.
+
+{: .warning }
+`localStorage` is best-effort here. The page runs in a sandboxed
+`googleusercontent.com` iframe, and browsers may partition or block storage
+for framed content — so surviving a **reload** is not guaranteed, and is
+feature-detected rather than assumed. Surviving a dropped connection does not
+depend on it: that queue lives in memory, and the unload warning covers the
+gap.
 
 ---
 
@@ -369,9 +414,11 @@ Accepted, documented, not accidental:
   carries the previous session forward.
 - **An empty session does not survive a reload**, because there is nothing to
   write. Only affects the blank day before its first exercise is added.
-- **No offline support.** Gym wifi is bad; this will bite eventually. A
-  service worker plus a queue of pending writes is the obvious fix and a
-  substantial one.
+- **Partial offline support.** Edits to an open session are queued and
+  replayed, so a dropped connection delays a save rather than losing it. But
+  *starting* a session, adding an exercise and changing set counts all need
+  the server, because row numbers come from it. Full offline would need a
+  service worker and client-assigned IDs — a different design.
 - **No roster view across logs.** Deliberate — the workflow is one
   log at a time.
 - **Weights seeded at 0 stay at 0**, because `+2 reps, same weight` never

@@ -75,7 +75,9 @@ Setting it up starts with one file:
 ## What it deliberately does not do
 
 - No dashboard across several logs. One person at a time, by design.
-- No offline mode. Bad gym wifi will interrupt saving.
+- No full offline mode. Changes to an open session survive a dropped
+  connection and save themselves when it returns, but *starting* a session
+  needs the network.
 - No charts or analytics. The real workflow is "look at last week, do slightly
   more", and that already lives in the app.
 

@@ -121,6 +121,39 @@ when you tap away.
 Every change saves on its own about half a second later. There is no save
 button for the numbers.
 
+### When the wifi drops
+
+Nothing is lost. Every tap goes into a queue on the tablet first, and the app
+keeps retrying until the sheet confirms it. The bar at the bottom turns amber
+and tells you where you stand:
+
+```
+   ┌──────────────────────────────────────────────────────┐
+   │ Saved row 14: 12 x 25 @ RPE 8                        │  everything is in
+   └──────────────────────────────────────────────────────┘  the sheet
+
+   ┌──────────────────────────────────────────────────────┐
+   │ 3 changes not saved yet — waiting for   [ Retry now ]│  keep training,
+   │ a connection                                         │  it will catch up
+   └──────────────────────────────────────────────────────┘
+```
+
+Carry on training while it is amber — the numbers on screen are what you
+entered, and they go in as soon as there is signal. It retries by itself on
+reconnect and whenever you come back to the tab; **Retry now** just skips the
+wait.
+
+{: .warning }
+Do not close the tab while the bar is amber. The browser will warn you if you
+try. Those changes have not reached the spreadsheet yet, and closing may lose
+them — the app tries to keep them on the device, but browsers do not always
+allow that inside a Google-hosted page.
+
+While anything is outstanding, **adding or removing sets, adding an exercise
+and Delete this day are refused** — you get a note asking you to wait. Those
+actions shuffle rows in the sheet, and doing that underneath a change that has
+not landed yet is how numbers end up on the wrong line.
+
 ### 5. Record RPE
 
 RPE is *rate of perceived exertion* — how hard that set was, 1 to 10.

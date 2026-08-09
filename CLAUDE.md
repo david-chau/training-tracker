@@ -148,6 +148,19 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   1.5s debounce while typing, and blur.
 - **Row indices go stale** after add/remove. Every mutation returns a fresh
   `loadSession()` rather than patching client state.
+- **Queued writes are addressed by row, and rows move.** `writeSet` verifies
+  all of A–D (date, day, exercise, set) before writing. Exercise + set alone
+  is NOT unique — the same "bench set 2" exists for every week logged, so a
+  shifted row would pass and eat a write meant for another date. A mismatch
+  is a permanent reject, never a retry. Structural ops (`setSetCount`,
+  `addExercise`, `deleteSession`) are blocked client-side while the queue is
+  non-empty, for the same reason.
+- **`localStorage` in the Apps Script iframe is best-effort.** The page is
+  sandboxed `googleusercontent.com`; browsers may partition or block framed
+  storage. Feature-detected, never assumed. Durability across a dropped
+  connection comes from the in-memory queue; `localStorage` only adds
+  surviving a reload, and `beforeunload` covers the rest. Don't promise more
+  than that in the docs.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the
@@ -162,7 +175,9 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
 
 - No way to remove a single exercise from a session (only set count → 1,
   or edit the sheet).
-- No offline support. Gym wifi is bad; this will bite eventually.
+- Partial offline only. Edits to an open session queue and replay; starting
+  a session, adding an exercise and set counts still need the server,
+  because rows are server-assigned.
 - No roster view across logs. Deliberate — not needed yet.
 - Weights seed at 0 from templates, and `+2 reps, same weight` keeps 0 at
   0 forever. Real weights must be entered once per exercise.
@@ -170,9 +185,15 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
 
 ## Testing
 
-There is no test suite for the Apps Script side — no local runtime. The one
-automated check is in `data/build_template.py`, which re-reads the `.xlsx` it
-just wrote and asserts tab names, the nine `Log` headings, and numeric typing.
+No test suite for the Apps Script side — no local runtime. Two automated
+checks exist for the parts that can run locally, both stdlib-only:
+
+- `node test/queue.test.js` — the pending-write queue out of `Index.html`,
+  run against a stubbed DOM. Covers dedupe, retry, rejection, partial
+  results, offline, and the overlay. Run it after touching anything in the
+  queue; it is the only thing standing between a wifi drop and a lost set.
+- `python3 data/build_template.py` — re-reads the `.xlsx` it just wrote and
+  asserts tab names, the nine `Log` headings, and numeric typing.
 
 Manual loop:
 
