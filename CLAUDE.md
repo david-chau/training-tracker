@@ -79,10 +79,15 @@ it persist.
 ## Architecture
 
 ```
-Google Sheet ("Personal Training")
+Google Sheet (named per person — the name is the app's heading and tab title)
 ├── Log        — one row per set. The only real data. 9 columns, A–I.
-├── Exercises  — name | group | pattern. Autocomplete source. Grows on use.
-└── Templates  — day | exercise | sets | reps | weight. Seeds a first session.
+├── Exercises  — name | group | pattern | image. Autocomplete + optional
+│                picture URL (http(s) only). Grows on use. Ships ~256 rows
+│                including the `[Other]` placeholder.
+├── Templates  — day | exercise | sets | reps | weight. Seeds a first session.
+├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing
+│                keys fall back to DEFAULTS in Code.gs.
+└── Records    — DERIVED OUTPUT. Rewritten wholesale; never a source.
 
 Apps Script project (bound to the sheet)
 ├── Code.gs    — all server logic
@@ -171,6 +176,21 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   Seed data lives inline in `data/build_template.py` — the `.tsv` files it
   used to read are gone.
 
+## Personal records
+
+Derived, never stored. `computeRecords(rows, cfg, skip)` is deliberately
+free of SpreadsheetApp so it stays testable — keep it that way.
+
+- `skip` excludes the session being viewed. Without it today's first set
+  becomes the bar for today's second and nothing ever reads as a PR.
+- The ★ is judged in the browser (`isPr()`), not shipped per set, so it
+  updates as a value is typed.
+- `refreshRecords()` runs on structural writes and the menu only — NEVER on
+  `saveBatch`. A rebuild is a whole-sheet scan plus a tab rewrite; putting
+  it on the save path taxes every tap. It also swallows its own errors: a
+  failed rendering must not cost someone their logged set.
+- `Records` tab is output. Anything typed there dies on the next rebuild.
+
 ## Known gaps
 
 - No way to remove a single exercise from a session (only set count → 1,
@@ -192,6 +212,10 @@ checks exist for the parts that can run locally, both stdlib-only:
   run against a stubbed DOM. Covers dedupe, retry, rejection, partial
   results, offline, and the overlay. Run it after touching anything in the
   queue; it is the only thing standing between a wifi drop and a lost set.
+- `node test/records.test.js` — `computeRecords`/`recordRows` loaded from
+  `Code.gs` in a vm. Note: `const` declarations do not land on the sandbox
+  global, and arrays built in the vm fail `deepStrictEqual` on prototype —
+  both worked around at the top of that file.
 - `python3 data/build_template.py` — re-reads the `.xlsx` it just wrote and
   asserts tab names, the nine `Log` headings, and numeric typing.
 

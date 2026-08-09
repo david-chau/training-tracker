@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-nav_order: 6
+nav_order: 7
 ---
 
 # Troubleshooting
@@ -195,6 +195,53 @@ if it matters.
 {: .note }
 The same exercise cannot be added to one session twice. *"Barbell Row is
 already in this session"* means it is already on the page, further up.
+
+---
+
+## The Records tab looks out of date
+
+It is rewritten when a session is started or deleted, or an exercise or set is
+added — not on every value you tap, so that logging stays quick.
+
+**Training → Rebuild records** brings it up to date immediately.
+
+The `Best:` line and the ★ inside the app are always live regardless, because
+they are worked out fresh each time a session loads.
+
+---
+
+## A record looks wrong
+
+Records are read straight from the `Log` tab, so a wrong record means a wrong
+row. Common causes:
+
+- **A typo in a weight** — `1000` instead of `100` will win every record it
+  touches. Fix the row in the `Log` tab and rebuild.
+- **A set logged under the wrong exercise name.** Two spellings are two
+  different exercises as far as records are concerned.
+- **Nothing at all for an exercise you have done.** Records need reps above
+  zero, and weight records need weight above zero — bodyweight work only ever
+  produces a *Most reps* record.
+
+See [personal records](records.html) for what each record means.
+
+---
+
+## An exercise picture does not show
+
+The `image` column has to hold a **direct link to the image file**, public,
+and reachable without signing in.
+
+- A link to a page containing the image will not work. It should end in
+  `.jpg`, `.png`, `.gif` or `.webp`.
+- A Google Drive `/view` link is a web page. Convert it to
+  `https://drive.google.com/thumbnail?id=FILE_ID&sz=w640` — see
+  [pictures of the exercises](admin.html#pictures-of-the-exercises).
+- The file has to be shared as *Anyone with the link*, not just with you.
+- Only `http://` and `https://` links are accepted; anything else is ignored.
+
+Reload the app after editing the tab. A broken link shows no thumbnail rather
+than breaking the card.
 
 ---
 

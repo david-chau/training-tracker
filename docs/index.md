@@ -49,6 +49,7 @@ genuinely cannot write.
 | Setting this up for the first time | [Setup guide](setup.html) |
 | The one recording sets — myself or a trainer | [Admin guide](admin.html) |
 | Someone who was sent a view-only link | [Viewer guide](viewer.html) |
+| After personal bests | [Personal records](records.html) |
 | Hitting something odd | [Troubleshooting](troubleshooting.html) |
 | Curious how it is built | [Architecture](architecture.html) |
 
@@ -69,6 +70,12 @@ Setting it up starts with one file:
   drives next week's numbers.
 - **No typing into cells.** Everything is a plus or minus button. Mistyping a
   weight on a tablet mid-set is the thing this design exists to prevent.
+- **Tracks personal bests.** Worked out from the log, shown on the card as you
+  train, and listed on their own tab. [Configurable](records.html).
+- **Shows you the movement.** Drop a picture or GIF link next to an exercise
+  and it appears on the card — worth a lot if you are new to it.
+- **Survives bad wifi.** Changes queue on the device and save themselves when
+  the connection comes back.
 - **Scales by copying.** A trainer with twenty-five people runs twenty-five
   independent copies. Nothing shared, nothing to sync.
 

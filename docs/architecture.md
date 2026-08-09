@@ -1,6 +1,6 @@
 ---
 title: Architecture
-nav_order: 5
+nav_order: 6
 ---
 
 # Architecture
@@ -28,8 +28,10 @@ is something Google already runs for you:
   ║   │  "Training — Jane Doe"         │                             ║
   ║   │                                │                             ║
   ║   │   Log         every set ever   │                             ║
-  ║   │   Exercises   autocomplete     │                             ║
+  ║   │   Exercises   names + images   │                             ║
   ║   │   Templates   first session    │                             ║
+  ║   │   Settings    which records    │                             ║
+  ║   │   Records     derived output   │                             ║
   ║   └───────────────┬────────────────┘                             ║
   ║                   │ bound to                                     ║
   ║                   ▼                                              ║
@@ -79,12 +81,12 @@ dialog.
     │ setRow()         │           │  listDates()      sessions that exist
     │ stepper()        │           │  loadSession()    one day's sets
     │ noteField()      │           │  ─────────────────────────────────
-    └────────┬─────────┘           │  saveSet()        ┐
-             │                     │  setSetCount()    │ all call
-             │ google.script.run   │  saveNote()       │ assertEdit(k)
-             ├────────────────────▶│  addExercise()    │ first
-             │                     │  deleteSession()  ┘
-             │◀────────────────────┤
+    └────────┬─────────┘           │  computeRecords() personal bests
+             │                     │  ─────────────────────────────────
+             │ google.script.run   │  saveBatch()      ┐
+             ├────────────────────▶│  setSetCount()    │ all call
+             │                     │  addExercise()    │ assertEdit(k)
+             │◀────────────────────┤  deleteSession()  ┘ first
              │   plain JS objects  │  progress()       the progression rule
                                    │
 ```
@@ -101,7 +103,8 @@ and must be rendered with `createTemplateFromFile`, never `createHtmlOutput`.
 
 ## The sheet
 
-`Log` is the only real data. The other two tabs are inputs to it.
+`Log` is the only real data. Two tabs feed it, one configures, and one is
+derived from it.
 
 ```
    Log        the record — one row per set
@@ -119,14 +122,25 @@ and must be rendered with `createTemplateFromFile`, never `createHtmlOutput`.
           │            (the row is overwritten     progress()  the admin
           │             as the set is logged)
           │
-   Exercises  ┌──────────┬───────┬─────────┐
-              │ exercise │ group │ pattern │  autocomplete source;
-              └──────────┴───────┴─────────┘  grows when a new name is used
+   Exercises  ┌──────────┬───────┬─────────┬───────┐
+              │ exercise │ group │ pattern │ image │  autocomplete source;
+              └──────────┴───────┴─────────┴───────┘  grows when a new name
+                                                      is used. D is an
+                                                      optional picture URL
 
    Templates  ┌─────┬──────────┬──────┬──────┬────────┐
               │ day │ exercise │ sets │ reps │ weight │  first session only;
               └─────┴──────────┴──────┴──────┴────────┘  `day` also defines
                                                          the day-type buttons
+
+   Settings   ┌─────┬───────┬──────────────┐
+              │ key │ value │ what it does │  key/value; C is for the human.
+              └─────┴───────┴──────────────┘  Missing keys fall back to
+                                              DEFAULTS in Code.gs
+
+   Records    ┌──────────┬────────┬───────┬────────┬──────┬─────┐
+              │ exercise │ record │ value │ detail │ date │ day │  OUTPUT
+              └──────────┴────────┴───────┴────────┴──────┴─────┘  only
 ```
 
 {: .warning }
@@ -312,6 +326,60 @@ for framed content — so surviving a **reload** is not guaranteed, and is
 feature-detected rather than assumed. Surviving a dropped connection does not
 depend on it: that queue lives in memory, and the unload warning covers the
 gap.
+
+---
+
+## Personal records
+
+Records are **derived, never stored**. `computeRecords()` folds the whole Log
+into one pass and returns a record set per exercise; the `Records` tab is a
+rendering of that, not a source. Edit a row in the Log by hand and the records
+follow on the next rebuild — there is no second copy to fall out of step.
+
+```
+   Log rows ──▶ computeRecords(rows, cfg, skip) ──┬──▶ loadSession()
+                          │                       │    per-exercise best,
+                          │                       │    sent to the browser
+                 heaviest │ byReps[N]             │
+                 est1rm   │ volume                └──▶ recordRows() ──▶ the
+                 reps     │ session                    Records tab
+
+   cfg  ◀── Settings tab: pr_rep_targets, pr_metrics
+   skip ◀── the session being viewed, so today is not its own record to beat
+```
+
+The `skip` argument is the whole trick behind the ★ in the UI. Without it,
+the first set you log today becomes the record the second set is measured
+against, and nothing ever reads as a personal best.
+
+Two deliberate asymmetries:
+
+- **The browser judges the star, not the server.** `loadSession` ships the
+  record; the comparison happens in `isPr()` on the page, so the star appears
+  as a weight is typed rather than on the next reload.
+- **The Records tab is refreshed on structural change only** — session
+  created, deleted, exercise or set added — plus the menu item. Never on
+  `saveBatch`. A full rebuild is a whole-sheet scan and a tab rewrite, and
+  putting that on the save path would tax every tap to keep a view fresh that
+  nobody is looking at mid-set. `refreshRecords()` also swallows its own
+  errors: a failed rendering must never cost someone their logged set.
+
+---
+
+## Exercise images
+
+Column D of the `Exercises` tab, optional, one URL per exercise. Sent to the
+browser by `getBootstrap()` as a name → URL map, rendered as a thumbnail on
+the card and expanded on tap.
+
+Only `http(s)` URLs are accepted (`exerciseImages()` filters), and the value
+reaches the DOM as `img.src` via a property assignment rather than through
+`innerHTML` — a URL from the sheet is user-supplied data and is never parsed
+as markup. Exercise names get the same treatment: `textContent`, not string
+concatenation into HTML.
+
+A broken link removes its own thumbnail via `onerror` rather than leaving a
+grey box on the card.
 
 ---
 

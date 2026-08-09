@@ -8,7 +8,17 @@
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { font-family:system-ui,-apple-system,sans-serif; margin:0; padding:16px 16px 64px;
          color:var(--ink); background:#faf9f7; font-size:17px; }
-  h1 { font-size:20px; font-weight:600; margin:0 0 14px; }
+  /* Sticky so the log you are in stays visible however far you scroll —
+     with one sheet per person, that is the thing worth never losing. The
+     negative margins bleed it past the body padding so nothing shows
+     through the gutters when it is stuck. */
+  .top { position:sticky; top:0; z-index:5; background:#faf9f7;
+         margin:-16px -16px 12px; padding:14px 16px 8px;
+         border-bottom:1px solid var(--line); }
+  h1 { font-size:20px; font-weight:600; margin:0 0 2px;
+       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .kicker { font-size:12px; color:var(--muted); letter-spacing:0.06em;
+            text-transform:uppercase; margin:0; }
   .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .day { flex:1; min-width:84px; padding:13px 8px; border:1px solid var(--line);
          background:#fff; border-radius:10px; font-size:17px; cursor:pointer; }
@@ -21,8 +31,17 @@
   .ex { background:#fff; border:1px solid var(--line); border-radius:12px;
         padding:14px; margin-bottom:14px; }
   .exhead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .title { display:flex; align-items:center; gap:10px; min-width:0; }
   .ex h2 { font-size:17px; font-weight:600; margin:0; }
-  .ref { font-size:14px; color:var(--muted); margin:2px 0 12px; }
+  .thumb { width:42px; height:42px; flex:0 0 42px; object-fit:cover; border-radius:8px;
+           border:1px solid var(--line); background:#f4f3f0; cursor:pointer; }
+  .demo { display:block; width:100%; max-width:420px; margin:10px 0 4px;
+          border:1px solid var(--line); border-radius:10px; background:#f4f3f0; }
+  .ref { font-size:14px; color:var(--muted); margin:2px 0 4px; }
+  .best { font-size:13px; color:var(--muted); margin:0 0 12px; }
+  .best b { color:var(--ink); font-weight:600; }
+  .star { color:#b8860b; font-size:13px; margin-left:4px; }
+  .pr .step { border-color:#e0c97a; background:#fffdf4; }
   .cnt { display:flex; align-items:center; border:1px solid var(--line);
          border-radius:8px; overflow:hidden; flex-shrink:0; }
   .cnt button { width:34px; height:34px; border:0; background:#f4f3f0; font-size:18px;
@@ -64,7 +83,8 @@
             border-radius:8px; font-size:14px; color:var(--warn); cursor:pointer; }
   .start { width:100%; padding:16px; border:0; background:var(--ink); color:#fff;
            border-radius:10px; font-size:17px; cursor:pointer; }
-  .bar { position:fixed; left:0; right:0; bottom:0; padding:12px 16px; background:#faf9f7;
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:5;
+         padding:12px 16px; background:#faf9f7;
          border-top:1px solid var(--line); font-size:14px; color:var(--muted);
          display:flex; align-items:center; gap:10px; }
   .bar span { flex:1; min-width:0; }
@@ -101,7 +121,10 @@
   var CAN_EDIT = ('<?= canEdit ?>' === 'true');
   var KEY = '<?= editKey ?>';
 </script>
-<h1>Training log</h1>
+<header class="top">
+  <h1 id="who">Training log</h1>
+  <div class="kicker">Training log</div>
+</header>
 <div id="robanner"></div>
 <div class="days" id="days"></div>
 <div class="datebar">
@@ -129,6 +152,8 @@ if (!CAN_EDIT) {
 google.script.run.withSuccessHandler(function (b) {
   S.date = b.today;
   document.getElementById('date').value = b.today;
+  S.images = b.images || {};
+  if (b.name) document.getElementById('who').textContent = b.name;
   var dl = document.getElementById('exlist');
   (b.exercises || []).forEach(function (name) {
     var o = document.createElement('option'); o.value = name; dl.appendChild(o);
@@ -229,6 +254,7 @@ function render(res) {
   });
 
   S.lastNotes = res.lastNotes || {};
+  S.records = res.records || {};
   order.forEach(function (name) { body.appendChild(card(name, groups[name])); });
   if (CAN_EDIT) body.appendChild(addExerciseControl());
   flash(res.priorDate ? 'Comparing against ' + res.priorDate : 'First session', false);
@@ -295,13 +321,58 @@ function addExercisePanel() {
   return p;
 }
 
+// The name, with a thumbnail in front of it when the Exercises tab supplies
+// an image. Tapping it shows the picture full width — for someone who has
+// not done the movement before, that is worth more than the name.
+function title(name, card) {
+  var wrap = document.createElement('div');
+  wrap.className = 'title';
+
+  var url = S.images && S.images[name];
+  if (url) {
+    var thumb = document.createElement('img');
+    thumb.className = 'thumb';
+    thumb.src = url;
+    thumb.alt = '';
+    thumb.loading = 'lazy';
+    thumb.title = 'Show ' + name;
+    thumb.onerror = function () { thumb.remove(); };
+    thumb.onclick = function () { toggleDemo(card, name, url); };
+    wrap.appendChild(thumb);
+  }
+
+  var h2 = document.createElement('h2');
+  h2.textContent = name;            // names come from the sheet — never innerHTML
+  if (url) {
+    h2.style.cursor = 'pointer';
+    h2.onclick = function () { toggleDemo(card, name, url); };
+  }
+  wrap.appendChild(h2);
+  return wrap;
+}
+
+function toggleDemo(card, name, url) {
+  var open = card.querySelector('.demo');
+  if (open) { open.remove(); return; }
+
+  var img = document.createElement('img');
+  img.className = 'demo';
+  img.src = url;
+  img.alt = name;
+  img.onerror = function () {
+    img.replaceWith(document.createTextNode(''));
+    flash('That image did not load — check the link on the Exercises tab', false, true);
+  };
+  card.insertBefore(img, card.firstChild.nextSibling);
+}
+
 function card(name, sets) {
   var el = document.createElement('div');
   el.className = 'ex';
 
   var head = document.createElement('div');
   head.className = 'exhead';
-  head.innerHTML = '<h2>' + name + '</h2>';
+  head.appendChild(title(name, el));
 
   if (!CAN_EDIT) {
     var tag = document.createElement('span');
@@ -311,6 +382,7 @@ function card(name, sets) {
     el.appendChild(head);
     var refRo = sets.map(function (x) { return x.last; }).filter(Boolean).join(' · ');
     if (refRo) el.insertAdjacentHTML('beforeend', '<div class="ref">Last time: ' + refRo + '</div>');
+    bestLine(el, name);
     sets.forEach(function (x) { el.appendChild(setRow(x)); });
     if (sets[0] && sets[0].note) {
       el.insertAdjacentHTML('beforeend', '<div class="rotext"></div>');
@@ -332,6 +404,7 @@ function card(name, sets) {
 
   var ref = sets.map(function (s) { return s.last; }).filter(Boolean).join(' · ');
   if (ref) el.insertAdjacentHTML('beforeend', '<div class="ref">Last time: ' + ref + '</div>');
+  bestLine(el, name);
 
   sets.forEach(function (s) { el.appendChild(setRow(s)); });
   el.appendChild(noteField(name, sets));
@@ -430,14 +503,49 @@ function resize(exercise, count, label) {
     .setSetCount(KEY, S.day, S.date, exercise, count);
 }
 
+// Personal records come from the server with this session excluded, so a
+// comparison here answers "better than anything before today". Judged in the
+// browser rather than shipped per set, so the star appears the moment a
+// weight is typed rather than on the next reload.
+function isPr(name, reps, weight) {
+  var rec = S.records && S.records[name];
+  if (!rec || !rec.heaviest || !(weight > 0) || !(reps > 0)) return false;
+  if (weight !== rec.heaviest.weight) return weight > rec.heaviest.weight;
+  return reps > rec.heaviest.reps;
+}
+
+function bestLine(el, name) {
+  var rec = S.records && S.records[name];
+  if (!rec || !rec.heaviest) return;
+  var h = rec.heaviest;
+  var txt = 'Best: <b>' + h.reps + ' x ' + h.weight + '</b>' +
+            (rec.est1rm ? ' · est 1RM ' + rec.est1rm : '') +
+            ' · ' + h.date;
+  el.insertAdjacentHTML('beforeend', '<div class="best">' + txt + '</div>');
+}
+
+function markPr(row, s) {
+  var on = isPr(s.exercise, s.reps, s.weight);
+  row.classList.toggle('pr', on);
+  var tag = row.querySelector('.star');
+  if (on && !tag) {
+    var n = row.firstChild;
+    n.insertAdjacentHTML('beforeend', '<span class="star" title="Personal best">★</span>');
+  } else if (!on && tag) {
+    tag.remove();
+  }
+}
+
 function setRow(s) {
   var row = document.createElement('div');
   row.className = 'set';
   var n = document.createElement('div'); n.className = 'n'; n.textContent = s.set;
   row.appendChild(n);
+  s.onChange = function () { markPr(row, s); };
   row.appendChild(stepper(s, 'reps', 'Reps', 1, 0));
   row.appendChild(stepper(s, 'weight', 'Weight (LB)', 2.5, 1));
   row.appendChild(stepper(s, 'rpe', 'RPE', 0.5, 1));
+  markPr(row, s);
   return row;
 }
 
@@ -681,6 +789,7 @@ function paint() {
 }
 
 function queueSave(s) {
+  if (s.onChange) s.onChange();
   enqueue({
     kind: 'set', row: s.row, exercise: s.exercise, set: s.set,
     reps: s.reps, weight: s.weight, rpe: s.rpe, day: S.day, date: S.date

@@ -7,11 +7,20 @@ const CFG = {
   logSheet: 'Log',
   exerciseSheet: 'Exercises',
   templateSheet: 'Templates',
+  settingsSheet: 'Settings',
+  recordsSheet: 'Records',
   weightStep: 5,
   repStep: 2,
   roundTo: 2.5,
   defaultRpe: 8,
   blankDay: 'Custom'   // always offered, always starts empty
+};
+
+// Used when the Settings tab is missing or a key is blank, so an older
+// spreadsheet keeps working without being edited.
+const DEFAULTS = {
+  pr_rep_targets: '1,5,10',
+  pr_metrics: 'est1rm,volume,reps'
 };
 
 const COL = {
@@ -37,9 +46,15 @@ function renderApp(canEdit) {
   const t = HtmlService.createTemplateFromFile('Index');
   t.canEdit = canEdit ? 'true' : 'false';
   t.editKey = canEdit ? editKey() : '';
+  // The spreadsheet's own name becomes the browser tab title — with one log
+  // per person, that is the only thing telling a row of open tabs apart.
   return t.evaluate()
-    .setTitle('Training log')
+    .setTitle(logName())
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function logName() {
+  return String(SpreadsheetApp.getActive().getName() || 'Training log').trim();
 }
 
 // Generated once and kept in script properties. Whoever has it can write.
@@ -81,6 +96,7 @@ function onOpen() {
     .createMenu('Training')
     .addItem('Open entry form', 'showSidebar')
     .addItem('Show shareable links', 'showLinks')
+    .addItem('Rebuild records', 'showRecords')
     .addItem('Refresh exercise dropdown', 'setupExerciseValidation')
     .addToUi();
 }
@@ -105,19 +121,36 @@ function getBootstrap() {
   return {
     days: days,
     exercises: exerciseList(),
+    images: exerciseImages(),
+    name: logName(),
     today: dateKey(new Date())
   };
 }
 
-// Names from the Exercises tab, for the autocomplete list.
-function exerciseList() {
+// Exercises tab: A name | B group | C pattern | D image (optional).
+// Column D may not exist on an older sheet, hence the width clamp.
+function exerciseRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  return dedupe(
-    sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues()
-      .map(function (r) { return String(r[0]).trim(); })
-      .filter(Boolean)
-  ).sort();
+  const width = Math.min(4, Math.max(1, sheet.getLastColumn()));
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
+    .filter(function (r) { return String(r[0]).trim(); });
+}
+
+// Names from the Exercises tab, for the autocomplete list.
+function exerciseList() {
+  return dedupe(exerciseRows().map(function (r) { return String(r[0]).trim(); })).sort();
+}
+
+// name -> image URL, for the ones that have one. Only http(s) is accepted:
+// the value is user-supplied and ends up as an image source.
+function exerciseImages() {
+  const map = {};
+  exerciseRows().forEach(function (r) {
+    const url = String(r[3] || '').trim();
+    if (/^https?:\/\//i.test(url)) map[String(r[0]).trim()] = url;
+  });
+  return map;
 }
 
 function logSheet() {
@@ -170,6 +203,11 @@ function loadSession(dayType, dayKey, create, k) {
   const priorKey = listDates(dayType).filter(function (d) { return d < dayKey; })[0] || null;
   const history = priorKey ? snapshot(rows, dayType, priorKey) : {};
 
+  // Records exclude this session, so "personal best" means "better than
+  // anything before today" rather than "better than the set I just typed".
+  const cfg = prConfig();
+  const records = computeRecords(rows, cfg, { day: dayType, date: dayKey });
+
   const sets = mine.map(function (r) {
     return {
       row: r.sheetRow,
@@ -180,6 +218,17 @@ function loadSession(dayType, dayKey, create, k) {
       rpe: r[COL.rpe] === '' ? BLANK_RPE : num(r[COL.rpe]),
       note: String(r[COL.userNote] || ''),
       last: history[key(r[COL.exercise], num(r[COL.set]))] || null
+    };
+  });
+
+  // Only what is on screen — no need to ship the whole history.
+  const shown = {};
+  dedupe(mine.map(function (r) { return String(r[COL.exercise]); })).forEach(function (name) {
+    const rec = records[name];
+    if (!rec || !rec.heaviest || rec.heaviest.weight <= 0) return;
+    shown[name] = {
+      heaviest: rec.heaviest,
+      est1rm: rec.est1rm ? rec.est1rm.value : null
     };
   });
 
@@ -194,7 +243,8 @@ function loadSession(dayType, dayKey, create, k) {
     blank: blank,
     sets: sets,
     priorDate: priorKey,
-    lastNotes: lastNotes
+    lastNotes: lastNotes,
+    records: shown
   };
 }
 
@@ -224,6 +274,202 @@ function snapshot(rows, dayType, dayKey) {
       reps + ' x ' + wt + (rpe === null ? '' : ' @' + rpe);
   });
   return map;
+}
+
+
+// ---------- personal records ----------
+//
+// Records are derived, never stored. The Log is the only truth, so a record
+// cannot drift out of sync with it — edit a row by hand and the record
+// follows. The Records tab is a rendering of this, not a source.
+
+// Settings tab: A key | B value. Anything missing falls back to DEFAULTS.
+function settings() {
+  const out = {};
+  Object.keys(DEFAULTS).forEach(function (k) { out[k] = DEFAULTS[k]; });
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.settingsSheet);
+  if (!sheet || sheet.getLastRow() < 2) return out;
+
+  sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues().forEach(function (r) {
+    const key = String(r[0]).trim();
+    const val = String(r[1]).trim();
+    if (key && val) out[key] = val;
+  });
+  return out;
+}
+
+function prConfig() {
+  const s = settings();
+
+  const targets = dedupe(String(s.pr_rep_targets).split(',')
+    .map(function (n) { return Math.round(num(n)); })
+    .filter(function (n) { return n > 0; }))
+    .sort(function (a, b) { return a - b; });
+
+  const metrics = String(s.pr_metrics).split(',')
+    .map(function (m) { return m.trim().toLowerCase(); })
+    .filter(Boolean);
+
+  return { targets: targets, metrics: metrics };
+}
+
+
+// Pure: takes Log rows and returns one record set per exercise. Kept free of
+// SpreadsheetApp so it can be tested outside Apps Script.
+//
+// `skip` optionally excludes one session (day + date) — that is what makes
+// "is this a personal best?" answerable during the session that might set it.
+function computeRecords(rows, cfg, skip) {
+  const byExercise = {};
+
+  rows.forEach(function (r) {
+    const name = String(r[COL.exercise]).trim();
+    if (!name) return;
+
+    const date = dateKey(r[COL.date]);
+    const day = String(r[COL.day]).trim();
+    if (skip && date === skip.date && sameDay(day, skip.day)) return;
+
+    const reps = num(r[COL.reps]);
+    const weight = num(r[COL.weight]);
+    if (reps <= 0) return;
+
+    const rec = byExercise[name] || (byExercise[name] = {
+      heaviest: null, byReps: {}, est1rm: null, volume: null, reps: null,
+      session: null, sessions: {}
+    });
+    const hit = { reps: reps, weight: weight, date: date, day: day };
+
+    if (better(hit, rec.heaviest)) rec.heaviest = hit;
+
+    cfg.targets.forEach(function (n) {
+      if (reps >= n && better(hit, rec.byReps[n])) rec.byReps[n] = hit;
+    });
+
+    if (weight > 0) {
+      const e = epley(reps, weight);
+      if (!rec.est1rm || e > rec.est1rm.value) {
+        rec.est1rm = { value: e, reps: reps, weight: weight, date: date, day: day };
+      }
+    }
+
+    const vol = reps * weight;
+    if (vol > 0 && (!rec.volume || vol > rec.volume.value)) {
+      rec.volume = { value: vol, reps: reps, weight: weight, date: date, day: day };
+    }
+
+    if (!rec.reps || reps > rec.reps.reps ||
+        (reps === rec.reps.reps && weight > rec.reps.weight)) {
+      rec.reps = hit;
+    }
+
+    const key = date + '|' + day;
+    const tally = rec.sessions[key] || (rec.sessions[key] = { value: 0, sets: 0, date: date, day: day });
+    tally.value += vol;
+    tally.sets++;
+  });
+
+  Object.keys(byExercise).forEach(function (name) {
+    const rec = byExercise[name];
+    Object.keys(rec.sessions).forEach(function (k) {
+      const t = rec.sessions[k];
+      if (t.value > 0 && (!rec.session || t.value > rec.session.value)) rec.session = t;
+    });
+    delete rec.sessions;
+  });
+
+  return byExercise;
+}
+
+// Heavier wins; at equal weight, more reps wins.
+function better(hit, best) {
+  if (!best) return true;
+  if (hit.weight !== best.weight) return hit.weight > best.weight;
+  return hit.reps > best.reps;
+}
+
+// Epley. Only ever a comparison aid between sets, never a prescription.
+function epley(reps, weight) {
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+}
+
+const RECORD_LABELS = {
+  est1rm: 'Est. 1RM',
+  volume: 'Best set volume',
+  reps: 'Most reps',
+  session: 'Best session volume'
+};
+
+// One row per exercise per record, for the Records tab.
+function recordRows(records, cfg) {
+  const out = [];
+
+  Object.keys(records).sort().forEach(function (name) {
+    const rec = records[name];
+
+    cfg.targets.forEach(function (n) {
+      const hit = rec.byReps[n];
+      if (!hit || hit.weight <= 0) return;
+      out.push([
+        name,
+        n === 1 ? 'Heaviest' : 'Heaviest at ' + n + '+ reps',
+        hit.weight, hit.reps + ' x ' + hit.weight, hit.date, hit.day
+      ]);
+    });
+
+    cfg.metrics.forEach(function (m) {
+      const hit = rec[m];
+      if (!hit) return;
+      const label = RECORD_LABELS[m];
+      if (!label) return;
+      out.push([
+        name, label,
+        m === 'reps' ? hit.reps : hit.value,
+        hit.reps + ' x ' + hit.weight + (m === 'session' ? ' … ' + hit.sets + ' sets' : ''),
+        hit.date, hit.day
+      ]);
+    });
+  });
+
+  return out;
+}
+
+
+// Rewrites the Records tab from the Log. Cheap enough to run by hand, so it
+// is not on the save path — a session's saves stay fast, and the app's own
+// display is computed live regardless of when this last ran.
+function rebuildRecords() {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(CFG.recordsSheet) || ss.insertSheet(CFG.recordsSheet);
+  const cfg = prConfig();
+  const out = recordRows(computeRecords(allRows(), cfg, null), cfg);
+
+  sheet.clear();
+  sheet.getRange(1, 1, 1, 6)
+    .setValues([['Exercise', 'Record', 'Value', 'Detail', 'Date', 'Day']])
+    .setFontWeight('bold');
+  if (out.length) sheet.getRange(2, 1, out.length, 6).setValues(out);
+  sheet.setFrozenRows(1);
+  SpreadsheetApp.flush();
+  return out.length;
+}
+
+function showRecords() {
+  const n = rebuildRecords();
+  SpreadsheetApp.getUi().alert('Records rebuilt — ' + n +
+    ' on the "' + CFG.recordsSheet + '" tab.');
+}
+
+// Called after the operations that change which rows exist. Never on the
+// save path, and never allowed to break the write that triggered it — a
+// failed rendering of the records must not cost someone their logged set.
+function refreshRecords() {
+  try {
+    rebuildRecords();
+  } catch (err) {
+    console.error('Records refresh failed: ' + err);
+  }
 }
 
 
@@ -323,6 +569,7 @@ function setSetCount(k, dayType, dayKey, exercise, count) {
   }
 
   SpreadsheetApp.flush();
+  refreshRecords();
   return loadSession(dayType, dayKey, false, k);
 }
 
@@ -379,6 +626,7 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight) {
 
   rememberExercise(name);
   SpreadsheetApp.flush();
+  refreshRecords();
   return loadSession(dayType, dayKey, false, k);
 }
 
@@ -402,6 +650,7 @@ function deleteSession(k, dayType, dayKey) {
 
   doomed.forEach(function (rowNum) { sheet.deleteRow(rowNum); });
   SpreadsheetApp.flush();
+  refreshRecords();
   return doomed.length;
 }
 
@@ -425,6 +674,7 @@ function generateInto(dayType, dayKey, rows) {
   sheet.getRange(sheet.getLastRow() - output.length + 1, 1, output.length, 1)
     .setNumberFormat('yyyy-mm-dd');
   SpreadsheetApp.flush();
+  refreshRecords();
 }
 
 function fromHistory(prior, dayType, dayKey) {

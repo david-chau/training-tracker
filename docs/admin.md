@@ -22,7 +22,8 @@ read it as "whoever holds the admin link".
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Training log                                │
+│  Training — David                            │  ← the spreadsheet's name,
+│  TRAINING LOG                                │    stays put as you scroll
 │                                              │
 │  [ Push ]  [ Pull ]  [ Legs ]                │  ← day type
 │                                              │
@@ -33,6 +34,7 @@ read it as "whoever holds the admin link".
 │  ┌────────────────────────────────────────┐  │
 │  │ Barbell Bench Press        [− 4 sets +]│  │  ← one card
 │  │ Last time: 10 x 20 @8 · 8 x 30 @9      │  │    per exercise
+│  │ Best: 8 x 30 · est 1RM 38 · 2026-07-19 │  │  ← personal record
 │  │                                        │  │
 │  │    Reps    Weight (LB)    RPE          │  │
 │  │ 1 [− 12 +]  [− 25 +]    [− 8 +]        │  │
@@ -46,6 +48,13 @@ read it as "whoever holds the admin link".
 │  Saved row 14: 12 x 25 @ RPE 8               │  ← status bar
 └──────────────────────────────────────────────┘
 ```
+
+The heading is the **name of the spreadsheet**, so if you keep several logs
+open — one per person — you can tell them apart at a glance, and the browser
+tab is named after it too. Rename the spreadsheet and the app follows.
+
+Both the heading and the bar at the bottom stay put while you scroll, so you
+always know which log you are in and whether it has saved.
 
 The grey bar along the bottom is worth watching. It is not decoration — it
 reports the row number and the values it read back **out of the spreadsheet**
@@ -170,6 +179,12 @@ This is the single most important number in the app, because it is what next
 week is calculated from. Clear the field to leave it blank; a blank is treated
 as 8 next week, which is deliberately unexciting.
 
+### 6. Watch for records
+
+Each card shows the best you have ever done on that exercise, and a **★**
+appears beside any set that beats it. Which records get kept is configurable —
+see [personal records](records.html).
+
 ---
 
 ## Day types are yours
@@ -231,11 +246,75 @@ hand.
 ### A different exercise
 
 Tap **+ Add exercise** at the bottom, type the name — it autocompletes from
-the `Exercises` tab — set sets, reps and weight, then **Add**.
+the `Exercises` tab, which ships with over 250 movements — set sets, reps and
+weight, then **Add**.
 
 A name that is not on the list yet gets added to the `Exercises` tab
 automatically, so it autocompletes from then on. The same exercise cannot be
 added to a session twice.
+
+#### When you cannot name it
+
+The list includes an entry called **`[Other]`**. Pick it when nothing matches
+and you do not want to stop and think mid-session — some machine with no
+label, a movement your trainer improvised, a rehab drill.
+
+Log against it as normal, then rename it afterwards:
+
+1. Open the `Log` tab.
+2. Find the `[Other]` rows — they carry the date and day type you used.
+3. Type the real name over them.
+
+{: .warning }
+Rename it before the next session of that day type. The app builds next week
+from last week by exercise name, so two different movements both left as
+`[Other]` will be treated as the same exercise and progressed into each other.
+
+You can also add the proper name to the `Exercises` tab while you are there,
+so it autocompletes next time.
+
+### Pictures of the exercises
+
+The `Exercises` tab has an `image` column. Put a picture or GIF URL in it and
+that exercise gets a thumbnail on its card — tap the thumbnail or the name to
+see it full width. Useful when someone is new to a movement, or for machines
+that vary between gyms.
+
+```
+   Exercises tab
+   ┌────────────────────────┬───────┬─────────┬──────────────────────────┐
+   │ exercise               │ group │ pattern │ image                    │
+   ├────────────────────────┼───────┼─────────┼──────────────────────────┤
+   │ Barbell Bench Press    │ Chest │ Push    │ https://…/bench.gif      │
+   │ Lateral Raise          │ Should│ Push    │                          │
+   └────────────────────────┴───────┴─────────┴──────────────────────────┘
+                                                 blank is fine — no
+                                                 thumbnail, nothing breaks
+```
+
+It has to be a **direct link to the image itself**, ending in something like
+`.jpg`, `.png`, `.gif` or `.webp`, and reachable without signing in. A link to
+a page *containing* an image will not work.
+
+Using a picture stored in your own Google Drive:
+
+1. Upload it, then **Share → General access → Anyone with the link**.
+2. Copy the link. It looks like
+   `https://drive.google.com/file/d/FILE_ID/view?usp=sharing`.
+3. Take the `FILE_ID` out of the middle and paste this into the `image`
+   column instead:
+
+   ```
+   https://drive.google.com/thumbnail?id=FILE_ID&sz=w640
+   ```
+
+The `/view` link is a web page, not an image, which is why it needs
+rewriting.
+
+{: .note }
+Reload the app after editing the tab — the image list is read when the page
+loads. A link that does not work simply shows no thumbnail rather than
+breaking the card.
 
 ### Notes
 

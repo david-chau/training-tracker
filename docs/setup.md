@@ -27,8 +27,9 @@ You need a Google account. Anyone you share a viewer link with does not.
 
 ## Step 1 — Import the spreadsheet template
 
-The template is one file containing all three tabs, already named and already
-filled with a starting exercise list. You import it once per person you are tracking.
+The template is one file containing every tab, already named and already
+filled with a starting exercise list. You import it once per person you are
+tracking.
 
 [Download the spreadsheet template]({{ site.baseurl }}/download/training-tracker-template.xlsx){: .btn .btn-primary }
 
@@ -40,13 +41,19 @@ filled with a starting exercise list. You import it once per person you are trac
 5. Click the name in the top left and call it something like
    **Training — Jane** or **Training — me**. One spreadsheet per person.
 
-You now have three tabs along the bottom:
+The name matters: the app shows it as its heading and uses it as the browser
+tab title, so it is how you tell one person's log from another. You can rename
+the spreadsheet at any time and the app follows.
+
+You now have five tabs along the bottom:
 
 | Tab | What it is |
 |---|---|
 | `Log` | Empty apart from the headings. Every set ever logged lands here. |
-| `Exercises` | ~68 exercise names. Feeds the autocomplete, grows on its own. |
+| `Exercises` | 250+ exercise names. Feeds the autocomplete, and grows on its own when you use a name that is not there yet. |
 | `Templates` | The starting workout for each day type. |
+| `Settings` | Which [personal records](records.html) to track. Fine to ignore. |
+| `Records` | Output — your bests, rewritten from the log. Do not type in it. |
 
 {: .warning }
 Import it, do not open it. Double-clicking the `.xlsx` in Google Drive opens

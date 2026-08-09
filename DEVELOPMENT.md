@@ -15,6 +15,7 @@ src/Index.html     the entire UI (a template, uses <?= ?>)
 src/appsscript.json  manifest
 data/build_template.py       seed data + the .xlsx generator
 test/queue.test.js           pending-write queue, run with plain node
+test/records.test.js         personal-record maths, run with plain node
 docs/              the GitHub Pages site
 docs/download/training-tracker-template.xlsx   generated; what users import
 ```
@@ -86,6 +87,11 @@ A Date | B Day | C Exercise | D Set | E Reps | F Weight (LB) | G RPE
 H Auto note | I Notes
 ```
 
+The other tabs are looser: `Exercises` is read A–D with the width clamped,
+so a sheet without the `image` column still works; `Settings` is read as
+key/value from A and B; `Records` is output and is cleared on every
+rebuild.
+
 Column H is written by the generator (`from template`, `was easy`, `repeat`,
 `backed off`). Column I is the admin's free text. They are separate on
 purpose.
@@ -96,6 +102,7 @@ Two things run locally, neither needing a dependency:
 
 ```bash
 node test/queue.test.js          # the pending-write queue
+node test/records.test.js        # the personal-record maths
 python3 data/build_template.py   # rebuilds and self-checks the .xlsx
 ```
 
