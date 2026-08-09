@@ -101,7 +101,7 @@ EXERCISES = [
 ]
 
 # Weights seed at 0 on purpose — the real number gets typed in once, during
-# the client's first session of that day.
+# the first session of that day.
 TEMPLATES = [
     ["day", "exercise", "sets", "reps", "weight"],
     ["Push", "Barbell Bench Press", 4, 8, 0],
@@ -158,6 +158,18 @@ def sheet_xml(rows):
     )
 
 
+def add(z, name, data):
+    """Write one part with a fixed timestamp.
+
+    zipfile stamps the current mtime by default, which makes every rebuild a
+    byte-different file and so a spurious diff on a tracked binary.
+    """
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o644 << 16
+    z.writestr(info, data)
+
+
 def build():
     ns_r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
     types = "http://schemas.openxmlformats.org/package/2006/content-types"
@@ -179,7 +191,7 @@ def build():
     )
 
     with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(
+        add(z,
             "[Content_Types].xml",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             f'<Types xmlns="{types}">'
@@ -190,27 +202,27 @@ def build():
             '"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
             f"{overrides}</Types>",
         )
-        z.writestr(
+        add(z,
             "_rels/.rels",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             f'<Relationship Id="rId1" Type="{ns_r}/officeDocument" Target="xl/workbook.xml"/>'
             "</Relationships>",
         )
-        z.writestr(
+        add(z,
             "xl/workbook.xml",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
             f'xmlns:r="{ns_r}"><sheets>{tabs}</sheets></workbook>',
         )
-        z.writestr(
+        add(z,
             "xl/_rels/workbook.xml.rels",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             f"{rels}</Relationships>",
         )
         for i, (_, rows) in enumerate(SHEETS, start=1):
-            z.writestr(f"xl/worksheets/sheet{i}.xml", sheet_xml(rows))
+            add(z, f"xl/worksheets/sheet{i}.xml", sheet_xml(rows))
 
 
 def check():
