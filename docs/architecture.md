@@ -42,6 +42,21 @@ from, and no platform operator with access to all logs. Each implementation is
 independent; keeping it current or changing it is the responsibility of the
 person or organisation that owns that copy.
 
+### What that means in practice
+
+| Concern | Who owns it |
+|---|---|
+| **Google account and Workspace plan** | The implementing person or organisation. The tracker adds no separate hosting bill, but it runs within the Google account, quotas, storage, and any Workspace plan they choose. |
+| **Data and access** | The owner of that Google Workspace: they decide who can access the Sheet, who receives the admin or viewer link, and how long the data is retained. |
+| **Deployment and availability** | The implementer. Google serves the Apps Script web app, but each owner publishes and maintains their own deployment. |
+| **Custom features and fixes** | The implementer, their developer, or whoever they arrange to support the copy. A change here is a template or source update, not an automatic update to existing installations. |
+| **Operational support** | The implementer. This project is not a managed SaaS product and does not provide monitoring, incident response, uptime commitments, or an on-call developer for individual installations. |
+
+That separation is intentional. It keeps the project lightweight and lets an
+owner adapt a copy freely, but it also means adopting the tracker is an
+implementation decision: make a copy, customise it as needed, and decide who
+will maintain it over time.
+
 ---
 
 ## Where it lives in Google Workspace
