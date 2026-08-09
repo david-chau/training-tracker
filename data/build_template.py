@@ -17,6 +17,7 @@ heading. Changing the order here means changing COL in src/Code.gs.
 import re
 import zipfile
 from pathlib import Path
+from urllib.parse import quote_plus
 from xml.sax.saxutils import escape
 
 OUT = (Path(__file__).parent.parent
@@ -27,7 +28,13 @@ LOG = [
      "Auto note", "Notes"],
 ]
 
-# name | group | day it belongs to | image URL | carries no weight
+# name | group | day it belongs to | image URL | carries no weight | video
+#
+# Column F is filled in below, by fill_videos(): a YouTube search for the
+# exercise name. A search rather than a fixed video id because a search never
+# rots, covers every row, and stays current — and because picking one video
+# per exercise is a judgement the person training should make. Replace any of
+# them with a specific link you trust.
 #
 # Column D is left blank on purpose: an image URL has to be one the person
 # setting up is allowed to use, so there is nothing safe to ship here.
@@ -35,7 +42,7 @@ LOG = [
 # Column E marks the exercises with no external load — push-ups, planks, the
 # rower. The app hides their weight field and never tries to add plates.
 EXERCISES = [
-    ["exercise", "group", "pattern", "image", "no weight"],
+    ["exercise", "group", "pattern", "image", "no weight", "video"],
     # Placeholder
     ['[Other]', 'Placeholder', 'Any'],
     # Chest
@@ -360,6 +367,23 @@ RECORDS = [
     ["Exercise", "Record", "Value", "Detail", "Date", "Day"],
 ]
 
+VIDEO_SEARCH = "https://www.youtube.com/results?search_query="
+
+
+def fill_videos(rows):
+    """Pad every exercise row to six columns and add a how-to search link."""
+    out = [rows[0]]
+    for row in rows[1:]:
+        row = list(row) + [""] * (6 - len(row))
+        name = row[0]
+        if not name.startswith("["):          # the [Other] placeholder has none
+            row[5] = VIDEO_SEARCH + quote_plus(name + " proper form")
+        out.append(row)
+    return out
+
+
+EXERCISES = fill_videos(EXERCISES)
+
 SHEETS = [
     ("Log", LOG),
     ("Exercises", EXERCISES),
@@ -485,6 +509,12 @@ def check():
         assert ">image</t>" in ex, "Exercises needs the image column, D"
         assert ">[Other]</t>" in ex, "the [Other] placeholder must ship"
         assert ">no weight</t>" in ex, "Exercises needs the no-weight column, E"
+        assert ">video</t>" in ex, "Exercises needs the video column, F"
+
+        # Every real exercise gets a how-to link; the placeholder does not.
+        linked = [r[0] for r in EXERCISES[1:] if r[5]]
+        assert len(linked) == len(EXERCISES) - 2, "a row is missing its video link"
+        assert all(r[5].startswith("https://") for r in EXERCISES[1:] if r[5])
 
         flagged = [r[0] for r in EXERCISES[1:] if len(r) > 4 and r[4] == "yes"]
         assert "Push-Up" in flagged and "Plank" in flagged, "bodyweight flags lost"

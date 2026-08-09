@@ -89,10 +89,11 @@ it persist.
 ```
 Google Sheet (named per person — the name is the app's heading and tab title)
 ├── Log        — one row per set. The only real data. 9 columns, A–I.
-├── Exercises  — name | group | pattern | image | no weight. Autocomplete +
-│                optional picture URL (http(s) only) + a flag hiding the
-│                weight field. Grows on use. Ships 256 rows including the
-│                `[Other]` placeholder and 52 unweighted ones.
+├── Exercises  — name | group | pattern | image | no weight | video.
+│                Autocomplete + optional picture URL + a flag hiding the
+│                weight field + a how-to link. Both URLs http(s)-guarded.
+│                Ships 256 rows: the `[Other]` placeholder, 52 unweighted,
+│                255 video search links (generated, not stored by hand).
 ├── Templates  — day | exercise | sets | reps | weight | include in new
 │                session. Seeds a session; F="no" keeps a row out of
 │                generation. Ships 5 exercises / 16 sets per day (~1hr)
@@ -196,6 +197,9 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   a viewer sees only logged days. Templates and the blank day are entry-time
   concepts, and offering them read-only yields buttons that always answer
   "nothing logged". `getBootstrap(k)` takes the key for this reason.
+- **Links must never navigate the app away.** `<base target="_blank">` is
+  the backstop and anchors set `target`/`rel` themselves. The pending-write
+  queue lives in memory; leaving the page can take it. It was `_top`.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the

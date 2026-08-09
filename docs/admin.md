@@ -46,6 +46,10 @@ The heading is the spreadsheet's name — tap it to open the sheet itself. The
 bottom bar reports the row and the values read back **out of the spreadsheet**
 after saving. Both stay put as you scroll.
 
+{: .note }
+Every link in the app opens in a **new tab**, on purpose. Navigating away
+mid-session would take any not-yet-saved changes with it.
+
 ---
 
 ## Running a session
@@ -235,20 +239,29 @@ Pull-Up` and `Weighted Chin-Up` already ship unflagged.
 
 ---
 
-## Pictures of the exercises
+## Showing what the movement is
 
-Put an image or GIF URL in column **D** of the `Exercises` tab and that
-exercise gets a thumbnail — tap it, or the name, to see it full width. Worth a
-lot when someone is new to a movement.
+Two columns on the `Exercises` tab, both optional.
 
-Blank is fine and is the default; nothing breaks.
+**Column F, `video`** — every exercise ships with one already: a **▶ How to**
+link beside the name that opens a YouTube search for that movement, in a new
+tab. Replace any of them with a specific video you trust.
+
+{: .note }
+A search rather than one fixed video, because a search never rots, covers all
+250-odd rows, and stays current. Picking *the* video for an exercise is a
+judgement worth making yourself.
+
+**Column D, `image`** — paste a picture or GIF URL and that exercise gets a
+thumbnail; tap it, or the name, to see it full width. Blank by default,
+because an image URL has to be one you are allowed to use.
 
 <details markdown="block">
-<summary>Which links work</summary>
+<summary>Which image links work</summary>
 
 It must be a **direct link to the image**, reachable without signing in and
 ending in `.jpg`, `.png`, `.gif` or `.webp`. A link to a page *containing* an
-image will not work.
+image will not work — that is what column F is for.
 
 For a picture in your own Google Drive:
 

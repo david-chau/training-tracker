@@ -210,6 +210,7 @@ function getBootstrap(k) {
     openDay: openToday,
     exercises: exerciseList(),
     images: exerciseImages(),
+    videos: exerciseVideos(),
     noWeight: noWeightNames(),
     name: logName(),
     // Only for whoever can edit — a viewer has no access to the spreadsheet
@@ -219,12 +220,12 @@ function getBootstrap(k) {
   };
 }
 
-// Exercises tab: A name | B group | C pattern | D image | E no weight.
-// D and E may not exist on an older sheet, hence the width clamp.
+// Exercises tab: A name | B group | C pattern | D image | E no weight |
+// F video. Anything past A may not exist on an older sheet, hence the clamp.
 function exerciseRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  const width = Math.min(5, Math.max(1, sheet.getLastColumn()));
+  const width = Math.min(6, Math.max(1, sheet.getLastColumn()));
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
     .filter(function (r) { return String(r[0]).trim(); });
 }
@@ -259,6 +260,17 @@ function exerciseImages() {
   const map = {};
   exerciseRows().forEach(function (r) {
     const url = String(r[3] || '').trim();
+    if (/^https?:\/\//i.test(url)) map[String(r[0]).trim()] = url;
+  });
+  return map;
+}
+
+// name -> "how to" link. Same http(s) guard as images: the value comes from
+// the sheet and ends up as a href.
+function exerciseVideos() {
+  const map = {};
+  exerciseRows().forEach(function (r) {
+    const url = String(r[5] || '').trim();
     if (/^https?:\/\//i.test(url)) map[String(r[0]).trim()] = url;
   });
   return map;

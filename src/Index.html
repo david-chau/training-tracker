@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-<base target="_top">
+<!-- Every link leaves in a new tab. Navigating this page away mid-session
+     would take the pending-write queue with it, and localStorage inside the
+     Apps Script iframe is not a guarantee we can lean on. Anchors set their
+     own target as well; this is the backstop for any added later. -->
+<base target="_blank">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root { --line:#e3e3e0; --muted:#6b6b66; --ink:#1c1c1a; --ok:#1d7a4f; --warn:#a33; }
@@ -44,6 +48,10 @@
   .exhead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .title { display:flex; align-items:center; gap:10px; min-width:0; }
   .ex h2 { font-size:17px; font-weight:600; margin:0; }
+  .howto { flex:0 0 auto; font-size:12px; color:var(--muted); text-decoration:none;
+           border:1px solid var(--line); border-radius:999px; padding:3px 10px;
+           white-space:nowrap; background:#fff; }
+  .howto:hover { color:var(--ink); border-color:var(--muted); }
   .thumb { width:42px; height:42px; flex:0 0 42px; object-fit:cover; border-radius:8px;
            border:1px solid var(--line); background:#f4f3f0; cursor:pointer; }
   .demo { display:block; width:100%; max-width:420px; margin:10px 0 4px;
@@ -188,6 +196,7 @@ google.script.run.withSuccessHandler(function (b) {
   S.date = b.today;
   document.getElementById('date').value = b.today;
   S.images = b.images || {};
+  S.videos = b.videos || {};
   S.noWeight = b.noWeight || {};
   var who = document.getElementById('who');
   if (b.name) who.textContent = b.name;
@@ -494,6 +503,18 @@ function title(name, card) {
     h2.onclick = function () { toggleDemo(card, name, url); };
   }
   wrap.appendChild(h2);
+
+  var vid = S.videos && S.videos[name];
+  if (vid) {
+    var a = document.createElement('a');
+    a.className = 'howto';
+    a.href = vid;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '▶ How to';
+    a.title = 'How to do ' + name;
+    wrap.appendChild(a);
+  }
   return wrap;
 }
 
