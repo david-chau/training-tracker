@@ -22,11 +22,17 @@ function node() {
     // A real element always has .children, so the stub must too — code
     // legitimately reads .length off it before appending anything.
     children: [],
+    // Per element, not shared: whether *one particular row* is marked is the
+    // whole point of the personal-best rule.
+    classes: {},
     classList: {
-      toggle(name, on) { if (on) bodyClasses[name] = true; else delete bodyClasses[name]; },
-      add(name) { bodyClasses[name] = true; },
-      remove(name) { delete bodyClasses[name]; },
-      contains(name) { return !!bodyClasses[name]; }
+      toggle(name, on) {
+        const has = on === undefined ? !n.classes[name] : !!on;
+        if (has) n.classes[name] = true; else delete n.classes[name];
+      },
+      add(name) { n.classes[name] = true; },
+      remove(name) { delete n.classes[name]; },
+      contains(name) { return !!n.classes[name]; }
     },
     appendChild(c) { this.children.push(c); return c; },
     insertBefore(c) { this.children.unshift(c); return c; },
@@ -44,7 +50,6 @@ function node() {
 
 const store = new Map();
 const nodes = {};
-const bodyClasses = {};       // what code has toggled on the session element
 
 const sandbox = {
   console,
@@ -100,8 +105,11 @@ const G = sandbox;
 G.S.day = 'Push';
 G.S.date = '2026-08-09';
 
+const bodyClasses = () => sandbox.document.getElementById('body').classes;
+
 function reset() {
-  Object.keys(bodyClasses).forEach(k => delete bodyClasses[k]);
+  const bc = bodyClasses();
+  Object.keys(bc).forEach(k => delete bc[k]);
   clearTimeout(G.PEND.saveTimer);
   G.PEND.items = {};
   G.PEND.sending = false;
@@ -181,7 +189,7 @@ test('incrementing never puts the session into a busy state', () => {
   for (let i = 0; i < 20; i++) G.queueSave(set(14, 8 + i, 20, 8));
 
   assert.strictEqual(G.S.busy, false, 'a tap must not raise busy');
-  assert.strictEqual(bodyClasses.busy, undefined, 'nor dim the session');
+  assert.strictEqual(bodyClasses().busy, undefined, 'nor dim the session');
 });
 
 test('a burst of taps collapses to one write and defers the send', () => {
@@ -288,6 +296,63 @@ test('structural edits are blocked while writes are outstanding', () => {
 
   reset();
   assert.strictEqual(G.blockedByQueue(), false);
+});
+
+// ---------- the personal-best mark ----------
+
+const marked = rows => rows.reduce((n, r) => n + (r.classes.pr ? 1 : 0), 0);
+
+test('only the set that takes the record is marked', () => {
+  G.S.records = {
+    Bench: { heaviest: { reps: 8, weight: 100, date: '2026-08-01' },
+             est1rm: 127, reps: null }
+  };
+  // A generated session steps up together, so every set clears the old best.
+  const sets = [
+    { exercise: 'Bench', reps: 8, weight: 105 },
+    { exercise: 'Bench', reps: 8, weight: 105 },
+    { exercise: 'Bench', reps: 10, weight: 105 }     // the actual record
+  ];
+  const rows = sets.map(() => G.document.createElement('div'));
+
+  assert.strictEqual(G.markPr('Bench', sets, rows), true);
+  assert.strictEqual(marked(rows), 1, 'lighting up every row is the bug');
+  assert.ok(rows[2].classes.pr, 'more reps at equal weight takes it');
+});
+
+test('a tie keeps the earlier set so the mark does not wander', () => {
+  G.S.records = {
+    Bench: { heaviest: { reps: 8, weight: 100, date: '2026-08-01' }, est1rm: 127, reps: null }
+  };
+  const sets = [
+    { exercise: 'Bench', reps: 8, weight: 105 },
+    { exercise: 'Bench', reps: 8, weight: 105 }
+  ];
+  const rows = sets.map(() => G.document.createElement('div'));
+
+  G.markPr('Bench', sets, rows);
+  assert.ok(rows[0].classes.pr);
+  assert.ok(!rows[1].classes.pr);
+});
+
+test('nothing is marked when nothing beats the record', () => {
+  G.S.records = {
+    Bench: { heaviest: { reps: 8, weight: 140, date: '2026-08-01' }, est1rm: 180, reps: null }
+  };
+  const sets = [{ exercise: 'Bench', reps: 8, weight: 105 }];
+  const rows = sets.map(() => G.document.createElement('div'));
+
+  assert.strictEqual(G.markPr('Bench', sets, rows), false);
+  assert.strictEqual(marked(rows), 0);
+});
+
+test('an exercise with no record yet is never marked', () => {
+  G.S.records = {};
+  const sets = [{ exercise: 'Brand New', reps: 8, weight: 105 }];
+  const rows = sets.map(() => G.document.createElement('div'));
+
+  assert.strictEqual(G.markPr('Brand New', sets, rows), false,
+    'no baseline means no claim to a best');
 });
 
 // ---------- render smoke tests ----------

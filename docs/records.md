@@ -19,15 +19,22 @@ One strip under each exercise name:
   Best 8 × 100 lb  ·  est 1RM 127  ·  on 2026-07-19
 ```
 
-Beat it and that set's boxes tint amber, with a tag on the strip:
+Beat it and a tag joins the strip, and the set that takes the record is
+starred:
 
 ```
   Best 8 × 100 lb · est 1RM 127 · on 2026-07-19 · ★ personal best today
 
-     Reps    Weight (LB)    RPE
- 1     8         100          8
- 2     8         105          9      ← tinted: heavier than ever before
+       Reps    Weight (LB)    RPE
+ 1       8         105          8
+ 2 ★    10         105          9      ← the set that actually takes it
 ```
+
+**Only one set is marked per exercise.** Progression steps a whole session up
+together, so in a typical week every set beats last time — marking them all
+meant a card lit end to end, which told you nothing. The mark goes to the set
+that would become the new record: heaviest, and at equal weight the one with
+more reps or seconds.
 
 Both update as you tap. Judged against *everything except the session you are
 in*, so today's earlier sets do not become the bar for today's later ones.

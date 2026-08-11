@@ -132,9 +132,14 @@ deliberately unexciting.
    Best 8 × 30 lb  ·  est 1RM 38  ·  on 2026-07-19
 ```
 
-Beat it and that set's boxes tint amber, with a **★ personal best today** tag
-joining the strip. Both update as you tap. Configurable — see
-[personal records](records.html).
+Beat it and a **★ personal best today** tag joins the strip, and the one set
+that actually takes the record gets a star by its number and a faint tint.
+
+Only that set is marked, not every set that clears the old number. A generated
+session steps up together, so most weeks *all* of them beat last time — and
+marking them all lit up the whole card and said nothing.
+
+Both update as you tap. Configurable — see [personal records](records.html).
 
 ---
 
@@ -198,8 +203,9 @@ tab already says it uses; the toggle only changes this one session's rows.
 
 ### Renaming an exercise
 
-The **✎** beside an exercise name swaps it for a text box. Rename, press
-Enter, done — no trip to the spreadsheet. Useful when you logged something under a
+The **✎** beside an exercise name opens a full-width text box across the top of
+the card. Rename, press Enter, done — no trip to the spreadsheet. Escape
+cancels. Useful when you logged something under a
 [throwaway name](#when-you-cannot-name-it-mid-session).
 
 {: .note }

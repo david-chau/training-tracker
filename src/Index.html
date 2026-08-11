@@ -20,6 +20,16 @@
   .top { position:sticky; top:0; z-index:5; background:#faf9f7;
          margin:-16px -16px 12px; padding:14px 16px 8px;
          border-bottom:1px solid var(--line); }
+  /* Nothing above the session means anything until getBootstrap returns: the
+     heading is a placeholder, the date is blank and there are no day buttons.
+     Showing that half-built is what made a slow first load look broken. */
+  body.booting .datebar,
+  body.booting .sessnav,
+  body.booting #tools,
+  body.booting #days { display:none; }
+  body.booting h1 { color:transparent; background:var(--line);
+                    border-radius:6px; max-width:11em; }
+  body.booting .kicker { visibility:hidden; }
   h1 { font-size:20px; font-weight:600; margin:0 0 2px;
        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   /* It opens the spreadsheet, so it should read as a link rather than as a
@@ -58,10 +68,14 @@
             background:none; border-radius:7px; font-size:13px; cursor:pointer;
             color:var(--muted); font-family:inherit; line-height:1.4; }
   .rename:hover { border-color:var(--line); color:var(--ink); }
-  .namebox { display:flex; gap:8px; align-items:center; flex:1; min-width:0; }
-  .namebox input { flex:1; min-width:0; padding:8px 10px; font-size:16px;
-                   font-family:inherit; border:1px solid var(--link);
-                   border-radius:8px; background:#fff; color:var(--ink); }
+  /* Renaming takes the whole card width. Sharing the header row with the set
+     counter squeezed the input to a few pixels on a phone, which is where
+     renaming is most likely to happen. */
+  .namebox { margin-bottom:12px; }
+  .namebox input { width:100%; padding:12px; font-size:16px; font-family:inherit;
+                   border:1px solid var(--link); border-radius:9px;
+                   background:#fff; color:var(--ink); margin-bottom:8px; }
+  .namebox .row { display:flex; gap:8px; }
   .howto { flex:0 0 auto; font-size:12px; color:var(--muted); text-decoration:none;
            border:1px solid var(--line); border-radius:999px; padding:3px 10px;
            white-space:nowrap; background:#fff; }
@@ -80,8 +94,11 @@
   .meta .sep { color:var(--line); }
   .meta .prtag { color:#8a6100; background:#fff5d6; border:1px solid #e8d9a8;
                  border-radius:999px; padding:1px 9px; font-size:12px; }
-  .pr .step { border-color:#e0c97a; background:#fffdf4; }
-  .pr .val { border-color:#e0c97a; background:#fffdf4; }
+  /* One row per card at most, so this can stay quiet: a faint wash plus a
+     star on the set number, which also means the mark does not depend on
+     colour alone. */
+  .pr .step, .pr .val { background:#fffcf0; }
+  .pr .n::after { content:' ★'; color:#b8860b; font-size:12px; }
   .cnt { display:flex; align-items:center; border:1px solid var(--line);
          border-radius:8px; overflow:hidden; flex-shrink:0; }
   .cnt button { width:34px; height:34px; border:0; background:#f4f3f0; font-size:18px;
@@ -191,7 +208,7 @@
   .notestate { font-size:13px; color:var(--muted); }
 </style>
 </head>
-<body>
+<body class="booting">
 
 <script>
   var CAN_EDIT = ('<?= canEdit ?>' === 'true');
@@ -216,7 +233,7 @@
   <button class="danger" id="wipe">Delete this day</button>
 </div>
 <datalist id="exlist"></datalist>
-<div id="body"><div class="msg">Pick a day to start.</div></div>
+<div id="body"><div class="spinner">Loading…</div></div>
 <div class="bar" id="bar"><span id="barmsg">Ready</span><button class="retry" id="retry" hidden>Retry now</button></div>
 
 <script>
@@ -260,6 +277,8 @@ google.script.run.withSuccessHandler(function (b) {
     d.appendChild(el);
   });
 
+  document.body.classList.remove('booting');
+
   // Land on today's session when there is one — the common case is opening
   // this mid-workout, not browsing.
   if (b.openDay) {
@@ -274,7 +293,18 @@ google.script.run.withSuccessHandler(function (b) {
     document.getElementById('body').innerHTML = CAN_EDIT
       ? '<div class="msg">No day types yet — add rows to the Templates tab.</div>'
       : '<div class="msg">Nothing has been logged yet.</div>';
+  } else if (!b.openDay) {
+    document.getElementById('body').innerHTML =
+      '<div class="msg">Pick a day to start.</div>';
   }
+}).withFailureHandler(function (e) {
+  document.body.classList.remove('booting');
+  var body = document.getElementById('body');
+  body.innerHTML = '';
+  var m = document.createElement('div');
+  m.className = 'msg';
+  m.textContent = 'Could not load: ' + e.message;
+  body.appendChild(m);
 }).getBootstrap(KEY);
 
 document.getElementById('date').onchange = function () {
@@ -661,7 +691,7 @@ function title(name, card) {
     ren.textContent = '✎';
     ren.title = 'Rename ' + name;
     ren.setAttribute('aria-label', 'Rename ' + name);
-    ren.onclick = function () { renamePanel(wrap, name); };
+    ren.onclick = function () { renamePanel(card, name); };
     wrap.appendChild(ren);
   }
 
@@ -682,7 +712,9 @@ function title(name, card) {
 // Swaps the name for an input in place. Renames only within this session —
 // the same exercise in earlier sessions keeps its name, because rewriting
 // history would change what progression and records were built from.
-function renamePanel(wrap, name) {
+function renamePanel(card, name) {
+  var head = card.querySelector('.exhead');
+
   var box = document.createElement('div');
   box.className = 'namebox';
 
@@ -691,15 +723,17 @@ function renamePanel(wrap, name) {
   input.setAttribute('list', 'exlist');
   input.setAttribute('aria-label', 'New name for ' + name);
 
+  var row = document.createElement('div');
+  row.className = 'row';
   var ok = document.createElement('button');
-  ok.className = 'go'; ok.style.flex = '0 0 auto'; ok.textContent = 'Rename';
+  ok.className = 'go'; ok.textContent = 'Rename';
   var no = document.createElement('button');
-  no.className = 'cancel'; no.style.flex = '0 0 auto'; no.textContent = 'Cancel';
+  no.className = 'cancel'; no.textContent = 'Cancel';
+  row.appendChild(ok); row.appendChild(no);
 
-  var shown = [].slice.call(wrap.childNodes);
   function restore() {
     box.remove();
-    shown.forEach(function (n) { wrap.appendChild(n); });
+    if (head) head.style.display = '';
   }
 
   function commit() {
@@ -736,9 +770,12 @@ function renamePanel(wrap, name) {
     if (e.key === 'Escape') { e.preventDefault(); restore(); }
   });
 
-  shown.forEach(function (n) { n.remove(); });
-  box.appendChild(input); box.appendChild(ok); box.appendChild(no);
-  wrap.appendChild(box);
+  // Hide the header rather than rebuilding it: the set counter and the
+  // How-to link come back untouched on cancel.
+  if (head) head.style.display = 'none';
+  box.appendChild(input);
+  box.appendChild(row);
+  card.insertBefore(box, card.firstChild);
   setTimeout(function () { input.focus(); input.select(); }, 50);
 }
 
@@ -771,9 +808,14 @@ function card(name, sets) {
     tag.textContent = sets.length + ' sets';
     head.appendChild(tag);
     el.appendChild(head);
-    var refreshRo = metaLine(el, name, sets);
-    sets.forEach(function (x) { el.appendChild(setRow(x)); });
-    refreshRo();
+    var setTagRo = metaLine(el, name, sets);
+    var roRows = [];
+    sets.forEach(function (x) {
+      var row = setRow(x);
+      roRows.push(row);
+      el.appendChild(row);
+    });
+    setTagRo(markPr(name, sets, roRows));
     if (sets[0] && sets[0].note) {
       el.insertAdjacentHTML('beforeend', '<div class="rotext"></div>');
       el.lastChild.textContent = sets[0].note;
@@ -793,12 +835,15 @@ function card(name, sets) {
   head.appendChild(cnt);
   el.appendChild(head);
 
-  var refresh = metaLine(el, name, sets);
+  var setTag = metaLine(el, name, sets);
+  var rows = [];
+
+  function refresh() { setTag(markPr(name, sets, rows)); }
 
   sets.forEach(function (s) {
     var row = setRow(s);
-    var own = s.onChange;
-    s.onChange = function () { if (own) own(); refresh(); };
+    rows.push(row);
+    s.onChange = refresh;
     el.appendChild(row);
   });
   refresh();
@@ -982,15 +1027,30 @@ function metaLine(el, name, sets) {
 
   el.appendChild(row);
 
-  return function () {
-    var hit = sets.some(function (x) { return isPr(name, x.reps, x.weight); });
+  return function (hit) {
     tag.hidden = !hit;
     row.style.display = row.children.length > 1 || hit ? '' : 'none';
   };
 }
 
-function markPr(row, s) {
-  row.classList.toggle('pr', isPr(s.exercise, s.reps, s.weight));
+// A generated session usually beats the old best on *every* set, because the
+// whole session steps up together — so marking each qualifying row lit the
+// entire card. Mark the one set that actually takes the record instead.
+function markPr(name, sets, rows) {
+  var winner = -1, best = null;
+  sets.forEach(function (s, i) {
+    if (!isPr(name, s.reps, s.weight)) return;
+    if (!best || beats(s, best)) { best = s; winner = i; }
+  });
+  rows.forEach(function (row, i) { row.classList.toggle('pr', i === winner); });
+  return winner !== -1;
+}
+
+// Same order the server uses: heavier wins, and at equal weight more reps or
+// seconds wins. Ties keep the earlier set, so the mark does not wander.
+function beats(a, b) {
+  if (a.weight !== b.weight) return a.weight > b.weight;
+  return a.reps > b.reps;
 }
 
 function setRow(s) {
@@ -998,7 +1058,6 @@ function setRow(s) {
   row.className = 'set';
   var n = document.createElement('div'); n.className = 'n'; n.textContent = s.set;
   row.appendChild(n);
-  s.onChange = function () { markPr(row, s); };
   var t = isTimed(s.exercise);
   row.appendChild(stepper(s, 'reps', t ? 'Seconds' : 'Reps', t ? 5 : 1, 0));
   if (S.noWeight && S.noWeight[s.exercise]) {
@@ -1007,7 +1066,6 @@ function setRow(s) {
     row.appendChild(stepper(s, 'weight', 'Weight (LB)', 2.5, 1));
   }
   row.appendChild(stepper(s, 'rpe', 'RPE', 0.5, 1));
-  markPr(row, s);
   return row;
 }
 
