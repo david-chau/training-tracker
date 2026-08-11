@@ -212,6 +212,24 @@ The old admin link stops editing. The viewer link is unaffected.
 
 The links stay the same. Skipping step 2 keeps serving the old version.
 
+{: .warning }
+**Do not re-import the template to update.** *File → Import → Replace
+spreadsheet* replaces the **whole spreadsheet**, and the template ships a `Log`
+containing nothing but headings — so every session you have ever logged is
+gone. The code lives in Apps Script, not in the spreadsheet, so updating it
+never requires an import.
+
+To pick up template changes — new exercises, a new column — copy just the tab
+you want:
+
+1. Import the new template into a **separate, throwaway** spreadsheet.
+2. Right-click the tab you want → **Copy to → Existing spreadsheet**, and pick
+   your log.
+3. In your log, delete the old tab and rename the copy to the original name.
+
+Your `Log` is never touched. If you have already lost data this way,
+*File → Version history → See version history* still has it.
+
 </details>
 
 <details markdown="block">

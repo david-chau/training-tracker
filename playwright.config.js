@@ -7,6 +7,10 @@ const { defineConfig, devices } = require('@playwright/test');
 // tests write to a single shared spreadsheet.
 module.exports = defineConfig({
   testDir: './e2e',
+  // Verifies the demo log has data and rebuilds it if not.
+  globalSetup: require.resolve('./e2e/global-setup.js'),
+  // The seeder and the checker are drivers, not specs.
+  testIgnore: ['**/seed-demo.js', '**/global-setup.js', '**/app.js'],
   timeout: 180_000,   // live app, many round trips per test
   expect: { timeout: 20_000 },
   retries: process.env.CI ? 2 : 1,

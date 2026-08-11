@@ -543,9 +543,6 @@ One person tracking their own training needs one installation. A trainer with
 twenty-five people has twenty-five, identical and fully independent. There is
 no multi-tenancy anywhere in the design.
 
-<details markdown="block">
-<summary>What that costs and buys</summary>
-
 ```
    David         Jill           Arden            each is:
    ┌────┐        ┌────┐        ┌────┐              · one Sheet
@@ -564,10 +561,43 @@ data cannot leak into another's, there is no database to administer, and
 deleting someone is deleting a file. At twenty-five logs the trade is worth
 it. At two hundred it would not be.
 
-Quotas are not a concern at this size — Apps Script allows thousands of
-executions a day per account, and a session is a few dozen calls.
+### Quotas, and what they mean at 25 people
 
-</details>
+Every deployment runs **as the account that published it**, so all 25 logs draw
+on *one* account's quota rather than 25. That is the number that matters, and it
+is not obvious from the architecture.
+
+Most of Apps Script's published limits do not apply here. The app sends no
+email, makes no `UrlFetch` calls, and installs no triggers — so the daily
+trigger runtime, mail recipients and fetch quotas are all irrelevant. Three
+things actually bind:
+
+| Limit | Value | How this app uses it |
+|---|---|---|
+| Runtime per execution | 6 min | Every read scans the whole `Log`. Fine for years of sessions; [archiving](admin.html#archiving-old-sessions) is the release valve. |
+| Simultaneous executions | 30 | One per tap in flight. 25 people rarely train in the same minute, and taps are batched. |
+| Properties read/write | 50,000/day consumer, 500,000 Workspace | One read per page load and one per `saveBatch`, for the edit key. |
+
+A worked estimate, since "will it fit" deserves arithmetic rather than
+reassurance. A session is roughly 30 sets; taps collapse into one `saveBatch`
+per ~600 ms of stillness, so call it 40–80 writes plus a handful of reads —
+**under 100 property reads per session**.
+
+| Load | Property reads/day | Consumer quota used |
+|---|---|---|
+| 5 sessions a day, all clients | ~500 | ~1% |
+| 25 clients × 1 session/day | ~2,500 | ~5% |
+| 25 clients × 5 sessions/day | ~12,500 | ~25% |
+
+So yes — 25 people fits, with room to spare even at five sessions each per
+day. On a `@gmail.com` account the first thing to bite would be property
+reads at around 500 sessions a day, which is twenty times the intended load.
+
+{: .warning }
+The limit that will actually be felt first is none of the above: it is the
+6-minute execution ceiling meeting a `Log` that has grown for years, because
+every read scans all of it and every structural write rebuilds `Records`.
+Archive old seasons and it stays quick.
 
 ---
 

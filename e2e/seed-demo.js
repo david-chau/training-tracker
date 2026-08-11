@@ -201,17 +201,9 @@ async function buildSession(app, session) {
   console.log(`${session.exercises.length} exercises`);
 }
 
-(async () => {
+async function seed({ quiet = false } = {}) {
   const T = targets();
   if (!T.adminUrl) throw new Error('no adminUrl — see e2e/targets.example.json');
-
-  const sets = PLAN.reduce((n, s) => n + s.exercises.reduce((m, e) => m + e[1], 0), 0);
-  console.log(`${PLAN.length} sessions, ${sets} sets`);
-  if (DRY) {
-    PLAN.forEach(s => console.log(`  ${s.date} ${s.day}: ` +
-      s.exercises.map(e => `${e[0]} ${e[1]}x${e[2]}@${e[3]}`).join(', ')));
-    return;
-  }
 
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1100, height: 1400 } });
@@ -220,16 +212,51 @@ async function buildSession(app, session) {
   // Dialogs are auto-dismissed by default, which would hide the app refusing
   // an action ("some changes have not saved yet") behind a silent no-op.
   page.on('dialog', async d => {
-    console.log(`    [dialog] ${d.type()}: ${d.message().split('\n')[0]}`);
+    if (!quiet) console.log(`    [dialog] ${d.type()}: ${d.message().split('\n')[0]}`);
     await d.accept();
   });
 
-  await page.goto(T.adminUrl, { waitUntil: 'domcontentloaded' });
-  const app = await appFrame(page);
-  await ready(app);
+  try {
+    await page.goto(T.adminUrl, { waitUntil: 'domcontentloaded' });
+    const app = await appFrame(page);
+    await ready(app);
+    for (const session of PLAN) await buildSession(app, session);
+  } finally {
+    await browser.close();
+  }
+}
 
-  for (const session of PLAN) await buildSession(app, session);
+// Is the demo log populated? Cheap: the viewer only lists day types that have
+// sessions, so an empty list means there is nothing to look at.
+async function isSeeded() {
+  const T = targets();
+  if (!T.viewerUrl) return true;          // nothing to check against
 
-  console.log('done');
-  await browser.close();
-})();
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    page.setDefaultTimeout(45_000);
+    await page.goto(T.viewerUrl, { waitUntil: 'domcontentloaded' });
+    const app = await appFrame(page);
+    await ready(app);
+    return (await app.locator('.day').count()) > 0;
+  } finally {
+    await browser.close();
+  }
+}
+
+module.exports = { PLAN, seed, isSeeded };
+
+if (require.main === module) {
+  (async () => {
+    const sets = PLAN.reduce((n, s) => n + s.exercises.reduce((m, e) => m + e[1], 0), 0);
+    console.log(`${PLAN.length} sessions, ${sets} sets`);
+    if (DRY) {
+      PLAN.forEach(s => console.log(`  ${s.date} ${s.day}: ` +
+        s.exercises.map(e => `${e[0]} ${e[1]}x${e[2]}@${e[3]}`).join(', ')));
+      return;
+    }
+    await seed();
+    console.log('done');
+  })();
+}

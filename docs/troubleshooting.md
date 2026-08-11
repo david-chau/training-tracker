@@ -271,6 +271,19 @@ separately if it matters.
 
 ## Recovery
 
+### My whole log is empty
+
+Almost always a template re-import. *File → Import → Replace spreadsheet*
+replaces the entire spreadsheet, and the template's `Log` tab contains only
+headings — so importing it again to "update" wipes every session.
+
+**Recover it:** *File → Version history → See version history*, pick a version
+from before the import, **Restore this version**.
+
+Then update the way that does not destroy data — see
+[updating the code](setup.html#afterwards). The code lives in Apps Script, so
+updating it never needs an import at all.
+
 ### I deleted the wrong day, or removed the wrong exercise
 
 The app has no undo. The spreadsheet does:
