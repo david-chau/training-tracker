@@ -8,7 +8,8 @@
 <base target="_blank">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --line:#e3e3e0; --muted:#6b6b66; --ink:#1c1c1a; --ok:#1d7a4f; --warn:#a33; }
+  :root { --line:#e3e3e0; --muted:#6b6b66; --ink:#1c1c1a; --ok:#1d7a4f; --warn:#a33;
+          --link:#1b5aa0; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { font-family:system-ui,-apple-system,sans-serif; margin:0; padding:16px 16px 64px;
          color:var(--ink); background:#faf9f7; font-size:17px; }
@@ -21,8 +22,13 @@
          border-bottom:1px solid var(--line); }
   h1 { font-size:20px; font-weight:600; margin:0 0 2px;
        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  h1 a { color:inherit; text-decoration:none; border-bottom:1px dotted var(--line); }
-  h1 a:hover { border-bottom-color:var(--muted); }
+  /* It opens the spreadsheet, so it should read as a link rather than as a
+     heading that happens to respond to taps. */
+  h1 a { color:var(--link); text-decoration:underline;
+         text-decoration-color:rgba(27,90,160,0.35); text-underline-offset:3px; }
+  h1 a::after { content:' \2197'; font-size:0.75em; text-decoration:none;
+                display:inline-block; }
+  h1 a:hover { text-decoration-color:var(--link); }
   .kicker { font-size:12px; color:var(--muted); letter-spacing:0.06em;
             text-transform:uppercase; margin:0; }
   .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
@@ -48,6 +54,14 @@
   .exhead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .title { display:flex; align-items:center; gap:10px; min-width:0; }
   .ex h2 { font-size:17px; font-weight:600; margin:0; }
+  .rename { flex:0 0 auto; padding:2px 7px; border:1px solid transparent;
+            background:none; border-radius:7px; font-size:13px; cursor:pointer;
+            color:var(--muted); font-family:inherit; line-height:1.4; }
+  .rename:hover { border-color:var(--line); color:var(--ink); }
+  .namebox { display:flex; gap:8px; align-items:center; flex:1; min-width:0; }
+  .namebox input { flex:1; min-width:0; padding:8px 10px; font-size:16px;
+                   font-family:inherit; border:1px solid var(--link);
+                   border-radius:8px; background:#fff; color:var(--ink); }
   .howto { flex:0 0 auto; font-size:12px; color:var(--muted); text-decoration:none;
            border:1px solid var(--line); border-radius:999px; padding:3px 10px;
            white-space:nowrap; background:#fff; }
@@ -105,6 +119,15 @@
   .panel input { width:100%; padding:12px; font-size:16px; border:1px solid var(--line);
                  border-radius:9px; font-family:inherit; margin-bottom:10px; }
   .mini { display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-bottom:12px; }
+  /* Reps or seconds. The Exercises tab decides it for a known name; this is
+     how a new one gets to say so. */
+  .unit { display:flex; gap:0; margin-bottom:12px; border:1px solid var(--line);
+          border-radius:9px; overflow:hidden; }
+  .unit button { flex:1; padding:10px 8px; border:0; background:#fff;
+                 font-size:15px; font-family:inherit; color:var(--muted);
+                 cursor:pointer; }
+  .unit button.on { background:var(--ink); color:#fff; }
+  .unit + .hint { font-size:12px; color:var(--muted); margin:-6px 0 10px; }
   .mini label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
   .mini input { margin:0; text-align:center; }
   .go { flex:1; padding:13px; border:0; background:var(--ink); color:#fff;
@@ -134,6 +157,20 @@
            cursor:pointer; }
   .retry[hidden] { display:none; }
   .msg { padding:16px; color:var(--muted); }
+  /* Whole-session work only: loading a day, or a structural change that
+     rewrites rows. Per-tick saves deliberately stay silent — blocking the
+     form on every increment would make entry feel broken. */
+  .busy { position:relative; pointer-events:none; opacity:0.55;
+          transition:opacity 0.12s ease; }
+  .spinner { display:flex; align-items:center; gap:10px;
+             padding:16px; color:var(--muted); }
+  .spinner::before { content:''; width:15px; height:15px; flex:0 0 15px;
+                     border:2px solid var(--line); border-top-color:var(--muted);
+                     border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner::before { animation-duration:2.4s; }
+  }
   .ro { display:inline-block; padding:6px 12px; border-radius:8px; background:#eef1ee;
         color:var(--muted); font-size:13px; margin-bottom:12px; }
   .val { display:flex; align-items:center; justify-content:center; height:46px;
@@ -247,13 +284,17 @@ document.getElementById('wipe').onclick = function () {
   if (!S.day || !S.date) return;
   if (blockedByQueue()) return;
   if (!confirm('Delete every ' + S.day + ' set logged on ' + S.date + '?')) return;
-  flash('Deleting…', false);
+  busy(true, 'Deleting…');
   google.script.run
     .withSuccessHandler(function (n) {
+      busy(false);
       flash('Deleted ' + n + ' rows', true);
       load(false);
     })
-    .withFailureHandler(function (e) { flash('Delete failed: ' + e.message, false, true); })
+    .withFailureHandler(function (e) {
+      busy(false);
+      flash('Delete failed: ' + e.message, false, true);
+    })
     .deleteSession(KEY, S.day, S.date);
 };
 
@@ -315,15 +356,36 @@ function markDay() {
   });
 }
 
+// Whole-session work: loading a day, or a structural change that rewrites
+// rows. Per-tick saves are excluded on purpose — dimming the form on every
+// increment would read as the app fighting you.
+function busy(on, label) {
+  S.busy = !!on;
+  var body = document.getElementById('body');
+  body.classList.toggle('busy', !!on);
+  ['wipe', 'prevsess', 'nextsess', 'dayback', 'dayfwd'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.disabled = !!on;
+  });
+  [].forEach.call(document.querySelectorAll('.day'), function (b) {
+    b.disabled = !!on;
+  });
+  if (on && label) flash(label, false);
+}
+
 function load(create, source) {
   if (!S.day) return;
-  document.getElementById('body').innerHTML = '<div class="msg">Loading…</div>';
+  var body = document.getElementById('body');
+  body.classList.remove('busy');
+  body.innerHTML = '<div class="spinner">Loading ' + S.day + '…</div>';
+  busy(true);
   google.script.run.withSuccessHandler(function (d) {
     S.dates = d; markSessNav();
   }).listDates(S.day);
   google.script.run
-    .withSuccessHandler(render)
+    .withSuccessHandler(function (res) { busy(false); render(res); })
     .withFailureHandler(function (e) {
+      busy(false);
       // Server messages quote sheet values back, so this is text, not markup.
       var body = document.getElementById('body');
       body.innerHTML = '';
@@ -445,25 +507,78 @@ function addExercisePanel() {
     wrap.appendChild(inp); mini.appendChild(wrap);
     fields[f[0]] = inp; wraps[f[0]] = wrap;
   });
+
+  // Reps / Seconds toggle. A known exercise sets it from the Exercises tab;
+  // touching it afterwards overrides that for this add, and a brand-new name
+  // carries the choice into the tab so it sticks.
+  var unit = (function () {
+    var row = document.createElement('div');
+    row.className = 'unit';
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    var chosen = false, timed = false;
+
+    var reps = document.createElement('button');
+    reps.textContent = 'Reps';
+    var secs = document.createElement('button');
+    secs.textContent = 'Seconds';
+
+    function paint() {
+      reps.classList.toggle('on', !timed);
+      secs.classList.toggle('on', timed);
+      wraps.reps.firstChild.textContent = timed ? 'Seconds' : 'Reps';
+      fields.reps.setAttribute('aria-label', timed ? 'Seconds' : 'Reps');
+    }
+    function pick(t) {
+      chosen = true;
+      timed = t;
+      if (fields.reps.value === (t ? '10' : '30')) fields.reps.value = t ? 30 : 10;
+      paint();
+      hint.textContent = '';
+    }
+    reps.onclick = function () { pick(false); };
+    secs.onclick = function () { pick(true); };
+
+    row.appendChild(reps); row.appendChild(secs);
+    paint();
+
+    return {
+      row: row,
+      hint: hint,
+      timed: function () { return timed; },
+      // Follow the sheet until the user says otherwise.
+      suggest: function (nameText) {
+        if (chosen) return;
+        var known = S.timed && Object.prototype.hasOwnProperty.call(S.timed, nameText);
+        timed = isTimed(nameText);
+        if (timed && fields.reps.value === '10') fields.reps.value = 30;
+        if (!timed && fields.reps.value === '30') fields.reps.value = 10;
+        paint();
+        hint.textContent = (nameText && known)
+          ? nameText + ' is measured in seconds on the Exercises tab'
+          : '';
+      }
+    };
+  })();
+
+  p.appendChild(unit.row);
+  p.appendChild(unit.hint);
   p.appendChild(mini);
+  syncUnits();
 
   // Asking for the weight of a push-up is the same nonsense here as it was on
   // the card, so the field goes as soon as the name is one that carries none.
+
   function syncUnits() {
     var chosen = name.value.trim();
     var none = S.noWeight && S.noWeight[chosen];
     wraps.weight.style.display = none ? 'none' : '';
     mini.style.gridTemplateColumns = none ? '1fr 1fr' : '1fr 1fr 1fr';
     if (none) fields.weight.value = 0;
-
-    var t = isTimed(chosen);
-    wraps.reps.firstChild.textContent = t ? 'Seconds' : 'Reps';
-    fields.reps.setAttribute('aria-label', t ? 'Seconds' : 'Reps');
-    if (t && fields.reps.value === '10') fields.reps.value = 30;
+    unit.suggest(chosen);
   }
   name.addEventListener('input', syncUnits);
   name.addEventListener('change', syncUnits);
-  syncUnits();
 
   var row = document.createElement('div');
   row.style.display = 'flex'; row.style.gap = '8px';
@@ -476,14 +591,18 @@ function addExercisePanel() {
     if (!name.value.trim()) { name.focus(); return; }
     if (blockedByQueue()) return;
     go.textContent = 'Adding…'; go.disabled = true;
+    busy(true, 'Adding ' + name.value.trim() + '…');
     google.script.run
-      .withSuccessHandler(function (res) { render(res); flash('Exercise added', true); })
+      .withSuccessHandler(function (res) {
+        busy(false); render(res); flash('Exercise added', true);
+      })
       .withFailureHandler(function (e) {
+        busy(false);
         go.textContent = 'Add'; go.disabled = false;
         flash(e.message, false, true);
       })
       .addExercise(KEY, S.day, S.date, name.value, fields.sets.value,
-                   fields.reps.value, fields.weight.value);
+                   fields.reps.value, fields.weight.value, unit.timed());
   };
   cancel.onclick = function () { p.replaceWith(addExerciseControl()); };
 
@@ -521,6 +640,16 @@ function title(name, card) {
   }
   wrap.appendChild(h2);
 
+  if (CAN_EDIT) {
+    var ren = document.createElement('button');
+    ren.className = 'rename';
+    ren.textContent = '✎';
+    ren.title = 'Rename ' + name;
+    ren.setAttribute('aria-label', 'Rename ' + name);
+    ren.onclick = function () { renamePanel(wrap, name); };
+    wrap.appendChild(ren);
+  }
+
   var vid = S.videos && S.videos[name];
   if (vid) {
     var a = document.createElement('a');
@@ -533,6 +662,69 @@ function title(name, card) {
     wrap.appendChild(a);
   }
   return wrap;
+}
+
+// Swaps the name for an input in place. Renames only within this session —
+// the same exercise in earlier sessions keeps its name, because rewriting
+// history would change what progression and records were built from.
+function renamePanel(wrap, name) {
+  var box = document.createElement('div');
+  box.className = 'namebox';
+
+  var input = document.createElement('input');
+  input.value = name;
+  input.setAttribute('list', 'exlist');
+  input.setAttribute('aria-label', 'New name for ' + name);
+
+  var ok = document.createElement('button');
+  ok.className = 'go'; ok.style.flex = '0 0 auto'; ok.textContent = 'Rename';
+  var no = document.createElement('button');
+  no.className = 'cancel'; no.style.flex = '0 0 auto'; no.textContent = 'Cancel';
+
+  var shown = [].slice.call(wrap.childNodes);
+  function restore() {
+    box.remove();
+    shown.forEach(function (n) { wrap.appendChild(n); });
+  }
+
+  function commit() {
+    var to = input.value.trim();
+    if (!to || to === name) return restore();
+    if (blockedByQueue()) return;
+
+    ok.disabled = no.disabled = true;
+    ok.textContent = 'Renaming…';
+    busy(true, 'Renaming ' + name + '…');
+    google.script.run
+      .withSuccessHandler(function (res) {
+        busy(false); render(res); flash('Renamed to ' + to, true);
+      })
+      .withFailureHandler(function (e) {
+        busy(false);
+        ok.disabled = no.disabled = false;
+        ok.textContent = 'Rename';
+        flash(e.message, false, true);
+      })
+      .renameExercise(KEY, S.day, S.date, name, to);
+  }
+
+  ok.onclick = commit;
+  no.onclick = restore;
+  input.addEventListener('mousedown', function (e) {
+    e.stopPropagation();
+    window.focus();
+    setTimeout(function () { input.focus(); input.select(); }, 0);
+  });
+  input.addEventListener('keydown', function (e) {
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); restore(); }
+  });
+
+  shown.forEach(function (n) { n.remove(); });
+  box.appendChild(input); box.appendChild(ok); box.appendChild(no);
+  wrap.appendChild(box);
+  setTimeout(function () { input.focus(); input.select(); }, 50);
 }
 
 function toggleDemo(card, name, url) {
@@ -695,13 +887,17 @@ function resize(exercise, count, label) {
   }
 
   label.textContent = '…';
-  flash(count === 0 ? 'Removing…' : 'Updating sets…', false);
+  busy(true, count === 0 ? 'Removing ' + exercise + '…' : 'Updating sets…');
   google.script.run
     .withSuccessHandler(function (res) {
+      busy(false);
       render(res);
       flash(count === 0 ? exercise + ' removed' : 'Sets updated', true);
     })
-    .withFailureHandler(function (e) { flash('Failed: ' + e.message, false, true); })
+    .withFailureHandler(function (e) {
+      busy(false);
+      flash('Failed: ' + e.message, false, true);
+    })
     .setSetCount(KEY, S.day, S.date, exercise, count);
 }
 

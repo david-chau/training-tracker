@@ -33,6 +33,11 @@ Top to bottom:
 
 The heading and the status bar stay put as you scroll.
 
+While a day is loading, or while a change that rewrites rows is in flight, the
+session dims and the controls disable until it settles. Ordinary value taps do
+**not** do this — they queue quietly, because dimming the form on every
+increment would read as the app fighting you.
+
 {: .note }
 Every link in the app opens in a **new tab**, on purpose. Navigating away
 mid-session would take any not-yet-saved changes with it.
@@ -162,12 +167,42 @@ then deletes those rows from the sheet.
 ### A different exercise
 
 **+ Add exercise**, type the name — it autocompletes from the `Exercises` tab,
-which ships with over 250 movements — then set sets, reps and weight. The
-second box asks for **Seconds** instead when the exercise is a timed one, and
-the weight box disappears for exercises that carry none.
+which ships with over 250 movements — then choose **Reps** or **Seconds** and
+set the numbers.
 
-An unknown name is added to the `Exercises` tab automatically. The same
-exercise cannot be added twice.
+```
+   ┌────────────────────────────────────────────┐
+   │ Plank                                    ▾ │
+   ├──────────────────────┬─────────────────────┤
+   │        Reps          │      Seconds        │  ← pre-picked from the
+   ├──────────────────────┴─────────────────────┤     Exercises tab, yours
+   │  Sets 3   │  Seconds 30  │                 │     to override
+   └────────────────────────────────────────────┘
+```
+
+Pick a known exercise and the toggle follows the `Exercises` tab and says so.
+Change it and your choice wins for this add. The weight box disappears
+entirely for exercises that carry none.
+
+The same exercise cannot be added to a session twice.
+
+{: .note }
+**A name that is not on the list gets added to the `Exercises` tab**, so it
+autocompletes from then on — and if you set the toggle to *Seconds*, the new
+row is marked `time based` too. An existing exercise keeps whatever unit the
+tab already says it uses; the toggle only changes this one session's rows.
+
+### Renaming an exercise
+
+The **✎** beside an exercise name swaps it for a text box. Rename, press
+Enter, done — no trip to the spreadsheet. This is the quick fix for
+[`[Other]`](#when-you-cannot-name-it-mid-session).
+
+{: .note }
+It renames **this session only**. The same exercise in earlier sessions keeps
+its old name, deliberately — rewriting history would change what progression
+and records were built from. The new name joins the `Exercises` tab so it
+autocompletes next time.
 
 <details markdown="block">
 <summary>When you cannot name it mid-session</summary>
@@ -176,13 +211,16 @@ The list includes **`[Other]`**. Pick it when nothing matches and you do not
 want to stop and think — an unlabelled machine, an improvised movement, a
 rehab drill.
 
-Rename it afterwards in the `Log` tab: find the `[Other]` rows for that date
-and type the real name over them.
+Rename it afterwards with the **✎** on the card, or in the `Log` tab if you
+prefer — find the `[Other]` rows for that date and type over them.
 
 {: .warning }
 Rename it before the next session of that day type. Progression matches by
 name, so two different movements both left as `[Other]` get progressed into
 each other.
+
+The **✎** on the card is the quickest way — see
+[renaming an exercise](#renaming-an-exercise).
 
 </details>
 

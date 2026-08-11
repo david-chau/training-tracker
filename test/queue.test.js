@@ -17,10 +17,22 @@ function node() {
   const n = {
     style: {}, className: '', textContent: '', innerHTML: '', value: '',
     hidden: false, rows: 0, placeholder: '', type: '', inputMode: '',
-    classList: { toggle() {}, remove() {}, add() {} },
-    appendChild(c) { (this.children = this.children || []).push(c); return c; },
+    disabled: false, title: '', href: '', target: '', rel: '', alt: '',
+    loading: '', src: '',
+    // A real element always has .children, so the stub must too — code
+    // legitimately reads .length off it before appending anything.
+    children: [],
+    classList: { toggle() {}, remove() {}, add() {}, contains() { return false; } },
+    appendChild(c) { this.children.push(c); return c; },
+    insertBefore(c) { this.children.unshift(c); return c; },
     insertAdjacentHTML() {}, addEventListener() {}, setAttribute() {},
-    replaceWith() {}, focus() {}, select() {}, blur() {}, remove() {}
+    replaceWith() {}, focus() {}, select() {}, blur() {}, remove() {},
+    querySelector() { return null; }, querySelectorAll() { return []; },
+    // Real code reads firstChild after setting innerHTML to a <label>, so the
+    // stub has to offer something with a textContent to write to.
+    get firstChild() { return (this._fc = this._fc || node()); },
+    get childNodes() { return this.children; },
+    get lastChild() { return this.children.slice(-1)[0] || node(); }
   };
   return n;
 }
@@ -42,6 +54,7 @@ const sandbox = {
   document: {
     getElementById: id => (nodes[id] = nodes[id] || node()),
     createElement: () => node(),
+    createTextNode: t => ({ nodeValue: String(t), textContent: String(t) }),
     querySelectorAll: () => [],
     addEventListener: () => {}
   },
@@ -227,6 +240,56 @@ test('structural edits are blocked while writes are outstanding', () => {
 
   reset();
   assert.strictEqual(G.blockedByQueue(), false);
+});
+
+// ---------- render smoke tests ----------
+//
+// These call the real render helpers against the stub and assert only that
+// they do not throw. Cheap, and they catch the failure mode that unit tests
+// miss entirely: a helper used before the var holding it is assigned.
+
+G.S.records = {
+  Bench: { heaviest: { reps: 8, weight: 100, date: '2026-08-01' }, est1rm: 127, reps: null },
+  Plank: { heaviest: { reps: 45, weight: 0, date: '2026-08-01' }, est1rm: null,
+           reps: { reps: 45, weight: 0, date: '2026-08-01' } }
+};
+G.S.videos = { Bench: 'https://example.com/v' };
+G.S.images = { Bench: 'https://example.com/i.png' };
+G.S.noWeight = { Plank: true };
+G.S.timed = { Plank: true };
+G.S.lastNotes = {};
+
+const sample = (name, over) => Object.assign({
+  row: 14, exercise: name, set: 1, reps: 8, weight: 100, rpe: 8, note: '',
+  last: { reps: 8, weight: 95, rpe: 7 }
+}, over || {});
+
+test('a card renders for a loaded exercise', () => {
+  const el = G.card('Bench', [sample('Bench'), sample('Bench', { set: 2, row: 15 })]);
+  assert.ok(el, 'card returned nothing');
+});
+
+test('a card renders for an unweighted timed exercise', () => {
+  const el = G.card('Plank', [sample('Plank', { reps: 45, weight: 0 })]);
+  assert.ok(el);
+});
+
+test('a card renders for an exercise with no records at all', () => {
+  const el = G.card('Brand New Thing', [sample('Brand New Thing')]);
+  assert.ok(el);
+});
+
+test('the add-exercise panel builds without throwing', () => {
+  // Regression: the Reps/Seconds toggle was appended before the var holding
+  // it was assigned, so this threw a TypeError on open.
+  const panel = G.addExercisePanel();
+  assert.ok(panel);
+});
+
+test('the start chooser builds for each combination of sources', () => {
+  assert.ok(G.starter({ priorDate: '2026-08-02', templateCount: 5, blank: false }));
+  assert.ok(G.starter({ priorDate: null, templateCount: 5, blank: false }));
+  assert.ok(G.starter({ priorDate: null, templateCount: 0, blank: true }));
 });
 
 console.log('\n' + passed + ' passed');

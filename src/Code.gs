@@ -893,7 +893,7 @@ function writeNote(sheet, dayType, dayKey, exercise, text) {
 
 // Add an exercise to a session that's already underway. Unknown names get
 // appended to the Exercises tab so they're autocompleted next time.
-function addExercise(k, dayType, dayKey, name, sets, reps, weight) {
+function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed) {
   assertEdit(k);
   name = String(name).trim();
   if (!name) throw new Error('Name required.');
@@ -920,18 +920,67 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight) {
   sheet.getRange(sheet.getLastRow() - out.length + 1, 1, out.length, 1)
     .setNumberFormat('yyyy-mm-dd');
 
-  rememberExercise(name);
+  rememberExercise(name, timed);
   SpreadsheetApp.flush();
   refreshRecords();
   return loadSession(dayType, dayKey, false, k);
 }
 
 
-function rememberExercise(name) {
+// Rename an exercise within one session. The [Other] placeholder exists to
+// be renamed afterwards, and doing that in the sheet meant leaving the app
+// mid-workout.
+//
+// Scoped to this session on purpose: the same exercise in earlier sessions
+// keeps its name, because renaming history would silently rewrite what
+// progression and records were built from.
+function renameExercise(k, dayType, dayKey, from, to) {
+  assertEdit(k);
+  from = String(from).trim();
+  to = String(to).trim();
+  if (!to) throw new Error('New name required.');
+  if (to === from) return loadSession(dayType, dayKey, false, k);
+  if (to.length > 80) throw new Error('That name is too long.');
+
+  const rows = allRows();
+  const here = rows.filter(function (r) {
+    return dateKey(r[COL.date]) === dayKey && sameDay(r[COL.day], dayType);
+  });
+
+  const mine = here.filter(function (r) {
+    return String(r[COL.exercise]).trim() === from;
+  });
+  if (!mine.length) throw new Error(from + ' is not in this session.');
+
+  const clash = here.some(function (r) {
+    return String(r[COL.exercise]).trim().toLowerCase() === to.toLowerCase() &&
+      String(r[COL.exercise]).trim() !== from;
+  });
+  if (clash) throw new Error(to + ' is already in this session.');
+
+  const sheet = logSheet();
+  mine.forEach(function (r) {
+    sheet.getRange(r.sheetRow, COL.exercise + 1).setValue(to);
+  });
+
+  rememberExercise(to);
+  SpreadsheetApp.flush();
+  refreshRecords();
+  return loadSession(dayType, dayKey, false, k);
+}
+
+
+// A name typed into the app joins the Exercises tab so it autocompletes next
+// time. `timed` is only honoured for a genuinely new row — an existing
+// exercise keeps whatever unit the sheet already says it uses.
+function rememberExercise(name, timed) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet) return;
   const known = exerciseList().map(function (n) { return n.toLowerCase(); });
-  if (known.indexOf(name.toLowerCase()) === -1) sheet.appendRow([name, '', '']);
+  if (known.indexOf(name.toLowerCase()) !== -1) return;
+
+  // A | B | C | D image | E no weight | F video | G time based
+  sheet.appendRow([name, '', '', '', '', '', timed ? 'yes' : '']);
 }
 
 
