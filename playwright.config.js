@@ -7,7 +7,7 @@ const { defineConfig, devices } = require('@playwright/test');
 // tests write to a single shared spreadsheet.
 module.exports = defineConfig({
   testDir: './e2e',
-  timeout: 90_000,
+  timeout: 180_000,   // live app, many round trips per test
   expect: { timeout: 20_000 },
   retries: process.env.CI ? 2 : 1,
   workers: 1,

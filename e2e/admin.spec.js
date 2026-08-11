@@ -7,7 +7,7 @@
 
 const { test, expect } = require('@playwright/test');
 const {
-  targets, open, settled, scratchDate, gotoDate, deployedFeature
+  targets, open, scratchDate, gotoDate, deployedFeature, awaitLoad, awaitQueue
 } = require('./app');
 
 const T = targets();
@@ -15,11 +15,14 @@ const DATE = scratchDate();
 
 // Leave nothing behind, whether the test passed or not.
 async function wipe(app) {
+  // Structural changes are refused while writes are outstanding, so drain
+  // first rather than racing the app's own guard.
+  await awaitQueue(app);
   const del = app.locator('#wipe');
   if (!await del.count()) return;
   app.page().once('dialog', d => d.accept());
   await del.click();
-  await settled(app);
+  await awaitLoad(app);
 }
 
 test.describe('admin link', () => {
@@ -63,14 +66,15 @@ test.describe('admin link', () => {
       const empty = app.locator('.choice', { hasText: 'Empty' });
       await expect(empty).toBeVisible();
       await empty.click();
-      await settled(app);
+      await awaitLoad(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
       await panel.locator('input').first().fill('Barbell Bench Press');
       await panel.locator('input').first().dispatchEvent('change');
       await panel.locator('.go').click();
-      await settled(app);
+      await awaitLoad(app);
+      await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
 
       const card = app.locator('.ex', { hasText: 'Barbell Bench Press' });
       await expect(card).toBeVisible();
@@ -83,7 +87,7 @@ test.describe('admin link', () => {
       await app.locator('.day', { hasText: 'Custom' }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
-      await settled(app);
+      await awaitLoad(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
@@ -113,14 +117,15 @@ test.describe('admin link', () => {
       await app.locator('.day', { hasText: 'Custom' }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
-      await settled(app);
+      await awaitLoad(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
       await panel.locator('input').first().fill('Lat Pulldown');
       await panel.locator('input').first().dispatchEvent('change');
       await panel.locator('.go').click();
-      await settled(app);
+      await awaitLoad(app);
+      await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
 
       test.skip(!await deployedFeature(app, '.rename'),
         'the live app has no rename control yet — redeploy Index.html');
@@ -131,7 +136,7 @@ test.describe('admin link', () => {
       const box = app.locator('.namebox input');
       await box.fill('Machine by the window');
       await app.locator('.namebox .go').click();
-      await settled(app);
+      await awaitLoad(app);
 
       await expect(app.locator('.ex', { hasText: 'Machine by the window' }))
         .toBeVisible();
@@ -144,14 +149,15 @@ test.describe('admin link', () => {
       await app.locator('.day', { hasText: 'Custom' }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
-      await settled(app);
+      await awaitLoad(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
       await panel.locator('input').first().fill('Barbell Curl');
       await panel.locator('input').first().dispatchEvent('change');
       await panel.locator('.go').click();
-      await settled(app);
+      await awaitLoad(app);
+      await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
 
       const first = app.locator('.ex').first().locator('.set').first();
       const reps = first.locator('.step input').first();
@@ -180,7 +186,7 @@ test.describe('admin link', () => {
       await app.locator('.day', { hasText: 'Custom' }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
-      await settled(app);
+      await awaitLoad(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
@@ -188,7 +194,8 @@ test.describe('admin link', () => {
       await panel.locator('input').first().dispatchEvent('change');
       await panel.locator('.mini input').first().fill('1');   // one set
       await panel.locator('.go').click();
-      await settled(app);
+      await awaitLoad(app);
+      await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
 
       const card = app.locator('.ex', { hasText: 'Face Pull' });
       await expect(card).toBeVisible();
@@ -202,7 +209,7 @@ test.describe('admin link', () => {
       // Below one set is how an exercise is taken out; it asks first.
       page.once('dialog', d => d.accept());
       await minus.click();
-      await settled(app);
+      await awaitLoad(app);
 
       await expect(app.locator('.ex', { hasText: 'Face Pull' })).toHaveCount(0);
     });

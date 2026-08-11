@@ -72,30 +72,46 @@ async function openSession(app, dayIndex = 0) {
   await days.nth(dayIndex).click();
   await settled(app);
 
-  for (let i = 0; i < 12; i++) {
+  // Start from beyond every session so stepping *back* can always reach the
+  // newest one. Without this the search inherits whatever date the previous
+  // day type left behind, and a session ahead of it is unreachable.
+  await gotoDate(app, '2035-12-31');
+
+  // Step back until a session appears. One step *should* be enough from beyond
+  // every date, but a step can be a no-op while the date list is still in
+  // flight, so this retries rather than concluding there is nothing there.
+  for (let i = 0; i < 8; i++) {
     if (await app.locator('.ex').count()) return true;
 
     const back = app.locator('#prevsess');
-    if (await back.isDisabled()) return false;
+    if (!await navReady(app, back)) return false;
 
-    // The date list arrives on its own round trip, so an early click can be
-    // a no-op. Treat "the date did not move" as not-ready and try again
-    // rather than burning the loop.
     const before = await app.locator('#date').inputValue();
     await back.click();
     const moved = await app
       .waitForFunction(
         d => document.getElementById('date').value !== d,
         before,
-        { timeout: 8_000 }
+        { timeout: 15_000 }
       )
       .then(() => true)
       .catch(() => false);
 
-    if (!moved) { await app.page().waitForTimeout(1_000); continue; }
-    await settled(app);
+    if (!moved) { await app.page().waitForTimeout(1_500); continue; }
+    await awaitLoad(app);
   }
   return await app.locator('.ex').count() > 0;
+}
+
+// True once the button is enabled, false if it is still disabled after the
+// date list has had time to land.
+async function navReady(app, button, grace = 12_000) {
+  const deadline = Date.now() + grace;
+  while (Date.now() < deadline) {
+    if (!await button.isDisabled()) return true;
+    await app.page().waitForTimeout(400);
+  }
+  return false;
 }
 
 // The session dims and shows a spinner while a day loads.
@@ -125,7 +141,27 @@ function scratchDate() {
 async function gotoDate(app, iso) {
   await app.locator('#date').fill(iso);
   await app.locator('#date').dispatchEvent('change');
-  await app.locator('.spinner').waitFor({ state: 'detached' }).catch(() => {});
+  await awaitLoad(app);
+}
+
+// The app refuses structural changes while writes are outstanding, which is
+// correct behaviour and something a script has to respect rather than race.
+// The amber bar is the signal.
+async function awaitQueue(app, timeout = 60_000) {
+  await app.locator('#bar.pending')
+    .waitFor({ state: 'detached', timeout })
+    .catch(() => {});
+}
+
+// Wait for the spinner to appear and then go. Waiting only for it to detach
+// races with it not having appeared yet, which lets stale cards from the
+// previous date look like the new session.
+async function awaitLoad(app) {
+  const spinner = app.locator('.spinner');
+  await spinner.waitFor({ state: 'visible', timeout: 8_000 }).catch(() => {});
+  await spinner.waitFor({ state: 'detached', timeout: 60_000 }).catch(() => {});
+  await app.locator('#body.busy').waitFor({ state: 'detached', timeout: 60_000 })
+    .catch(() => {});
 }
 
 // The status bar is the app's own receipt: it reports values read back out of
@@ -136,6 +172,7 @@ async function waitForSaved(app) {
 }
 
 module.exports = {
-  targets, appFrame, open, ready, openSession, settled, deployedFeature,
+  targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad, awaitQueue,
+  deployedFeature,
   scratchDate, gotoDate, waitForSaved
 };

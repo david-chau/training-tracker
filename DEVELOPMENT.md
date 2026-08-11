@@ -135,6 +135,37 @@ it was 5.9 MB and visibly banded, against 1.2 MB of much better H.264. Both
 GitHub and the Pages site render `<video>`, so there is no reason to carry
 the GIF.
 
+## The demo data
+
+The links in the README point at a real log. `e2e/seed-demo.js` rebuilds its
+contents:
+
+```bash
+node e2e/seed-demo.js --dry     # print the plan, touch nothing
+node e2e/seed-demo.js           # rebuild every session in it
+```
+
+It needs `e2e/targets.json` for the admin URL. Each session is deleted and
+rebuilt, so running it twice leaves the same data rather than doubling it.
+
+Apps Script has no HTTP write API — `google.script.run` is only reachable from
+inside the page — so this drives the UI exactly as a person would. That makes
+it slow (a few minutes) and means it has to respect the app's own guards:
+
+- **Wait for the app's signals, not for time.** `awaitLoad()` waits for the
+  spinner to *appear and then go*; waiting only for it to detach races with it
+  never having appeared, which lets stale cards from the previous date look
+  like the new session.
+- **`count()` does not wait.** Asking "is the chooser there?" before the render
+  lands reads "no" when the truth is "not yet". Wait for `.choice, .addex`
+  first, then ask.
+- **Structural writes are refused while the queue is busy**, correctly.
+  `awaitQueue()` waits for the amber bar to clear before deleting or adding.
+
+{: .warning }
+Adds get slower as the log grows, because each one rewrites the `Records` tab
+server-side. That is why the timeouts here are minutes rather than seconds.
+
 ## End-to-end tests
 
 `e2e/` drives a real deployed web app with Playwright. There is no local

@@ -37,4 +37,22 @@ inline at the top of the documentation site.
 - [Open the demo viewer](https://script.google.com/macros/s/AKfycbxH2TaEs7AR-EeINAF9mTYqQ9Dc5-Cy1hST8BP4mw4arttqKQwOKpRMhq5yX7QMyu4BEQ/exec)
 - [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1fjs3pzBXt2AzUgrJWjDrNwbWoD0WaNhlwGPTqTbHaS8/edit?usp=sharing)
 
+Both are read-only. The log holds a few weeks of seeded training, chosen to
+show the things worth seeing:
+
+| Day type | Sessions | What it demonstrates |
+|---|---|---|
+| **Push** | 20, 27 Jul, 3 Aug | Three weeks of the same lifts, so weights climb and the `was 95` line under each field has something to say. The newest session carries RPE and a note. |
+| **Pull** | 22, 29 Jul | Includes `Pull-Up` — no weight field at all |
+| **Legs** | 24, 31 Jul | The heaviest numbers, so records read clearly |
+| **Custom** | 5 Aug | `Plank` in seconds, `Push-Up` unweighted, `Farmer Carry` both timed *and* loaded |
+
+Use **‹ Previous session** to walk back through them — landing on today shows
+nothing, because nothing is logged today.
+
+{: .note }
+It is a live spreadsheet, not a fixture, so exact numbers may drift. Regenerate
+it with `node e2e/seed-demo.js` — see
+[DEVELOPMENT.md](DEVELOPMENT.md#the-demo-data).
+
 Working on the code: [DEVELOPMENT.md](DEVELOPMENT.md).

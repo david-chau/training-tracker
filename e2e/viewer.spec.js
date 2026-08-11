@@ -2,7 +2,7 @@
 // they are safe to run against a live log.
 
 const { test, expect } = require('@playwright/test');
-const { targets, open, openSession, settled } = require('./app');
+const { targets, open, openSession, settled, navReady } = require('./app');
 
 const T = targets();
 
@@ -31,21 +31,25 @@ test.describe('viewer link', () => {
     await expect(app.locator('#tools')).toBeHidden();
   });
 
-  test('only offers day types that have sessions', async ({ page }) => {
-    const app = await open(page, T.viewerUrl);
+  test('every day type it offers leads to a real session', async ({ page }) => {
+    const first = await open(page, T.viewerUrl);
 
-    const days = app.locator('.day');
-    const count = await days.count();
-
-    if (count === 0) {
-      await expect(app.locator('#body')).toContainText('Nothing has been logged');
+    const names = await first.locator('.day').allTextContents();
+    if (!names.length) {
+      await expect(first.locator('#body')).toContainText('Nothing has been logged');
       return;
     }
 
-    // Custom is an entry-time concept: offering it read-only would be a
-    // button that always answers "nothing logged".
-    for (let i = 0; i < count; i++) {
-      await expect(days.nth(i)).not.toHaveText('Custom');
+    // The rule is "day types that have sessions", not "day types from the
+    // Templates tab" — Custom qualifies once something is logged against it.
+    // The property worth holding is that no button is a dead end.
+    //
+    // Each day gets a fresh load: hunting for a session moves the date and
+    // costs round trips, and carrying that state into the next day made this
+    // flaky rather than wrong.
+    for (let i = 0; i < names.length; i++) {
+      const app = await open(page, T.viewerUrl);
+      expect(await openSession(app, i), `${names[i]} led nowhere`).toBe(true);
     }
   });
 
@@ -79,7 +83,7 @@ test.describe('viewer link', () => {
     test.skip(!await openSession(app), 'the demo log has no sessions');
 
     const back = app.locator('#prevsess');
-    test.skip(await back.isDisabled(), 'only one session for this day type');
+    test.skip(!await navReady(app, back), 'only one session for this day type');
 
     const before = await app.locator('#date').inputValue();
     await back.click();
