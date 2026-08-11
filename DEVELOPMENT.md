@@ -166,6 +166,31 @@ it slow (a few minutes) and means it has to respect the app's own guards:
 Adds get slower as the log grows, because each one rewrites the `Records` tab
 server-side. That is why the timeouts here are minutes rather than seconds.
 
+## Recording the doc clips
+
+`e2e/record-clips.js` records the short animations on the documentation pages,
+one per feature, by driving the live app and converting Playwright's webm to a
+GIF.
+
+```bash
+node e2e/record-clips.js            # all of them
+node e2e/record-clips.js rename     # just one
+```
+
+Each clip works on the same scratch date the tests use and deletes the day
+afterwards.
+
+{: .note }
+Screen recordings are the good case for GIF — flat colour, static background,
+a small changing region — which is why these are GIFs while the hand-held
+tablet clip is an MP4. That footage was 39 MB as a GIF; see
+[the demo clip](#the-demo-clip).
+
+{: .warning }
+Do not run this at the same time as the test suite. Both drive the same
+spreadsheet, and both launch browsers — running them together produced 180
+second launch timeouts and a poisoned 40 minute test run.
+
 ## End-to-end tests
 
 `e2e/` drives a real deployed web app with Playwright. There is no local
@@ -192,6 +217,10 @@ Three things are worth knowing before running them:
   on a `googleusercontent` origin, so nothing is reachable from the top-level
   document. `appFrame()` finds whichever frame contains the app rather than
   hardcoding `#sandboxFrame`, which Google has renamed before.
+- **Chromium, not a device preset.** `devices['iPad …']` carries
+  `defaultBrowserType: 'webkit'`, and the workflow installs chromium only — so
+  the preset failed in CI with a bare launch timeout that named no cause. The
+  config pins `browserName` and sets a tablet-sized touch viewport instead.
 - **A live app can be older than this repo.** Users paste the two files by hand
   and then have to redeploy. Tests for a feature the deployment lacks skip with
   a message naming it, rather than failing — a red suite for a pending deploy

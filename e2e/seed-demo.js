@@ -208,6 +208,7 @@ async function seed({ quiet = false } = {}) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1100, height: 1400 } });
   page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
 
   // Dialogs are auto-dismissed by default, which would hide the app refusing
   // an action ("some changes have not saved yet") behind a silent no-op.
@@ -235,11 +236,17 @@ async function isSeeded() {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    page.setDefaultTimeout(45_000);
+    page.setDefaultTimeout(60_000);
+    page.setDefaultNavigationTimeout(90_000);   // cold Apps Script is slow
     await page.goto(T.viewerUrl, { waitUntil: 'domcontentloaded' });
     const app = await appFrame(page);
     await ready(app);
     return (await app.locator('.day').count()) > 0;
+  } catch (e) {
+    // A pre-flight check that can fail the whole suite is worse than no
+    // check. Assume seeded and let the specs report what they find.
+    console.log('e2e: seed check could not run (' + e.message.split('\n')[0] + ')');
+    return true;
   } finally {
     await browser.close();
   }

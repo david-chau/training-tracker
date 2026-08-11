@@ -130,6 +130,12 @@ async function deployedFeature(app, selector) {
   return (await app.locator(selector).count()) > 0;
 }
 
+// The admin specs need a day-type button that already exists, and day types
+// only exist once something has been logged against them — so they reuse the
+// blank day. Named here because the viewer specs have to know which day the
+// suite is mutating underneath them.
+const SCRATCH_DAY = 'Custom';
+
 // A date far enough out that it cannot collide with anything logged for real.
 function scratchDate() {
   const d = new Date();
@@ -172,7 +178,8 @@ async function waitForSaved(app) {
 }
 
 module.exports = {
-  targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad, awaitQueue,
+  targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad,
+  awaitQueue, SCRATCH_DAY,
   deployedFeature,
   scratchDate, gotoDate, waitForSaved
 };

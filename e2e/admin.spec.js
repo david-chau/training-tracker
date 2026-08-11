@@ -7,7 +7,8 @@
 
 const { test, expect } = require('@playwright/test');
 const {
-  targets, open, scratchDate, gotoDate, deployedFeature, awaitLoad, awaitQueue
+  targets, open, scratchDate, gotoDate, deployedFeature, awaitLoad, awaitQueue,
+  SCRATCH_DAY
 } = require('./app');
 
 const T = targets();
@@ -34,7 +35,7 @@ test.describe('admin link', () => {
     await expect(app.locator('.ro')).toHaveCount(0);
     await expect(app.locator('#tools')).toBeVisible();
     // Custom is entry-only, so it is offered here and not to a viewer.
-    await expect(app.locator('.day', { hasText: 'Custom' })).toHaveCount(1);
+    await expect(app.locator('.day', { hasText: SCRATCH_DAY })).toHaveCount(1);
   });
 
   test('the heading links to the spreadsheet, in a new tab', async ({ page }) => {
@@ -51,7 +52,7 @@ test.describe('admin link', () => {
 
     test.afterEach(async ({ page }) => {
       const app = await open(page, T.adminUrl);
-      await app.locator('.day', { hasText: 'Custom' }).click();
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
       await gotoDate(app, DATE);
       await wipe(app);
     });
@@ -59,7 +60,7 @@ test.describe('admin link', () => {
     test('an empty Custom session accepts an added exercise', async ({ page }) => {
       const app = await open(page, T.adminUrl);
 
-      await app.locator('.day', { hasText: 'Custom' }).click();
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
       await gotoDate(app, DATE);
 
       // Custom defaults to Empty, so that is the highlighted choice.
@@ -84,7 +85,7 @@ test.describe('admin link', () => {
     test('the add form switches between reps and seconds', async ({ page }) => {
       const app = await open(page, T.adminUrl);
 
-      await app.locator('.day', { hasText: 'Custom' }).click();
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
       await awaitLoad(app);
@@ -114,7 +115,7 @@ test.describe('admin link', () => {
     test('an exercise can be renamed from its card', async ({ page }) => {
       const app = await open(page, T.adminUrl);
 
-      await app.locator('.day', { hasText: 'Custom' }).click();
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
       await awaitLoad(app);
@@ -146,7 +147,7 @@ test.describe('admin link', () => {
     test('a tapped value reaches the sheet and is read back', async ({ page }) => {
       const app = await open(page, T.adminUrl);
 
-      await app.locator('.day', { hasText: 'Custom' }).click();
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
       await awaitLoad(app);
@@ -183,7 +184,7 @@ test.describe('admin link', () => {
     test('removing the last exercise empties the session', async ({ page }) => {
       const app = await open(page, T.adminUrl);
 
-      await app.locator('.day', { hasText: 'Custom' }).click();
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
       await gotoDate(app, DATE);
       await app.locator('.choice', { hasText: 'Empty' }).click();
       await awaitLoad(app);

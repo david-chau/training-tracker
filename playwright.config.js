@@ -1,5 +1,5 @@
 // @ts-check
-const { defineConfig, devices } = require('@playwright/test');
+const { defineConfig } = require('@playwright/test');
 
 // These run against a real deployed web app over the network, not a local
 // server — there is nothing to build or serve. So: generous timeouts, retries
@@ -17,7 +17,14 @@ module.exports = defineConfig({
   workers: 1,
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
   use: {
-    ...devices['iPad (gen 7) landscape'],   // the app is tablet-first
+    // Chromium with a tablet-sized, touch-enabled viewport rather than a
+    // WebKit device preset. devices['iPad …'] implies defaultBrowserType
+    // 'webkit', which CI does not install — it installs chromium only — so the
+    // preset would have failed there for a reason that looks like a timeout.
+    browserName: 'chromium',
+    viewport: { width: 1024, height: 1180 },
+    hasTouch: true,
+    isMobile: false,          // chromium's isMobile forbids some interactions
     actionTimeout: 20_000,
     navigationTimeout: 60_000,
     trace: 'retain-on-failure',
