@@ -1104,8 +1104,8 @@ function stepper(s, key, label, step, dp) {
 // is last-value-wins against a fixed row the server verifies first.
 
 var STORE = 'wl.pending.v1';
-var PEND = { items: {}, sending: false, timer: null, backoff: 1000, note: '',
-             last: null, watchers: {} };
+var PEND = { items: {}, sending: false, timer: null, saveTimer: null,
+             backoff: 1000, note: '', last: null, watchers: {} };
 
 // A note field wants to know when its own write reaches the sheet, so it can
 // stop saying "Queued". Registered by pending-key and cleared on every
@@ -1145,8 +1145,19 @@ function pendLoad() {
   } catch (e) { PEND.items = {}; }
 }
 
+// Serialising the queue and writing localStorage is synchronous, and holding
+// a ± button fires this on every press. Debounced so a burst of taps costs one
+// write instead of twenty; pendPersistNow() is for the moments that must not
+// wait — the queue emptying, and leaving the page.
 function pendPersist() {
   if (!STORAGE) return;
+  clearTimeout(PEND.saveTimer);
+  PEND.saveTimer = setTimeout(pendPersistNow, 250);
+}
+
+function pendPersistNow() {
+  if (!STORAGE) return;
+  clearTimeout(PEND.saveTimer);
   try {
     if (pendCount()) STORAGE.setItem(STORE, JSON.stringify(PEND.items));
     else STORAGE.removeItem(STORE);
@@ -1224,7 +1235,7 @@ function accept(keys, results) {
 
   PEND.backoff = 1000;
   PEND.note = '';
-  pendPersist();
+  pendPersistNow();
 
   if (rejected.length) {
     paint();
@@ -1296,6 +1307,7 @@ document.addEventListener('visibilitychange', function () {
   if (!document.hidden && pendCount()) flush();
 });
 window.addEventListener('beforeunload', function (e) {
+  pendPersistNow();          // a debounced write must not be what is lost
   if (!pendCount()) return;
   e.preventDefault();
   e.returnValue = '';

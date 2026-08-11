@@ -34,9 +34,11 @@ Top to bottom:
 The heading and the status bar stay put as you scroll.
 
 While a day is loading, or while a change that rewrites rows is in flight, the
-session dims and the controls disable until it settles. Ordinary value taps do
-**not** do this — they queue quietly, because dimming the form on every
-increment would read as the app fighting you.
+session dims and the controls disable until it settles.
+
+Tapping reps, weight or RPE is **exempt** — those stay instant however fast
+you tap. A burst of presses collapses into a single write, sent once you stop
+for about half a second, so holding **+** costs one save rather than twenty.
 
 {: .note }
 Every link in the app opens in a **new tab**, on purpose. Navigating away
@@ -184,7 +186,9 @@ Pick a known exercise and the toggle follows the `Exercises` tab and says so.
 Change it and your choice wins for this add. The weight box disappears
 entirely for exercises that carry none.
 
-The same exercise cannot be added to a session twice.
+The name is **free text** — it autocompletes, but nothing stops you typing
+something that is not on the list. The same exercise cannot be added to one
+session twice.
 
 {: .note }
 **A name that is not on the list gets added to the `Exercises` tab**, so it
@@ -207,20 +211,18 @@ autocompletes next time.
 <details markdown="block">
 <summary>When you cannot name it mid-session</summary>
 
-The list includes **`[Other]`**. Pick it when nothing matches and you do not
-want to stop and think — an unlabelled machine, an improvised movement, a
-rehab drill.
+Type anything — the box is free text, not a fixed list. `Machine by the
+window` is a perfectly good name for one session, and **✎** renames it the
+moment you find out what it is really called.
 
-Rename it afterwards with the **✎** on the card, or in the `Log` tab if you
-prefer — find the `[Other]` rows for that date and type over them.
+The list also includes **`[Other]`** as a ready-made placeholder, for when you
+would rather not invent anything at all mid-set. It is a convenience, not a
+requirement.
 
 {: .warning }
-Rename it before the next session of that day type. Progression matches by
-name, so two different movements both left as `[Other]` get progressed into
-each other.
-
-The **✎** on the card is the quickest way — see
-[renaming an exercise](#renaming-an-exercise).
+Whatever placeholder you use, rename it before the next session of that day
+type. Progression matches on the name, so two different movements both left as
+`[Other]` — or both left as `temp` — get progressed into each other.
 
 </details>
 

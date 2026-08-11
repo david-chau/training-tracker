@@ -22,7 +22,12 @@ function node() {
     // A real element always has .children, so the stub must too — code
     // legitimately reads .length off it before appending anything.
     children: [],
-    classList: { toggle() {}, remove() {}, add() {}, contains() { return false; } },
+    classList: {
+      toggle(name, on) { if (on) bodyClasses[name] = true; else delete bodyClasses[name]; },
+      add(name) { bodyClasses[name] = true; },
+      remove(name) { delete bodyClasses[name]; },
+      contains(name) { return !!bodyClasses[name]; }
+    },
     appendChild(c) { this.children.push(c); return c; },
     insertBefore(c) { this.children.unshift(c); return c; },
     insertAdjacentHTML() {}, addEventListener() {}, setAttribute() {},
@@ -39,6 +44,7 @@ function node() {
 
 const store = new Map();
 const nodes = {};
+const bodyClasses = {};       // what code has toggled on the session element
 
 const sandbox = {
   console,
@@ -95,6 +101,8 @@ G.S.day = 'Push';
 G.S.date = '2026-08-09';
 
 function reset() {
+  Object.keys(bodyClasses).forEach(k => delete bodyClasses[k]);
+  clearTimeout(G.PEND.saveTimer);
   G.PEND.items = {};
   G.PEND.sending = false;
   G.PEND.backoff = 1000;
@@ -143,8 +151,48 @@ test('different rows and notes queue separately', () => {
 
 test('a queued write survives into storage', () => {
   G.queueSave(set(14, 12, 25, 9));
+
+  // The write is debounced, so holding a ± button costs one serialisation
+  // rather than one per press. Nothing is in storage yet.
+  assert.strictEqual(store.has('wl.pending.v1'), false, 'should not write per tap');
+
+  G.pendPersistNow();
   const saved = JSON.parse(store.get('wl.pending.v1'));
   assert.strictEqual(saved['s|14'].reps, 12);
+});
+
+test('emptying the queue clears storage immediately, not on a timer', () => {
+  G.queueSave(set(14, 12, 25, 9));
+  G.pendPersistNow();
+  assert.ok(store.has('wl.pending.v1'));
+
+  G.flush();
+  outbox[0].ok([{ ok: true, set: { row: 14, reps: 12, weight: 25, rpe: 9 } }]);
+
+  // A stale stored copy would replay work already confirmed.
+  assert.strictEqual(store.has('wl.pending.v1'), false);
+});
+
+test('incrementing never puts the session into a busy state', () => {
+  // Busy dims the form and disables the controls. It belongs to loading a day
+  // and to structural writes — not to tapping a number, which must stay
+  // instant however fast it is tapped.
+  G.S.busy = false;
+  for (let i = 0; i < 20; i++) G.queueSave(set(14, 8 + i, 20, 8));
+
+  assert.strictEqual(G.S.busy, false, 'a tap must not raise busy');
+  assert.strictEqual(bodyClasses.busy, undefined, 'nor dim the session');
+});
+
+test('a burst of taps collapses to one write and defers the send', () => {
+  for (let i = 0; i < 15; i++) G.queueSave(set(14, 8 + i, 20, 8));
+
+  assert.strictEqual(G.pendCount(), 1, '15 taps, one queued write');
+  assert.strictEqual(outbox.length, 0, 'nothing sent while still tapping');
+
+  G.flush();
+  assert.strictEqual(outbox.length, 1);
+  assert.strictEqual(outbox[0].batch[0].reps, 22, 'the last value wins');
 });
 
 test('a confirmed write leaves the queue and clears storage', () => {
