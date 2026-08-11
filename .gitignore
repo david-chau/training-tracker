@@ -22,3 +22,10 @@ node_modules/
 
 # Screen-recording sources. The silent GIF/MP4 under docs/img/ are what ship.
 /example.mp4
+
+# The admin URL embeds the edit key — the write credential for a log.
+e2e/targets.json
+node_modules/
+test-results/
+playwright-report/
+/playwright/.cache/

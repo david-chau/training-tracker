@@ -927,9 +927,9 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed) {
 }
 
 
-// Rename an exercise within one session. The [Other] placeholder exists to
-// be renamed afterwards, and doing that in the sheet meant leaving the app
-// mid-workout.
+// Rename an exercise within one session. The name box is free text, so a
+// throwaway name typed mid-set can be corrected here rather than by going to
+// the spreadsheet.
 //
 // Scoped to this session on purpose: the same exercise in earlier sessions
 // keeps its name, because renaming history would silently rewrite what

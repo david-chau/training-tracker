@@ -92,8 +92,10 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 ├── Exercises  — name | group | pattern | image | no weight | video |
 │                time based. Autocomplete + optional picture URL + a flag
 │                hiding the weight field + a how-to link + the unit for
-│                Log column E. Both URLs http(s)-guarded. Ships 256 rows:
-│                `[Other]`, 52 unweighted, 23 timed, 255 video searches.
+│                Log column E. Both URLs http(s)-guarded. Ships 255 rows:
+│                52 unweighted, 23 timed, a video search on every one.
+│                No placeholder row — the name box is free text and ✎
+│                renames in place, so `[Other]` was redundant.
 ├── Templates  — day | exercise | sets | reps | weight | include in new
 │                session. Seeds a session; F="no" keeps a row out of
 │                generation. Ships 5 exercises / 16 sets per day (~1hr)

@@ -16,6 +16,8 @@ src/appsscript.json  manifest
 data/build_template.py       seed data + the .xlsx generator
 test/queue.test.js           pending-write queue, run with plain node
 test/records.test.js         personal-record maths, run with plain node
+e2e/                         Playwright, against a live deployment
+e2e/targets.example.json     copy to targets.json (gitignored) and fill in
 docs/              the GitHub Pages site
 docs/download/training-tracker-template.xlsx   generated; what users import
 ```
@@ -132,6 +134,44 @@ compression has nothing to work with. Even cropped, at 5 fps and 64 colours,
 it was 5.9 MB and visibly banded, against 1.2 MB of much better H.264. Both
 GitHub and the Pages site render `<video>`, so there is no reason to carry
 the GIF.
+
+## End-to-end tests
+
+`e2e/` drives a real deployed web app with Playwright. There is no local
+server to start — Apps Script *is* the server — so the tests need a live
+deployment to point at.
+
+```bash
+npm ci
+npx playwright install chromium
+cp e2e/targets.example.json e2e/targets.json    # then fill it in
+npm run e2e
+```
+
+`e2e/targets.json` is **gitignored**: the admin URL embeds the edit key, which
+is the write credential for that log. CI reads the same values from
+`TT_VIEWER_URL`, `TT_ADMIN_URL`, `TT_SHEET_URL` secrets instead.
+
+Three things are worth knowing before running them:
+
+- **The admin specs write to the real sheet.** They work on a date five years
+  out, where nothing real is ever logged, and each deletes the day it created.
+  `allowWrites: false` (or `TT_ALLOW_WRITES=false`) skips them.
+- **The app lives in an iframe.** Apps Script serves it inside a sandbox frame
+  on a `googleusercontent` origin, so nothing is reachable from the top-level
+  document. `appFrame()` finds whichever frame contains the app rather than
+  hardcoding `#sandboxFrame`, which Google has renamed before.
+- **A live app can be older than this repo.** Users paste the two files by hand
+  and then have to redeploy. Tests for a feature the deployment lacks skip with
+  a message naming it, rather than failing — a red suite for a pending deploy
+  teaches you to ignore red.
+
+`.github/workflows/e2e.yml` runs them on demand and weekly, never on push.
+
+{: .note }
+Feature-detect against the `<style>` block, not rendered markup. A class like
+`.rename` only appears as an attribute once a card exists, so its absence at
+bootstrap proves nothing; the stylesheet ships either way.
 
 ## Testing
 

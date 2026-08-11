@@ -1,0 +1,29 @@
+{
+  "name": "training-tracker",
+  "version": "0.0.0",
+  "description": "Workout log on Apps Script over a Google Sheet",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node test/queue.test.js && node test/records.test.js",
+    "e2e": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david-chau/training-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/david-chau/training-tracker/issues"
+  },
+  "homepage": "https://github.com/david-chau/training-tracker#readme",
+  "private": "true",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

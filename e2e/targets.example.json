@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "Copy to e2e/targets.json and fill in. That file is gitignored: the admin",
+    "URL contains the edit key, which is the write credential for the log.",
+    "Every value can also come from the environment, which is what CI would",
+    "use: TT_VIEWER_URL, TT_ADMIN_URL, TT_SHEET_URL."
+  ],
+  "viewerUrl": "https://script.google.com/macros/s/AKfy…/exec",
+  "adminUrl": "https://script.google.com/macros/s/AKfy…/exec?key=…",
+  "sheetUrl": "https://docs.google.com/spreadsheets/d/…/htmlview",
+  "_writeTests": [
+    "Admin tests write to the real sheet. They work on a date far in the",
+    "future so they cannot collide with anything logged for real, and they",
+    "delete the day they created afterwards. Set allowWrites to false to skip",
+    "them entirely."
+  ],
+  "allowWrites": true
+}

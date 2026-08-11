@@ -343,9 +343,12 @@ function nearest(dir) {
 }
 
 function markSessNav() {
-  var i = S.dates.indexOf(S.date);
-  var back = i === -1 ? nearest(1) !== -1 : i + 1 < S.dates.length;
-  var fwd = i === -1 ? nearest(-1) !== -1 : i - 1 >= 0;
+  var back = false, fwd = false;
+  if (S.dates.length) {
+    var i = S.dates.indexOf(S.date);
+    back = i === -1 ? nearest(1) !== -1 : i + 1 < S.dates.length;
+    fwd = i === -1 ? nearest(-1) !== -1 : i - 1 >= 0;
+  }
   document.getElementById('prevsess').disabled = !back;
   document.getElementById('nextsess').disabled = !fwd;
 }
@@ -363,10 +366,18 @@ function busy(on, label) {
   S.busy = !!on;
   var body = document.getElementById('body');
   body.classList.toggle('busy', !!on);
-  ['wipe', 'prevsess', 'nextsess', 'dayback', 'dayfwd'].forEach(function (id) {
+  ['wipe', 'dayback', 'dayfwd'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.disabled = !!on;
   });
+  // The session buttons have their own enabled/disabled meaning, so busy
+  // disables them but only markSessNav decides when they come back.
+  if (on) {
+    document.getElementById('prevsess').disabled = true;
+    document.getElementById('nextsess').disabled = true;
+  } else {
+    markSessNav();
+  }
   [].forEach.call(document.querySelectorAll('.day'), function (b) {
     b.disabled = !!on;
   });
@@ -379,6 +390,10 @@ function load(create, source) {
   body.classList.remove('busy');
   body.innerHTML = '<div class="spinner">Loading ' + S.day + '…</div>';
   busy(true);
+  // Until the date list arrives, hop() has nothing to work with — so the two
+  // session buttons stay disabled rather than looking live and doing nothing.
+  S.dates = [];
+  markSessNav();
   google.script.run.withSuccessHandler(function (d) {
     S.dates = d; markSessNav();
   }).listDates(S.day);

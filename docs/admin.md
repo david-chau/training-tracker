@@ -169,7 +169,7 @@ then deletes those rows from the sheet.
 ### A different exercise
 
 **+ Add exercise**, type the name — it autocompletes from the `Exercises` tab,
-which ships with over 250 movements — then choose **Reps** or **Seconds** and
+which ships with 255 movements — then choose **Reps** or **Seconds** and
 set the numbers.
 
 ```
@@ -199,8 +199,8 @@ tab already says it uses; the toggle only changes this one session's rows.
 ### Renaming an exercise
 
 The **✎** beside an exercise name swaps it for a text box. Rename, press
-Enter, done — no trip to the spreadsheet. This is the quick fix for
-[`[Other]`](#when-you-cannot-name-it-mid-session).
+Enter, done — no trip to the spreadsheet. Useful when you logged something under a
+[throwaway name](#when-you-cannot-name-it-mid-session).
 
 {: .note }
 It renames **this session only**. The same exercise in earlier sessions keeps
@@ -215,14 +215,10 @@ Type anything — the box is free text, not a fixed list. `Machine by the
 window` is a perfectly good name for one session, and **✎** renames it the
 moment you find out what it is really called.
 
-The list also includes **`[Other]`** as a ready-made placeholder, for when you
-would rather not invent anything at all mid-set. It is a convenience, not a
-requirement.
-
 {: .warning }
-Whatever placeholder you use, rename it before the next session of that day
-type. Progression matches on the name, so two different movements both left as
-`[Other]` — or both left as `temp` — get progressed into each other.
+If you do use a throwaway name, rename it before the next session of that day
+type. Progression matches on the name, so two different movements both logged
+as `temp` get progressed into each other.
 
 </details>
 

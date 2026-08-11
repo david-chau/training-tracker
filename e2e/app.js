@@ -1,0 +1,141 @@
+// Shared helpers for the end-to-end tests.
+//
+// Targets come from e2e/targets.json (gitignored — the admin URL embeds the
+// edit key) or from the environment, which is what CI would use.
+
+const fs = require('fs');
+const path = require('path');
+
+function targets() {
+  let file = {};
+  const p = path.join(__dirname, 'targets.json');
+  if (fs.existsSync(p)) file = JSON.parse(fs.readFileSync(p, 'utf8'));
+
+  const t = {
+    viewerUrl: process.env.TT_VIEWER_URL || file.viewerUrl || '',
+    adminUrl: process.env.TT_ADMIN_URL || file.adminUrl || '',
+    sheetUrl: process.env.TT_SHEET_URL || file.sheetUrl || '',
+    allowWrites: process.env.TT_ALLOW_WRITES
+      ? process.env.TT_ALLOW_WRITES === 'true'
+      : file.allowWrites !== false
+  };
+  return t;
+}
+
+// Apps Script serves the page inside a sandbox iframe on a googleusercontent
+// origin, so nothing in the app is reachable from the top-level document.
+// Rather than hardcode #sandboxFrame — Google has renamed and re-nested it
+// before — find whichever frame actually contains the app.
+async function appFrame(page) {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      try {
+        if (await frame.locator('#barmsg').count()) return frame;
+      } catch {
+        // frame detached mid-navigation; try the next one
+      }
+    }
+    await page.waitForTimeout(500);
+  }
+  throw new Error('the app frame never appeared — is the deployment live?');
+}
+
+async function open(page, url) {
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  const app = await appFrame(page);
+  await ready(app);
+  return app;
+}
+
+// h1 is in the static markup, so its presence proves nothing. Bootstrap has
+// landed once the day buttons exist — or once the app has said there are none,
+// which is a legitimate end state for an empty log.
+async function ready(app) {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    if (await app.locator('.day').count()) return;
+    const body = await app.locator('#body').textContent().catch(() => '');
+    if (/Nothing has been logged|No day types yet/.test(body || '')) return;
+    await app.page().waitForTimeout(400);
+  }
+  throw new Error('bootstrap never populated the day list');
+}
+
+// Pick a day type and land on a date that actually has a session. Clicking a
+// day type lands on today, which usually has nothing logged — so step back
+// until a card appears.
+async function openSession(app, dayIndex = 0) {
+  const days = app.locator('.day');
+  if (!await days.count()) return false;
+
+  await days.nth(dayIndex).click();
+  await settled(app);
+
+  for (let i = 0; i < 12; i++) {
+    if (await app.locator('.ex').count()) return true;
+
+    const back = app.locator('#prevsess');
+    if (await back.isDisabled()) return false;
+
+    // The date list arrives on its own round trip, so an early click can be
+    // a no-op. Treat "the date did not move" as not-ready and try again
+    // rather than burning the loop.
+    const before = await app.locator('#date').inputValue();
+    await back.click();
+    const moved = await app
+      .waitForFunction(
+        d => document.getElementById('date').value !== d,
+        before,
+        { timeout: 8_000 }
+      )
+      .then(() => true)
+      .catch(() => false);
+
+    if (!moved) { await app.page().waitForTimeout(1_000); continue; }
+    await settled(app);
+  }
+  return await app.locator('.ex').count() > 0;
+}
+
+// The session dims and shows a spinner while a day loads.
+async function settled(app) {
+  await app.locator('.spinner').waitFor({ state: 'detached', timeout: 45_000 })
+    .catch(() => {});
+  await app.locator('#body.busy').waitFor({ state: 'detached', timeout: 45_000 })
+    .catch(() => {});
+}
+
+// Users paste Code.gs and Index.html by hand and then have to redeploy, so a
+// live app can legitimately be older than this repo. Rather than fail, say so:
+// a skip naming the missing feature is a useful signal, a red suite for a
+// pending deploy is not.
+async function deployedFeature(app, selector) {
+  return (await app.locator(selector).count()) > 0;
+}
+
+// A date far enough out that it cannot collide with anything logged for real.
+function scratchDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 5);
+  const two = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+}
+
+async function gotoDate(app, iso) {
+  await app.locator('#date').fill(iso);
+  await app.locator('#date').dispatchEvent('change');
+  await app.locator('.spinner').waitFor({ state: 'detached' }).catch(() => {});
+}
+
+// The status bar is the app's own receipt: it reports values read back out of
+// the spreadsheet, so waiting on it is waiting on a confirmed write.
+async function waitForSaved(app) {
+  await app.locator('#bar.saved, #barmsg:has-text("Saved")').first()
+    .waitFor({ timeout: 45_000 });
+}
+
+module.exports = {
+  targets, appFrame, open, ready, openSession, settled, deployedFeature,
+  scratchDate, gotoDate, waitForSaved
+};

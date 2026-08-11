@@ -40,7 +40,7 @@ You now have five tabs:
 | Tab | What it is |
 |---|---|
 | `Log` | Empty but for headings. Every set ever logged lands here. |
-| `Exercises` | 250+ names for autocomplete, each with a how-to video link. Grows on use. |
+| `Exercises` | 255 names for autocomplete, each with a how-to video link. Grows on use. |
 | `Templates` | The starting workout for each day type. |
 | `Settings` | Which [records](records.html) to track. Fine to ignore. |
 | `Records` | Output. Do not type in it. |

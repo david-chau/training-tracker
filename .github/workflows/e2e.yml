@@ -1,0 +1,38 @@
+name: e2e
+
+# Never on push. These drive a real deployed web app and write to a real
+# spreadsheet, so they need credentials and they cost wall-clock time.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'          # Monday morning, to catch Apps Script drift
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Absent secrets are not a failure — a fork has none, and the suite
+      # skips cleanly without a target.
+      - name: Run
+        env:
+          TT_VIEWER_URL: ${{ secrets.TT_VIEWER_URL }}
+          TT_ADMIN_URL: ${{ secrets.TT_ADMIN_URL }}
+          TT_SHEET_URL: ${{ secrets.TT_SHEET_URL }}
+          TT_ALLOW_WRITES: ${{ vars.TT_ALLOW_WRITES || 'true' }}
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

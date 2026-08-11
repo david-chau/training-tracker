@@ -44,8 +44,6 @@ LOG = [
 #                 holds seconds, and progression steps by CFG.timeStep
 EXERCISES = [
     ["exercise", "group", "pattern", "image", "no weight", "video", "time based"],
-    # Placeholder
-    ['[Other]', 'Placeholder', 'Any'],
     # Chest
     ['Barbell Bench Press', 'Chest', 'Push'],
     ['Incline Barbell Bench Press', 'Chest', 'Push'],
@@ -389,8 +387,7 @@ def finish_rows(rows):
     for row in rows[1:]:
         row = list(row) + [""] * (7 - len(row))
         name = row[0]
-        if not name.startswith("["):          # the [Other] placeholder has none
-            row[5] = VIDEO_SEARCH + quote_plus(name + " proper form")
+        row[5] = VIDEO_SEARCH + quote_plus(name + " proper form")
         if name in TIMED:
             row[6] = "yes"
         out.append(row)
@@ -522,7 +519,6 @@ def check():
         ex = z.read("xl/worksheets/sheet2.xml").decode()
         assert ex.count("<row ") == len(EXERCISES)
         assert ">image</t>" in ex, "Exercises needs the image column, D"
-        assert ">[Other]</t>" in ex, "the [Other] placeholder must ship"
         assert ">no weight</t>" in ex, "Exercises needs the no-weight column, E"
         assert ">video</t>" in ex, "Exercises needs the video column, F"
         assert ">time based</t>" in ex, "Exercises needs the time column, G"
@@ -538,7 +534,7 @@ def check():
 
         # Every real exercise gets a how-to link; the placeholder does not.
         linked = [r[0] for r in EXERCISES[1:] if r[5]]
-        assert len(linked) == len(EXERCISES) - 2, "a row is missing its video link"
+        assert len(linked) == len(EXERCISES) - 1, "a row is missing its video link"
         assert all(r[5].startswith("https://") for r in EXERCISES[1:] if r[5])
 
         flagged = [r[0] for r in EXERCISES[1:] if len(r) > 4 and r[4] == "yes"]
