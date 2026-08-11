@@ -35,6 +35,38 @@ its own web page.
 </details>
 
 <details markdown="block">
+<summary>"SyntaxError: Identifier 'CFG' has already been declared"</summary>
+
+Something is declared twice, which stops the whole script from parsing — so
+every link shows this until it is fixed. Two causes:
+
+**A second `.gs` file.** Apps Script joins *every* `.gs` file into one shared
+scope, so two copies of `Code.gs` collide even though each looks fine alone.
+The Files list on the left should hold exactly two entries:
+
+```
+   Files
+     Code.gs        ← all the server code
+     Index.html     ← the whole interface
+```
+
+Delete any other `.gs` — a `Code 2.gs`, or a new file pasted into instead of
+replacing the original.
+
+**Pasted twice into one file.** Click `Code.gs`, select all
+(`Ctrl`/`Cmd` + `A`), delete, then paste once. `Ctrl`/`Cmd` + `F` for
+`const CFG` should find a single match.
+
+Then save **and redeploy** — *Deploy → Manage deployments → pencil →
+Version: New version*. Saving alone leaves the broken version being served.
+
+{: .note }
+The same message with another name — `COL`, `WIDTH`, `HEADERS` — has the same
+cause and the same fix.
+
+</details>
+
+<details markdown="block">
 <summary>"Sorry, unable to open the file at present"</summary>
 
 The link points at a deployment that is not live.

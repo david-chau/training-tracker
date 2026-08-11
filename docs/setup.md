@@ -81,6 +81,12 @@ Delete the sample. Open
 [`src/Index.html`]({{ site.repo }}/blob/main/src/Index.html), **Raw**, copy,
 paste in.
 
+{: .warning }
+Replace, do not append. Select everything in `Code.gs` and delete it before
+pasting, and do not add a second `.gs` file — Apps Script joins every `.gs`
+file into one scope, so a duplicate stops the whole script with
+`Identifier 'CFG' has already been declared`.
+
 Save. It should look like this:
 
 ![The Apps Script editor with Code.gs and Index.html]({{ site.baseurl }}/img/apps-script-editor.jpeg)
