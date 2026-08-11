@@ -177,8 +177,16 @@ node e2e/record-clips.js            # all of them
 node e2e/record-clips.js rename     # just one
 ```
 
-Each clip works on the same scratch date the tests use and deletes the day
-afterwards.
+Each clip works on the same scratch date the tests use, and the day is deleted
+afterwards — in a separate browser context, so the wipe is never in frame.
+
+Two things keep the files small enough to put on a page. Playwright records a
+whole browser context, but most of that is scaffolding: navigating to the
+scratch date, waiting on Apps Script, adding the exercise the clip is *about*.
+Each clip calls `mark()` once the scene is set, and everything before that is
+seeked past on conversion — 8 to 31 seconds per clip. The frame is then cropped
+by `BANNER_PX` to drop Google's "created by a Google Apps Script user" strip.
+Together those took the four clips from 6.5 MB to 2.3 MB.
 
 {: .note }
 Screen recordings are the good case for GIF — flat colour, static background,

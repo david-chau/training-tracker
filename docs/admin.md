@@ -69,7 +69,9 @@ always offered.
 
 If nothing is logged for that day and date, you choose how to begin:
 
-![The start chooser: From last time, From the template, and Empty]({{ site.baseurl }}/img/admin-session-start.png)
+<img src="{{ site.baseurl }}/img/clip-start.gif" loading="lazy"
+     alt="The start chooser offering From last time, From the template and Empty; choosing From last time builds the session"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
 
 | Choice | What you get |
 |---|---|
@@ -109,6 +111,13 @@ half a second later; there is no save button.
 
 Under each field is what you did for **that same set** last time — `was 10`,
 `was 20`, `was 8`. A blank means there was no matching set.
+
+<img src="{{ site.baseurl }}/img/clip-logging.gif" loading="lazy"
+     alt="Reps and weight being stepped up on the first set, and the status bar reporting the row and values it read back"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+
+The bar reports the row and the values it read back out of the spreadsheet, so
+a save you can see is a save that landed.
 
 ### 4. Record RPE
 
@@ -187,9 +196,14 @@ set the numbers.
    └────────────────────────────────────────────┘
 ```
 
+<img src="{{ site.baseurl }}/img/clip-unit.gif" loading="lazy"
+     alt="Adding Plank to an empty session: the unit toggle flips itself to Seconds, the weight box disappears, and the seconds are set to 45"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+
 Pick a known exercise and the toggle follows the `Exercises` tab and says so.
 Change it and your choice wins for this add. The weight box disappears
-entirely for exercises that carry none.
+entirely for exercises that carry none — `Plank` above is timed and unloaded,
+so it offers **Seconds** and no weight.
 
 The name is **free text** — it autocompletes, but nothing stops you typing
 something that is not on the list. The same exercise cannot be added to one
@@ -207,6 +221,10 @@ The **✎** beside an exercise name opens a full-width text box across the top o
 the card. Rename, press Enter, done — no trip to the spreadsheet. Escape
 cancels. Useful when you logged something under a
 [throwaway name](#when-you-cannot-name-it-mid-session).
+
+<img src="{{ site.baseurl }}/img/clip-rename.gif" loading="lazy"
+     alt="The pencil beside Lat Pulldown opening a full-width box, the name being retyped as Machine by the window, and the card reloading under the new name"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
 
 {: .note }
 It renames **this session only**. The same exercise in earlier sessions keeps

@@ -24,6 +24,17 @@ const OUT = path.join(__dirname, '..', 'docs', 'img');
 const TMP = path.join(__dirname, '..', '.clips');
 const DATE = scratchDate();
 
+// Playwright records a whole context, but most of that is scaffolding —
+// navigating to the scratch date, waiting on Apps Script, adding the exercise
+// the clip is about. Each clip calls mark() when the scene is set, and the
+// recording is trimmed to what happened after it.
+let started = 0, action = 0;
+const mark = () => { action = Date.now(); };
+
+// Google's "created by a Google Apps Script user" banner sits above the app in
+// the outer page and is pure noise in a documentation clip.
+const BANNER_PX = 88;
+
 // Narrow viewport: the app is tablet-first and a phone-width clip is both
 // more honest and a smaller file.
 const VIEWPORT = { width: 460, height: 860 };
@@ -37,6 +48,8 @@ async function fresh(browser) {
   page.setDefaultTimeout(60_000);
   page.setDefaultNavigationTimeout(90_000);
   page.on('dialog', d => d.accept());
+  started = Date.now();
+  action = 0;
   return { context, page };
 }
 
@@ -106,7 +119,8 @@ const CLIPS = {
     const reps = row.locator('.step').first();
     const weight = row.locator('.step').nth(1);
 
-    await app.page().waitForTimeout(1200);
+    mark();
+    await app.page().waitForTimeout(900);
     for (let i = 0; i < 2; i++) {
       await reps.locator('button').nth(1).click();
       await app.page().waitForTimeout(450);
@@ -118,15 +132,15 @@ const CLIPS = {
     // Let the status bar report the values it read back out of the sheet.
     await app.locator('#barmsg').filter({ hasText: 'Saved row' })
       .waitFor({ timeout: 60_000 }).catch(() => {});
-    await app.page().waitForTimeout(2200);
-    await cleanup(app);
+    await app.page().waitForTimeout(1800);
   },
 
   async rename(app) {
     await emptyScratch(app);
     await addExercise(app, 'Lat Pulldown', 3, 10, 70);
 
-    await app.page().waitForTimeout(1200);
+    mark();
+    await app.page().waitForTimeout(900);
     await app.locator('.ex').first().locator('.rename').click();
     await app.page().waitForTimeout(900);
 
@@ -136,14 +150,14 @@ const CLIPS = {
     await app.page().waitForTimeout(700);
     await app.locator('.namebox .go').click();
     await awaitLoad(app);
-    await app.page().waitForTimeout(2200);
-    await cleanup(app);
+    await app.page().waitForTimeout(1800);
   },
 
   async unit(app) {
     await emptyScratch(app);
 
-    await app.page().waitForTimeout(900);
+    mark();
+    await app.page().waitForTimeout(700);
     await app.locator('.addex').click();
     const panel = app.locator('.panel');
     await panel.waitFor({ state: 'visible' });
@@ -162,8 +176,7 @@ const CLIPS = {
     await app.page().waitForTimeout(700);
     await panel.locator('.go').click();
     await panel.waitFor({ state: 'detached', timeout: 120_000 });
-    await app.page().waitForTimeout(2200);
-    await cleanup(app);
+    await app.page().waitForTimeout(1800);
   },
 
   async start(app) {
@@ -177,22 +190,25 @@ const CLIPS = {
     }
     // The chooser is the subject here.
     await app.locator('.choice').first().waitFor({ state: 'visible' });
-    await app.page().waitForTimeout(2600);
+    mark();
+    await app.page().waitForTimeout(2200);
     await app.locator('.choice', { hasText: 'From last time' }).click();
     await awaitLoad(app);
-    await app.page().waitForTimeout(2600);
-    await cleanup(app);
+    await app.page().waitForTimeout(2200);
   }
 };
 
-function toGif(webm, gif) {
-  const chain = 'fps=10,scale=460:-1:flags=lanczos';
+function toGif(webm, gif, skipSeconds) {
+  const crop = `crop=${VIEWPORT.width}:${VIEWPORT.height - BANNER_PX}:0:${BANNER_PX}`;
+  const chain = `${crop},fps=10,scale=440:-1:flags=lanczos`;
+  const seek = skipSeconds > 0.5 ? ['-ss', skipSeconds.toFixed(2)] : [];
   const pal = webm + '.png';
-  execFileSync('ffmpeg', ['-v', 'error', '-i', webm, '-an',
+
+  execFileSync('ffmpeg', ['-v', 'error', ...seek, '-i', webm, '-an',
     '-vf', `${chain},palettegen=stats_mode=diff:max_colors=64`, '-y', pal]);
-  execFileSync('ffmpeg', ['-v', 'error', '-i', webm, '-i', pal, '-an',
+  execFileSync('ffmpeg', ['-v', 'error', ...seek, '-i', webm, '-i', pal, '-an',
     '-lavfi', `[0:v]${chain}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle`,
-    '-y', gif]);
+    '-loop', '0', '-y', gif]);
   fs.unlinkSync(pal);
 }
 
@@ -210,14 +226,30 @@ async function record(names) {
     const app = await openAdmin(page);
     await CLIPS[name](app);
 
+    const skip = action ? (action - started) / 1000 : 0;
     const video = page.video();
     await context.close();                  // flushes the recording
     const webm = await video.path();
 
     const gif = path.join(OUT, `clip-${name}.gif`);
-    toGif(webm, gif);
+    toGif(webm, gif, skip);
     fs.unlinkSync(webm);
-    console.log(`${(fs.statSync(gif).size / 1024).toFixed(0)} KB`);
+    console.log(`${(fs.statSync(gif).size / 1024).toFixed(0)} KB` +
+                (skip ? `  (dropped ${skip.toFixed(1)}s of setup)` : ''));
+
+    // Tidy the scratch day outside the recording, so a wipe is never in frame.
+    const after = await browser.newPage();
+    after.setDefaultTimeout(60_000);
+    after.on('dialog', d => d.accept());
+    await after.goto(targets().adminUrl, { waitUntil: 'domcontentloaded' });
+    const tidy = await appFrame(after);
+    await ready(tidy);
+    await tidy.locator('.day', { hasText: new RegExp(`^(${SCRATCH_DAY}|Push)$`) })
+      .first().click();
+    await gotoDate(tidy, DATE);
+    await tidy.locator('.ex, .choice, .msg').first().waitFor({ state: 'visible' });
+    await cleanup(tidy);
+    await after.close();
   }
   await browser.close();
   fs.rmSync(TMP, { recursive: true, force: true });
