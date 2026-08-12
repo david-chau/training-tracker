@@ -1008,7 +1008,11 @@ function addExercisePanel(prefill) {
 // The name, with a thumbnail in front of it when the Exercises tab supplies
 // an image. Tapping it shows the picture full width — for someone who has
 // not done the movement before, that is worth more than the name.
-function title(name, card) {
+// `head` is the header row this title sits in. A superset card has one per
+// exercise, so renaming has to be told which — searching the card for the
+// first .exhead renamed the second exercise while hiding the first one's
+// header.
+function title(name, card, head) {
   var wrap = document.createElement('div');
   wrap.className = 'title';
 
@@ -1039,7 +1043,7 @@ function title(name, card) {
     ren.textContent = '✎';
     ren.title = 'Rename ' + name;
     ren.setAttribute('aria-label', 'Rename ' + name);
-    ren.onclick = function () { renamePanel(card, name); };
+    ren.onclick = function () { renamePanel(card, name, head); };
     wrap.appendChild(ren);
   }
 
@@ -1060,8 +1064,8 @@ function title(name, card) {
 // Swaps the name for an input in place. Renames only within this session —
 // the same exercise in earlier sessions keeps its name, because rewriting
 // history would change what progression and records were built from.
-function renamePanel(card, name) {
-  var head = card.querySelector('.exhead');
+function renamePanel(card, name, head) {
+  head = head || card.querySelector('.exhead');
 
   var box = document.createElement('div');
   box.className = 'namebox';
@@ -1123,7 +1127,10 @@ function renamePanel(card, name) {
   if (head) head.style.display = 'none';
   box.appendChild(input);
   box.appendChild(row);
-  card.insertBefore(box, card.firstChild);
+  // Next to the exercise being renamed, not at the top of the card — on a
+  // superset those are two different places.
+  var host = (head && head.parentNode) || card;
+  host.insertBefore(box, head || card.firstChild);
   setTimeout(function () { input.focus(); input.select(); }, 50);
 }
 
@@ -1148,7 +1155,7 @@ function card(name, sets) {
 
   var head = document.createElement('div');
   head.className = 'exhead';
-  head.appendChild(title(name, el));
+  head.appendChild(title(name, el, head));
 
   if (!CAN_EDIT) {
     var tag = document.createElement('span');
@@ -1250,7 +1257,7 @@ function supersetCard(page, groups) {
 
     var line = document.createElement('div');
     line.className = 'exhead';
-    line.appendChild(title(name, el));
+    line.appendChild(title(name, el, line));
     if (CAN_EDIT) line.appendChild(setCounter(name, sets));
     block.appendChild(line);
 

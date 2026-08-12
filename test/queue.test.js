@@ -518,6 +518,23 @@ test('a superset card renders both halves round by round', () => {
   assert.ok(el);
 });
 
+test('renaming hides the header of the exercise being renamed', () => {
+  // A superset card has one header per exercise. Finding the first .exhead
+  // renamed the second exercise while hiding the first one's header.
+  const card = sandbox.document.createElement();
+  const mine = sandbox.document.createElement();
+  mine.className = 'exhead';
+  const other = sandbox.document.createElement();
+  other.className = 'exhead';
+  card.appendChild(other);
+  card.appendChild(mine);
+
+  G.renamePanel(card, 'Battle Ropes', mine);
+
+  assert.strictEqual(mine.style.display, 'none', 'the right header goes');
+  assert.notStrictEqual(other.style.display, 'none', 'the other one stays');
+});
+
 test('the rail and the pager build for a session', () => {
   const pages = [{ group: '', names: ['Bench'] },
                  { group: 'A', names: ['Dead Bug', 'Battle Ropes'] }];
