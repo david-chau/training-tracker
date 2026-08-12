@@ -88,7 +88,7 @@ it persist.
 
 ```
 Google Sheet (named per person — the name is the app's heading and tab title)
-├── Log        — one row per set. The only real data. 9 columns, A–I.
+├── Log        — one row per set. The only real data. 10 columns, A–J.
 ├── Exercises  — name | group | pattern | image | no weight | video |
 │                time based. Autocomplete + optional picture URL + a flag
 │                hiding the weight field + a how-to link + the unit for
@@ -97,9 +97,10 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 │                No placeholder row — the name box is free text and ✎
 │                renames in place, so `[Other]` was redundant.
 ├── Templates  — day | exercise | sets | reps | weight | include in new
-│                session. Seeds a session; F="no" keeps a row out of
-│                generation. Ships 5 exercises / 16 sets per day (~1hr)
-│                plus one "no" row per day as a worked example.
+│                session | group. Seeds a session; F="no" keeps a row out of
+│                generation, G pairs rows into a superset. Ships 5 exercises
+│                / 16 sets per day (~1hr), one "no" row per day, and one
+│                paired accessory on Push, all as worked examples.
 ├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing
 │                keys fall back to DEFAULTS in Code.gs.
 └── Records    — DERIVED OUTPUT. Rewritten wholesale; never a source.
@@ -129,7 +130,7 @@ and progression compare column F against itself.
 
 ```
 A Date | B Day | C Exercise | D Set | E Reps / Secs | F Weight (LB) |
-G RPE | H Auto note | I Notes
+G RPE | H Auto note | I Notes | J Group
 ```
 
 Column E is reps, or seconds when the exercise is flagged `time based` on
@@ -141,6 +142,14 @@ There is no separate target/done pair — the row is overwritten as the set is
 logged, so it holds what actually happened. Column H is written by the
 generator (`from template`, `was easy`, `repeat`, `backed off`). Column I is
 the user's note. Don't merge them.
+
+Column J is the superset label — a single letter shared by every row of every
+exercise in one group, scoped to one session, blank for a normal exercise.
+`setGroup()` is its only writer. Membership is by label, not adjacency: rows
+are appended in the order they were added, so an exercise added later has to
+be able to join a pair logged above it. It arrived after people were logging,
+so `logSheet()` widens a nine-column sheet and writes the heading — blank J
+means "not a superset", which is the whole migration.
 
 Changing this layout means changing `COL` and `WIDTH` in `Code.gs` **and**
 `LOG` in `data/build_template.py` together.
@@ -169,6 +178,15 @@ via `noWeightLookup()` / `timedLookup()`.
 `doGet` compares `?key=` against `EDIT_KEY` in script properties. Writes
 call `assertEdit(k)` server-side — hiding buttons is not the mechanism.
 Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
+
+### One card at a time
+
+`paginate()` turns the session into pages — one exercise, or one superset.
+Every page is rendered and all but the current one hidden; don't "optimise"
+this into building the current page on demand. Cards hold live values,
+`onChange` hooks and queue watchers, and re-creating one to switch pages
+throws those away. A superset renders round by round (set 1 of each, then set
+2), which is the order it is performed in.
 
 ## Traps already hit — don't reintroduce
 

@@ -25,7 +25,7 @@ OUT = (Path(__file__).parent.parent
 
 LOG = [
     ["Date", "Day", "Exercise", "Set", "Reps / Secs", "Weight (LB)", "RPE",
-     "Auto note", "Notes"],
+     "Auto note", "Notes", "Group"],
 ]
 
 # name | group | pattern | image | no weight | video | time based
@@ -327,14 +327,20 @@ EXERCISES = [
 # what each day generates. A sixth accessory is listed against each day with
 # "include in new session" = no: it stays on the plan as a suggestion without
 # being generated, and doubles as a worked example of that column.
+#
+# Column G groups exercises into a superset: rows sharing a letter within one
+# day are done back to back and are shown as one card. The two Push accessories
+# ship paired as a worked example; everything else is blank, which is the
+# normal case.
 TEMPLATES = [
-    ["day", "exercise", "sets", "reps", "weight", "include in new session"],
+    ["day", "exercise", "sets", "reps", "weight", "include in new session",
+     "group"],
     ["Push", "Barbell Bench Press", 4, 8, 0],
     ["Push", "Incline Dumbbell Press", 3, 10, 0],
     ["Push", "Seated Dumbbell Shoulder Press", 3, 10, 0],
     ["Push", "Cable Chest Fly", 3, 12, 0, "no"],
-    ["Push", "Lateral Raise", 3, 15, 0],
-    ["Push", "Triceps Rope Pushdown", 3, 12, 0],
+    ["Push", "Lateral Raise", 3, 15, 0, "", "A"],
+    ["Push", "Triceps Rope Pushdown", 3, 12, 0, "", "A"],
     ["Pull", "Barbell Row", 4, 8, 0],
     ["Pull", "Lat Pulldown", 3, 10, 0],
     ["Pull", "Seated Cable Row", 3, 10, 0],
@@ -513,8 +519,8 @@ def check():
 
         log = z.read("xl/worksheets/sheet1.xml").decode()
         assert log.count("<row ") == 1, "Log must ship empty apart from headings"
-        assert log.count("<c ") == 9, "Log needs exactly 9 headings, A to I"
-        assert ">Notes</t>" in log, "last heading missing"
+        assert log.count("<c ") == 10, "Log needs exactly 10 headings, A to J"
+        assert ">Group</t>" in log, "last heading missing"
 
         ex = z.read("xl/worksheets/sheet2.xml").decode()
         assert ex.count("<row ") == len(EXERCISES)
@@ -551,6 +557,14 @@ def check():
         assert tpl.count("<row ") == len(TEMPLATES)
         assert "<v>4</v>" in tpl, "set counts must be numbers, not text"
         assert ">include in new session</t>" in tpl, "Templates needs column F"
+        assert ">group</t>" in tpl, "Templates needs the superset column, G"
+
+        # A superset of one is not a superset, so a label has to be shared.
+        from collections import Counter as _C
+        labels = _C(r[6] for r in TEMPLATES[1:] if len(r) > 6 and r[6])
+        assert labels, "the shipped template should show one superset"
+        assert all(n > 1 for n in labels.values()), \
+            "a group label is held by a single exercise: " + str(labels)
 
         # Five per day is the shipped default — an hour of training. The
         # sixth row of each day is the "no" example.

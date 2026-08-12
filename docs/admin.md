@@ -250,6 +250,81 @@ autocompletes from then on — and if you set the toggle to *Seconds*, the new
 row is marked `time based` too. An existing exercise keeps whatever unit the
 tab already says it uses; the toggle only changes this one session's rows.
 
+### Supersets
+
+Two exercises done back to back are one card, laid out in the order you
+actually perform them:
+
+```
+   ┌─ SUPERSET ─────────────────────────────── Unlink ─┐
+   │ Dead Bug                          [− 3 sets +]    │
+   │ Battle Ropes                      [− 3 sets +]    │
+   │ ─────────────────────────────────────────────     │
+   │ ROUND 1                                           │
+   │   Dead Bug        Reps [− 12 +]   RPE [− — +]     │
+   │   Battle Ropes    Secs [− 30 +]   RPE [− — +]     │
+   │ ROUND 2                                           │
+   │   Dead Bug        Reps [− 15 +]   RPE [− — +]     │
+   │   Battle Ropes    Secs [− 35 +]   RPE [− — +]     │
+   └───────────────────────────────────────────────────┘
+```
+
+Round by round rather than one exercise then the other, so a phone does not
+have to be scrolled between the two halves between reps.
+
+**To pair:** the **⇄ Superset with …** button at the bottom of a card links it
+with the exercise that follows it. **Unlink** at the top of a superset card
+takes it apart again.
+
+| | |
+|---|---|
+| Set counts | Independent. Three of one and two of the other is fine — a round only shows the exercises that still have a set that far in. |
+| Records and progression | Per exercise, exactly as before. A superset is a layout, not a new kind of movement. |
+| Notes | One per exercise, labelled, at the bottom of the card. |
+| More than two | Allowed. Tri-sets and giant sets work the same way. |
+
+Pairing is stored in **column J** of the `Log` as a letter shared by the rows
+involved, so it survives a reload, and *From last time* rebuilds next week's
+session with the same supersets. Blank means a normal exercise.
+
+You can also plan one: put the same letter in column **G** of the `Templates`
+tab against two exercises for the same day. The shipped template pairs
+*Lateral Raise* with *Triceps Rope Pushdown* on Push as a worked example.
+
+{: .note }
+Before this existed, the way to record a superset was in the name — `Dead Bug
+(ss)`. That works, but records key off the name, so `Dead Bug (ss)` and `Dead
+Bug` count as two different exercises with two separate histories. Renaming
+them back with **✎** merges nothing retrospectively, but it stops the split
+from growing.
+
+### One exercise at a time
+
+A session is a stack of pages, one card each, with the whole session listed
+above it:
+
+```
+   ① Barbell Bench Press
+   ② Dead Bug + Battle Ropes          SUPERSET
+   ③ Seated Leg Curl
+
+   ┌───────────────────────────────────────┐
+   │ Barbell Bench Press    [− 4 sets +]   │
+   │ …                                     │
+   └───────────────────────────────────────┘
+
+   [ ‹ Previous ]      2 of 3      [ Next › ]
+```
+
+Three ways to move: **swipe** left or right, the **‹ Previous / Next ›**
+buttons under the card, or tap any line in the list to jump straight to it.
+The list is the overview — where you are, what is left, and which exercises
+are paired.
+
+Nothing is thrown away when you move: every card stays rendered with its
+values and its pending saves intact, so switching is instant and a queued
+write is never interrupted by it.
+
 ### Pounds or kilograms
 
 The **lb / kg** switch beside the heading changes every weight on screen —
@@ -510,6 +585,7 @@ filter, chart, export or edit it freely — the app reads it fresh each time.
 | E–G | Reps, Weight (LB), RPE |
 | H | Auto note — the app's (`from template`, `was easy`, `repeat`, `backed off`) |
 | I | Notes — yours |
+| J | Group — a letter shared by the exercises in a [superset](#supersets), blank otherwise |
 
 {: .warning }
 Keep the column order. The code reads columns by position, not by heading.

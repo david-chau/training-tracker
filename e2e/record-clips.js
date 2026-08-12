@@ -16,8 +16,8 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 const {
-  targets, appFrame, ready, gotoDate, awaitLoad, awaitQueue, scratchDate,
-  SCRATCH_DAY
+  targets, appFrame, ready, gotoDate, awaitLoad, awaitQueue, awaitAdd,
+  scratchDate, SCRATCH_DAY
 } = require('./app');
 
 const OUT = path.join(__dirname, '..', 'docs', 'img');
@@ -98,6 +98,7 @@ async function addExercise(app, name, sets, amount, weight) {
   await panel.locator('.go').click();
   await panel.waitFor({ state: 'detached', timeout: 120_000 });
   await app.locator('.ex', { hasText: name }).first().waitFor({ state: 'visible' });
+  await awaitAdd(app);
 }
 
 async function cleanup(app) {

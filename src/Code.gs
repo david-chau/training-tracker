@@ -31,15 +31,16 @@ const DEFAULTS = {
 const COL = {
   date: 0, day: 1, exercise: 2, set: 3,
   reps: 4, weight: 5, rpe: 6, note: 7,
-  userNote: 8   // column I — free text, never touched by the generator
+  userNote: 8,  // column I — free text, never touched by the generator
+  group: 9      // column J — superset label, blank for a normal exercise
 };
 
-const WIDTH = 9;
+const WIDTH = 10;
 
 // Must stay in step with LOG in data/build_template.py. Only used when
 // creating a sheet from scratch — reads go by position, never by heading.
 const HEADERS = ['Date', 'Day', 'Exercise', 'Set', 'Reps / Secs',
-                 'Weight (LB)', 'RPE', 'Auto note', 'Notes'];
+                 'Weight (LB)', 'RPE', 'Auto note', 'Notes', 'Group'];
 const RECORD_HEADERS = ['Exercise', 'Record', 'Value', 'Detail', 'Date', 'Day'];
 
 const BLANK_RPE = -1;   // sentinel: google.script.run is unreliable with null
@@ -319,7 +320,21 @@ function exerciseVideos() {
 function logSheet() {
   const s = SpreadsheetApp.getActive().getSheetByName(CFG.logSheet);
   if (!s) throw new Error('No sheet named "' + CFG.logSheet + '".');
-  return s;
+  return widen(s);
+}
+
+// Column J (Group) arrived after people were already logging. A sheet made
+// from the older template has nine headings and may have been trimmed to nine
+// columns, which would make every write throw. Blank J means "not part of a
+// superset", so widening is all the migration there is.
+function widen(sheet) {
+  if (sheet.getMaxColumns() < WIDTH) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), WIDTH - sheet.getMaxColumns());
+  }
+  if (!String(sheet.getRange(1, WIDTH).getValue()).trim()) {
+    sheet.getRange(1, WIDTH).setValue(HEADERS[WIDTH - 1]);
+  }
+  return sheet;
 }
 
 function allRows() {
@@ -331,12 +346,12 @@ function allRows() {
 }
 
 // Templates tab: A day | B exercise | C sets | D reps | E weight |
-// F include in new session. F may not exist on an older sheet, hence the
-// width clamp.
+// F include in new session | G group. F and G may not exist on an older
+// sheet, hence the width clamp.
 function templateRows() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.templateSheet);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  const width = Math.min(6, Math.max(2, sheet.getLastColumn()));
+  const width = Math.min(7, Math.max(2, sheet.getLastColumn()));
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
     .filter(function (r) { return r[0] && r[1]; });
 }
@@ -398,6 +413,7 @@ function loadSession(dayType, dayKey, create, k, source) {
       weight: num(r[COL.weight]),
       rpe: r[COL.rpe] === '' ? BLANK_RPE : num(r[COL.rpe]),
       note: String(r[COL.userNote] || ''),
+      group: groupLabel(r[COL.group]),
       last: (prev && prev.sets[num(r[COL.set])]) || null
     };
   });
@@ -882,9 +898,10 @@ function setSetCount(k, dayType, dayKey, exercise, count) {
     const last = mine[mine.length - 1];
     const reps = last ? num(last[COL.reps]) : 8;
     const wt = last ? num(last[COL.weight]) : 0;
+    const grp = last ? last[COL.group] : '';
     const add = [];
     for (var i = mine.length + 1; i <= count; i++) {
-      add.push(buildRow(parseKey(dayKey), dayType, exercise, i, reps, wt, ''));
+      add.push(buildRow(parseKey(dayKey), dayType, exercise, i, reps, wt, '', grp));
     }
     sheet.getRange(sheet.getLastRow() + 1, 1, add.length, WIDTH).setValues(add);
     sheet.getRange(sheet.getLastRow() - add.length + 1, 1, add.length, 1)
@@ -918,6 +935,97 @@ function writeNote(sheet, dayType, dayKey, exercise, text) {
 
   SpreadsheetApp.flush();
   return clean;
+}
+
+
+// ---------- supersets ----------
+//
+// Two or more exercises done back to back count as one thing on the card, and
+// as one thing to progress. Membership is column J: every row of every
+// exercise in the group carries the same single-letter label, scoped to that
+// one session. Blank is the normal case.
+//
+// Grouping is by label rather than by adjacency because rows are appended in
+// the order they were added, and an exercise added later has to be able to
+// join a pair already logged above it.
+
+// The letters already spoken for in this session.
+function groupsInUse(rows, dayType, dayKey) {
+  const seen = {};
+  rows.forEach(function (r) {
+    if (dateKey(r[COL.date]) !== dayKey || !sameDay(r[COL.day], dayType)) return;
+    const g = groupLabel(r[COL.group]);
+    if (g) seen[g] = true;
+  });
+  return seen;
+}
+
+function nextGroup(rows, dayType, dayKey) {
+  const used = groupsInUse(rows, dayType, dayKey);
+  for (var i = 0; i < 26; i++) {
+    const letter = String.fromCharCode(65 + i);
+    if (!used[letter]) return letter;
+  }
+  throw new Error('That session already has 26 supersets.');
+}
+
+// Put these exercises in one superset, or take them out of one when `names`
+// holds a single exercise or `label` is ''. Every row of each named exercise
+// is written, so set counts can differ between the two halves.
+function setGroup(k, dayType, dayKey, names, label) {
+  assertEdit(k);
+  const wanted = (names || []).map(function (n) { return String(n).trim(); })
+    .filter(Boolean);
+  if (!wanted.length) throw new Error('Nothing to group.');
+
+  const rows = allRows();
+  const here = rows.filter(function (r) {
+    return dateKey(r[COL.date]) === dayKey && sameDay(r[COL.day], dayType);
+  });
+
+  // '' unlinks. Anything else is normalised, and an unrecognised label is a
+  // request for a fresh one rather than a silent write of nothing.
+  let g = '';
+  if (label !== '' && label != null) {
+    g = groupLabel(label) || nextGroup(rows, dayType, dayKey);
+  }
+
+  const sheet = logSheet();
+  let written = 0;
+  wanted.forEach(function (name) {
+    const mine = here.filter(function (r) {
+      return String(r[COL.exercise]).trim() === name;
+    });
+    if (!mine.length) throw new Error(name + ' is not in this session.');
+    mine.forEach(function (r) {
+      sheet.getRange(r.sheetRow, COL.group + 1).setValue(g);
+      written++;
+    });
+  });
+
+  if (!written) throw new Error('Nothing to group.');
+
+  // A superset of one is just an exercise. Taking a pair apart leaves the
+  // other half holding a label on its own, so clear any that no longer has
+  // company — worked out from what was just written rather than by re-reading
+  // the whole sheet.
+  const members = {};
+  here.forEach(function (r) {
+    const name = String(r[COL.exercise]).trim();
+    const g2 = wanted.indexOf(name) !== -1 ? g : groupLabel(r[COL.group]);
+    if (!g2) return;
+    (members[g2] = members[g2] || {})[name] = true;
+  });
+
+  here.forEach(function (r) {
+    const name = String(r[COL.exercise]).trim();
+    const g2 = wanted.indexOf(name) !== -1 ? g : groupLabel(r[COL.group]);
+    if (!g2 || Object.keys(members[g2]).length > 1) return;
+    sheet.getRange(r.sheetRow, COL.group + 1).setValue('');
+  });
+
+  SpreadsheetApp.flush();
+  return loadSession(dayType, dayKey, false, k);
 }
 
 
@@ -1074,7 +1182,7 @@ function fromHistory(prior, dayType, dayKey) {
       const key = String(set[COL.exercise]).trim().toLowerCase();
       const next = progress(set, noWeight[key], timed[key]);
       return buildRow(when, dayType, set[COL.exercise], set[COL.set],
-                      next.reps, next.weight, next.note);
+                      next.reps, next.weight, next.note, set[COL.group]);
     });
 }
 
@@ -1089,7 +1197,8 @@ function fromTemplate(dayType, dayKey) {
     .forEach(function (r) {
       const sets = Math.max(1, num(r[2]) || 3);
       for (var i = 1; i <= sets; i++) {
-        out.push(buildRow(when, dayType, r[1], i, num(r[3]), num(r[4]), 'from template'));
+        out.push(buildRow(when, dayType, r[1], i, num(r[3]), num(r[4]),
+                          'from template', r[6]));
       }
     });
   return out;
@@ -1126,7 +1235,7 @@ function progress(set, noWeight, timed) {
 
 // ---------- helpers ----------
 
-function buildRow(date, dayType, exercise, setNo, reps, weight, note) {
+function buildRow(date, dayType, exercise, setNo, reps, weight, note, group) {
   const out = new Array(WIDTH).fill('');
   out[COL.date] = date;
   out[COL.day] = dayType;
@@ -1135,7 +1244,16 @@ function buildRow(date, dayType, exercise, setNo, reps, weight, note) {
   out[COL.reps] = reps;
   out[COL.weight] = weight;
   out[COL.note] = note;
+  out[COL.group] = groupLabel(group);
   return out;
+}
+
+// Superset labels are single letters, scoped to one session. Anything else
+// that turns up in column J is ignored rather than trusted — it reaches the
+// browser and drives which rows are rendered together.
+function groupLabel(v) {
+  const g = String(v == null ? '' : v).trim().toUpperCase();
+  return /^[A-Z]$/.test(g) ? g : '';
 }
 
 function key(exercise, setNo) { return String(exercise) + '|' + setNo; }

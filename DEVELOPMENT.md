@@ -80,18 +80,24 @@ failed assertion means the file would have been broken on import.
 
 ## Log schema
 
-Nine columns. **`Code.gs` reads them by position, not by heading**, so the
+Ten columns. **`Code.gs` reads them by position, not by heading**, so the
 order is load-bearing — changing it means changing `COL` and `WIDTH` in
 `Code.gs` and `LOG` in `build_template.py` together.
 
 ```
 A Date | B Day | C Exercise | D Set | E Reps / Secs | F Weight (LB) |
-G RPE | H Auto note | I Notes
+G RPE | H Auto note | I Notes | J Group
 ```
 
 Column E is reps, or seconds for exercises flagged `time based` on the
 `Exercises` tab. The unit is a property of the exercise rather than the row,
-which is what keeps this at nine columns.
+which is what keeps that from needing a column of its own.
+
+Column J is the superset label: rows sharing a letter within one session are
+performed back to back and shown as one card. Blank is the normal case. It
+arrived after people were already logging, so `logSheet()` widens a nine-column
+sheet and writes the heading on first use — blank J means "not a superset", so
+that is the whole migration.
 
 The other tabs are looser. `Exercises` is read A–G with the width clamped, so
 a sheet predating the `image`, `no weight` or `video` columns still works;

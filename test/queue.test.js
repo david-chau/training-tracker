@@ -460,6 +460,73 @@ test('an add in flight blocks the operations that move rows', () => {
   assert.strictEqual(G.blockedByQueue(), false);
 });
 
+// ---------- pages and supersets ----------
+
+// Arrays built inside the vm carry that realm's prototype, which
+// deepStrictEqual reads as a difference. Copy them out before comparing.
+const plain = a => Array.from(a);
+
+const grouped = (name, group, count) => {
+  const out = [];
+  for (let i = 1; i <= (count || 2); i++) {
+    out.push(sample(name, { set: i, row: 100 + i, exercise: name, group }));
+  }
+  return out;
+};
+
+test('exercises in one superset share a page, in sheet order', () => {
+  const groups = {
+    Bench: grouped('Bench', ''),
+    'Dead Bug': grouped('Dead Bug', 'A'),
+    'Battle Ropes': grouped('Battle Ropes', 'A'),
+    Plank: grouped('Plank', '')
+  };
+  const pages = G.paginate(['Bench', 'Dead Bug', 'Battle Ropes', 'Plank'], groups);
+
+  assert.strictEqual(pages.length, 3, 'four exercises, three pages');
+  assert.deepStrictEqual(plain(pages[1].names), ['Dead Bug', 'Battle Ropes']);
+  assert.strictEqual(pages[1].group, 'A');
+  assert.strictEqual(pages[2].names[0], 'Plank', 'order is not shuffled');
+});
+
+test('a superset takes the position of its first member', () => {
+  // Pairing something added later must not move the pair to the end.
+  const groups = {
+    Bench: grouped('Bench', 'B'),
+    Plank: grouped('Plank', ''),
+    'Face Pull': grouped('Face Pull', 'B')
+  };
+  const pages = G.paginate(['Bench', 'Plank', 'Face Pull'], groups);
+
+  assert.strictEqual(pages.length, 2);
+  assert.deepStrictEqual(plain(pages[0].names), ['Bench', 'Face Pull']);
+  assert.deepStrictEqual(plain(pages[1].names), ['Plank']);
+});
+
+test('a label held by one exercise is not a superset', () => {
+  const groups = { Bench: grouped('Bench', 'A') };
+  const pages = G.paginate(['Bench'], groups);
+  assert.strictEqual(pages[0].group, '', 'one exercise cannot superset itself');
+});
+
+test('a superset card renders both halves round by round', () => {
+  const groups = {
+    'Dead Bug': grouped('Dead Bug', 'A', 3),
+    'Battle Ropes': grouped('Battle Ropes', 'A', 2)   // shorter half
+  };
+  const el = G.supersetCard({ group: 'A', names: ['Dead Bug', 'Battle Ropes'] }, groups);
+  assert.ok(el);
+});
+
+test('the rail and the pager build for a session', () => {
+  const pages = [{ group: '', names: ['Bench'] },
+                 { group: 'A', names: ['Dead Bug', 'Battle Ropes'] }];
+  G.S.pages = pages;
+  G.S.page = 0;
+  assert.ok(G.rail(pages));
+  assert.ok(G.pager(pages));
+});
+
 // ---------- weight units ----------
 //
 // The sheet is always pounds. Kilograms are a display choice, so the numbers

@@ -8,7 +8,7 @@
 const { test, expect } = require('@playwright/test');
 const {
   targets, open, scratchDate, gotoDate, deployedFeature, awaitLoad, awaitQueue,
-  SCRATCH_DAY
+  awaitAdd, SCRATCH_DAY
 } = require('./app');
 
 const T = targets();
@@ -76,6 +76,7 @@ test.describe('admin link', () => {
       await panel.locator('.go').click();
       await awaitLoad(app);
       await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
+      await awaitAdd(app);
 
       const card = app.locator('.ex', { hasText: 'Barbell Bench Press' });
       await expect(card).toBeVisible();
@@ -127,6 +128,7 @@ test.describe('admin link', () => {
       await panel.locator('.go').click();
       await awaitLoad(app);
       await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
+      await awaitAdd(app);
 
       test.skip(!await deployedFeature(app, '.rename'),
         'the live app has no rename control yet — redeploy Index.html');
@@ -159,6 +161,7 @@ test.describe('admin link', () => {
       await panel.locator('.go').click();
       await awaitLoad(app);
       await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
+      await awaitAdd(app);
 
       const first = app.locator('.ex').first().locator('.set').first();
       const reps = first.locator('.step input').first();
@@ -197,6 +200,7 @@ test.describe('admin link', () => {
       await panel.locator('.go').click();
       await awaitLoad(app);
       await app.locator('.panel').waitFor({ state: 'detached', timeout: 90_000 });
+      await awaitAdd(app);
 
       const card = app.locator('.ex', { hasText: 'Face Pull' });
       await expect(card).toBeVisible();
@@ -213,6 +217,87 @@ test.describe('admin link', () => {
       await awaitLoad(app);
 
       await expect(app.locator('.ex', { hasText: 'Face Pull' })).toHaveCount(0);
+    });
+
+    test('two exercises pair into one superset card and unpair again',
+      async ({ page }) => {
+        const app = await open(page, T.adminUrl);
+
+        await app.locator('.day', { hasText: SCRATCH_DAY }).click();
+        await gotoDate(app, DATE);
+        await app.locator('.choice', { hasText: 'Empty' }).click();
+        await awaitLoad(app);
+
+        for (const name of ['Plank', 'Push-Up']) {
+          await app.locator('.addex').click();
+          const panel = app.locator('.panel');
+          await panel.locator('input').first().fill(name);
+          await panel.locator('input').first().dispatchEvent('change');
+          await panel.locator('.go').click();
+          await panel.waitFor({ state: 'detached', timeout: 90_000 });
+          await awaitAdd(app);
+        }
+
+        test.skip(!await deployedFeature(app, '.rail'),
+          'the live app has no superset pages yet — redeploy Index.html');
+
+        // Two exercises, two pages.
+        await expect(app.locator('.railitem')).toHaveCount(2);
+
+        await app.locator('.pair').first().click();
+        await awaitLoad(app);
+
+        // One page now, and it renders round by round rather than as two
+        // separate lists of sets.
+        await expect(app.locator('.railitem')).toHaveCount(1);
+        const card = app.locator('.ex.ss');
+        await expect(card).toBeVisible();
+        await expect(card.locator('.round').first()).toBeVisible();
+        await expect(card.locator('.sswho', { hasText: 'Plank' })).toHaveCount(3);
+
+        await card.locator('.link', { hasText: 'Unlink' }).click();
+        await awaitLoad(app);
+
+        await expect(app.locator('.ex.ss')).toHaveCount(0);
+        await expect(app.locator('.railitem')).toHaveCount(2);
+      });
+
+    test('the pager and the rail move between exercises', async ({ page }) => {
+      const app = await open(page, T.adminUrl);
+
+      await app.locator('.day', { hasText: SCRATCH_DAY }).click();
+      await gotoDate(app, DATE);
+      await app.locator('.choice', { hasText: 'Empty' }).click();
+      await awaitLoad(app);
+
+      for (const name of ['Plank', 'Push-Up']) {
+        await app.locator('.addex').click();
+        const panel = app.locator('.panel');
+        await panel.locator('input').first().fill(name);
+        await panel.locator('input').first().dispatchEvent('change');
+        await panel.locator('.go').click();
+        await panel.waitFor({ state: 'detached', timeout: 90_000 });
+        await awaitAdd(app);
+      }
+
+      test.skip(!await deployedFeature(app, '.pager'),
+        'the live app has no pager yet — redeploy Index.html');
+
+      // One card on screen at a time, whichever way you move between them.
+      const cards = app.locator('.ex');
+      await expect(cards.nth(0)).toBeVisible();
+      await expect(cards.nth(1)).toBeHidden();
+      await expect(app.locator('#pageat')).toHaveText('1 of 2');
+
+      await app.locator('#pagefwd').click();
+      await expect(cards.nth(1)).toBeVisible();
+      await expect(cards.nth(0)).toBeHidden();
+      await expect(app.locator('#pageback')).toBeEnabled();
+      await expect(app.locator('#pagefwd')).toBeDisabled();
+
+      await app.locator('.railitem').first().click();
+      await expect(cards.nth(0)).toBeVisible();
+      await expect(app.locator('#pageat')).toHaveText('1 of 2');
     });
   });
 });

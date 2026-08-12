@@ -76,6 +76,51 @@
   /* On screen before the sheet has it. Entry works; the dashed edge is the
      only sign anything is outstanding. */
   .ex.adding { border-style:dashed; }
+
+  /* One exercise at a time, with the whole session listed above it. The list
+     is what a stack of cards gave for free: where you are, what is left, and
+     which exercises are paired. */
+  .rail { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
+  .railitem { display:flex; align-items:center; gap:8px; width:100%;
+              padding:8px 10px; border:1px solid transparent; border-radius:9px;
+              background:transparent; font-size:14px; color:var(--muted);
+              text-align:left; cursor:pointer; }
+  .railitem.on { background:#fff; border-color:var(--line); color:var(--ink);
+                 font-weight:600; }
+  .railno { flex:none; width:20px; height:20px; border-radius:50%;
+            background:var(--line); color:var(--ink); font-size:12px;
+            line-height:20px; text-align:center; }
+  .railitem.on .railno { background:var(--ink); color:#fff; }
+  .raillabel { flex:1; overflow:hidden; text-overflow:ellipsis;
+               white-space:nowrap; }
+  .railss { flex:none; font-size:11px; text-transform:uppercase;
+            letter-spacing:0.05em; color:var(--muted); }
+  .pager { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .pager button { flex:1; padding:13px 8px; border:1px solid var(--line);
+                  background:#fff; border-radius:10px; font-size:16px;
+                  cursor:pointer; color:var(--ink); }
+  .pager button:disabled { color:#c9c7c1; background:#f6f5f2; cursor:default; }
+  .pageat { flex:none; font-size:13px; color:var(--muted); min-width:64px;
+            text-align:center; }
+
+  /* A superset is one card holding two exercises, rendered in the order they
+     are performed: round 1 of both, then round 2. */
+  .ex.ss { border-color:var(--ink); }
+  .sshead { display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:8px; }
+  .sstag { font-size:11px; font-weight:600; text-transform:uppercase;
+           letter-spacing:0.06em; color:var(--muted); }
+  .ssex { margin-bottom:6px; }
+  .round { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
+  .rnum { font-size:12px; text-transform:uppercase; letter-spacing:0.05em;
+          color:var(--muted); margin-bottom:6px; }
+  .sswho { font-size:14px; font-weight:600; margin:6px 0 2px; }
+  .notelabel { font-size:13px; font-weight:600; color:var(--muted);
+               margin:12px 0 4px; }
+  .link { border:0; background:transparent; color:var(--link); font-size:14px;
+          padding:6px 0; cursor:pointer; text-decoration:underline;
+          text-decoration-color:rgba(27,90,160,0.35); }
+  .pair { margin-top:6px; }
   .exhead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .title { display:flex; align-items:center; gap:10px; min-width:0; }
   .ex h2 { font-size:17px; font-weight:600; margin:0; }
@@ -260,7 +305,7 @@
 <div class="bar" id="bar"><span id="barmsg">Ready</span><button class="retry" id="retry" hidden>Retry now</button></div>
 
 <script>
-var S = { day:null, date:null, dates:[] };
+var S = { day:null, date:null, dates:[], page:0, pages:[] };
 var BLANK = -1;
 
 // ---------- weight units ----------
@@ -404,6 +449,30 @@ document.getElementById('wipe').onclick = function () {
   b.onclick = function () { setUnit(b.getAttribute('data-unit')); };
 });
 paintUnit();
+
+// Swipe between exercises. Registered once on the page rather than per card,
+// since the cards are rebuilt on every load. Deliberately strict: mostly
+// horizontal, far enough to be meant, and one finger — a scroll or a pinch
+// must not change which exercise is on screen mid-set.
+(function () {
+  var x0 = 0, y0 = 0, live = false;
+  document.addEventListener('touchstart', function (e) {
+    live = e.touches.length === 1;
+    if (!live) return;
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function (e) {
+    if (!live) return;
+    live = false;
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    showPage(S.page + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+})();
 
 document.getElementById('dayback').onclick = function () { shiftDay(-1); };
 document.getElementById('dayfwd').onclick = function () { shiftDay(1); };
@@ -562,10 +631,139 @@ function render(res) {
   S.priorDate = res.priorDate || null;
   S.records = res.records || {};
   PEND.watchers = {};          // the old elements are about to be discarded
-  order.forEach(function (name) { body.appendChild(card(name, groups[name])); });
+
+  var pages = paginate(order, groups);
+  S.pages = pages;
+  if (S.page >= pages.length) S.page = Math.max(0, pages.length - 1);
+
+  if (pages.length) body.appendChild(rail(pages));
+
+  pages.forEach(function (page, i) {
+    var el = page.group ? supersetCard(page, groups) : card(page.names[0], groups[page.names[0]]);
+    el.classList.add('page');
+    if (i !== S.page) el.style.display = 'none';
+    body.appendChild(el);
+  });
+
+  if (pages.length > 1) body.appendChild(pager(pages));
   if (CAN_EDIT) body.appendChild(addExerciseControl());
   flash(res.priorDate ? 'Comparing against ' + res.priorDate : 'First session', false);
   if (!res.sets.length) flash('Empty session', false);
+}
+
+// ---------- one exercise at a time ----------
+//
+// A session is a list of pages: one exercise, or one superset of two or more.
+// Everything is rendered and all but the current page hidden, so switching is
+// instant and nothing has to be re-created — a card holds live values and
+// registered watchers, and rebuilding it mid-session would throw both away.
+//
+// Order follows the sheet. A superset takes the position of its first member,
+// so pairing something added later does not shuffle the session around.
+function paginate(order, groups) {
+  var pages = [], byGroup = {};
+  order.forEach(function (name) {
+    var g = (groups[name][0] && groups[name][0].group) || '';
+    if (!g) { pages.push({ group: '', names: [name] }); return; }
+    if (byGroup[g]) { byGroup[g].names.push(name); return; }
+    byGroup[g] = { group: g, names: [name] };
+    pages.push(byGroup[g]);
+  });
+  // A label held by one exercise is not a superset — the server clears these,
+  // but a sheet edited by hand can still produce one.
+  pages.forEach(function (p) { if (p.names.length < 2) p.group = ''; });
+  return pages;
+}
+
+function showPage(i) {
+  var cards = document.querySelectorAll('.page');
+  if (!cards.length) return;
+  S.page = Math.max(0, Math.min(cards.length - 1, i));
+  [].forEach.call(cards, function (el, n) {
+    el.style.display = n === S.page ? '' : 'none';
+  });
+  paintRail();
+  paintPager();
+  // The heading is sticky, so this puts the new card under it rather than
+  // leaving the reader halfway down the previous one.
+  window.scrollTo(0, 0);
+}
+
+// The overview: every page at a glance, numbered, with the current one lit.
+// Tapping jumps. This is what a stack of cards gave for free and a pager
+// takes away — without it there is no way to see the shape of the session.
+function rail(pages) {
+  var box = document.createElement('div');
+  box.className = 'rail';
+  box.id = 'rail';
+
+  pages.forEach(function (page, i) {
+    var b = document.createElement('button');
+    b.className = 'railitem';
+    b.setAttribute('data-page', i);
+
+    var n = document.createElement('span');
+    n.className = 'railno';
+    n.textContent = (i + 1);
+    b.appendChild(n);
+
+    var label = document.createElement('span');
+    label.className = 'raillabel';
+    label.textContent = page.names.join(' + ');
+    b.appendChild(label);
+
+    if (page.group) {
+      var tag = document.createElement('span');
+      tag.className = 'railss';
+      tag.textContent = 'superset';
+      b.appendChild(tag);
+    }
+
+    b.onclick = function () { showPage(i); };
+    box.appendChild(b);
+  });
+  return box;
+}
+
+function paintRail() {
+  var box = document.getElementById('rail');
+  if (!box) return;
+  [].forEach.call(box.querySelectorAll('.railitem'), function (b, i) {
+    b.classList.toggle('on', i === S.page);
+  });
+}
+
+function pager(pages) {
+  var box = document.createElement('div');
+  box.className = 'pager';
+  box.id = 'pager';
+
+  var back = document.createElement('button');
+  back.id = 'pageback';
+  back.textContent = '‹ Previous';
+  back.onclick = function () { showPage(S.page - 1); };
+
+  var where = document.createElement('span');
+  where.className = 'pageat';
+  where.id = 'pageat';
+
+  var fwd = document.createElement('button');
+  fwd.id = 'pagefwd';
+  fwd.textContent = 'Next ›';
+  fwd.onclick = function () { showPage(S.page + 1); };
+
+  box.appendChild(back); box.appendChild(where); box.appendChild(fwd);
+  setTimeout(paintPager, 0);
+  return box;
+}
+
+function paintPager() {
+  var at = document.getElementById('pageat');
+  if (!at) return;
+  var total = (S.pages || []).length;
+  at.textContent = (S.page + 1) + ' of ' + total;
+  document.getElementById('pageback').disabled = S.page <= 0;
+  document.getElementById('pagefwd').disabled = S.page >= total - 1;
 }
 
 // Three ways to begin, stated rather than inferred. The app used to pick
@@ -973,16 +1171,7 @@ function card(name, sets) {
     return el;
   }
 
-  var cnt = document.createElement('div');
-  cnt.className = 'cnt';
-  var minus = document.createElement('button'); minus.textContent = '−';
-  var label = document.createElement('span'); label.textContent = sets.length + ' sets';
-  var plus = document.createElement('button'); plus.textContent = '+';
-  minus.title = sets.length === 1 ? 'Remove ' + name : 'One fewer set';
-  minus.onclick = function () { resize(name, sets.length - 1, label); };
-  plus.onclick = function () { resize(name, sets.length + 1, label); };
-  cnt.appendChild(minus); cnt.appendChild(label); cnt.appendChild(plus);
-  head.appendChild(cnt);
+  head.appendChild(setCounter(name, sets));
   el.appendChild(head);
 
   var setTag = metaLine(el, name, sets);
@@ -999,7 +1188,154 @@ function card(name, sets) {
   refresh();
 
   el.appendChild(noteField(name, sets));
+  el.appendChild(pairControl(name));
   return el;
+}
+
+// Offered on a plain exercise when there is a following page to pair with —
+// which is how a superset gets made, since the two have to be next to each
+// other to be performed back to back.
+function pairControl(name) {
+  var wrap = document.createElement('div');
+  if (!CAN_EDIT) return wrap;
+
+  var pages = S.pages || [];
+  var here = -1;
+  pages.forEach(function (p, i) { if (p.names.indexOf(name) !== -1) here = i; });
+  var next = pages[here + 1];
+  if (here === -1 || !next) return wrap;
+
+  var b = document.createElement('button');
+  b.className = 'link pair';
+  b.textContent = '⇄ Superset with ' + next.names.join(' + ');
+  b.onclick = function () { regroup([name].concat(next.names), 'new'); };
+  wrap.appendChild(b);
+  return wrap;
+}
+
+// A superset, rendered in the order it is performed: round 1 of everything,
+// then round 2. Grouping each exercise's sets together instead would put the
+// two halves at opposite ends of the card, which is the scrolling the pages
+// were meant to remove.
+//
+// Set counts may differ between halves — three of one and two of the other is
+// a normal way to finish — so a round only shows the exercises that have a
+// set that far in.
+function supersetCard(page, groups) {
+  var el = document.createElement('div');
+  el.className = 'ex ss';
+
+  var head = document.createElement('div');
+  head.className = 'sshead';
+  var tag = document.createElement('span');
+  tag.className = 'sstag';
+  tag.textContent = 'Superset';
+  head.appendChild(tag);
+
+  if (CAN_EDIT) {
+    var cut = document.createElement('button');
+    cut.className = 'link';
+    cut.textContent = 'Unlink';
+    cut.onclick = function () { regroup(page.names, ''); };
+    head.appendChild(cut);
+  }
+  el.appendChild(head);
+
+  // One header block per exercise: name, records, and its own set counter.
+  var refreshers = [];
+  page.names.forEach(function (name) {
+    var sets = groups[name];
+    var block = document.createElement('div');
+    block.className = 'ssex';
+
+    var line = document.createElement('div');
+    line.className = 'exhead';
+    line.appendChild(title(name, el));
+    if (CAN_EDIT) line.appendChild(setCounter(name, sets));
+    block.appendChild(line);
+
+    var setTag = metaLine(block, name, sets);
+    el.appendChild(block);
+    refreshers.push({ name: name, sets: sets, rows: [], tag: setTag });
+  });
+
+  function refresh() {
+    refreshers.forEach(function (r) { r.tag(markPr(r.name, r.sets, r.rows)); });
+  }
+
+  var rounds = 0;
+  page.names.forEach(function (n) { rounds = Math.max(rounds, groups[n].length); });
+
+  for (var r = 0; r < rounds; r++) {
+    var round = document.createElement('div');
+    round.className = 'round';
+    var num = document.createElement('div');
+    num.className = 'rnum';
+    num.textContent = 'Round ' + (r + 1);
+    round.appendChild(num);
+
+    page.names.forEach(function (name, idx) {
+      var s = groups[name][r];
+      if (!s) return;
+      var line = document.createElement('div');
+      line.className = 'ssline';
+      var who = document.createElement('div');
+      who.className = 'sswho';
+      who.textContent = name;
+      line.appendChild(who);
+      var row = setRow(s);
+      refreshers[idx].rows.push(row);
+      s.onChange = refresh;
+      line.appendChild(row);
+      round.appendChild(line);
+    });
+    el.appendChild(round);
+  }
+  refresh();
+
+  page.names.forEach(function (name) {
+    var note = noteField(name, groups[name]);
+    note.classList.add('ssnote');
+    var label = document.createElement('div');
+    label.className = 'notelabel';
+    label.textContent = name;
+    note.insertBefore(label, note.children[0]);
+    el.appendChild(note);
+  });
+
+  return el;
+}
+
+// The − n sets + control, shared by both kinds of card.
+function setCounter(name, sets) {
+  var cnt = document.createElement('div');
+  cnt.className = 'cnt';
+  var minus = document.createElement('button'); minus.textContent = '−';
+  var label = document.createElement('span'); label.textContent = sets.length + ' sets';
+  var plus = document.createElement('button'); plus.textContent = '+';
+  minus.title = sets.length === 1 ? 'Remove ' + name : 'One fewer set';
+  minus.onclick = function () { resize(name, sets.length - 1, label); };
+  plus.onclick = function () { resize(name, sets.length + 1, label); };
+  cnt.appendChild(minus); cnt.appendChild(label); cnt.appendChild(plus);
+  return cnt;
+}
+
+// Pair with the next page, or unlink. Structural, so it goes through the same
+// guards as everything else that moves rows.
+function regroup(names, label) {
+  if (blockedByQueue()) return;
+  busy(true, label === '' ? 'Unlinking…' : 'Making a superset…');
+  google.script.run
+    .withSuccessHandler(function (res) {
+      busy(false);
+      render(res);
+      flash(label === '' ? 'Unlinked' : 'Superset created', true);
+    })
+    .withFailureHandler(function (e) {
+      busy(false);
+      flash('Failed: ' + e.message, false, true);
+    })
+    .setGroup(KEY, S.day, S.date, names, label);
 }
 
 function noteField(name, sets) {

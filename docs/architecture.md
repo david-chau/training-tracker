@@ -161,14 +161,16 @@ derived from it.
 
 ```
    Log        the record — one row per set
-   ┌────┬─────┬──────────┬────┬─────┬────────┬─────┬──────────┬───────┐
-   │ A  │  B  │    C     │ D  │  E  │   F    │  G  │    H     │   I   │
-   │Date│ Day │ Exercise │Set │Reps │Weight  │ RPE │Auto note │ Notes │
-   │    │     │          │    │/Sec │  (LB)  │     │          │       │
-   ├────┼─────┼──────────┼────┼─────┼────────┼─────┼──────────┼───────┤
-   │8-09│Push │Bench     │ 1  │ 12  │  25    │ 8   │          │ elbow │
-   │8-09│Push │Bench     │ 2  │ 10  │  30    │ 9   │ repeat   │ elbow │
-   └────┴─────┴──────────┴────┴─────┴────────┴─────┴──────────┴───────┘
+   ┌────┬─────┬──────────┬────┬─────┬────────┬─────┬──────────┬───────┬───┐
+   │ A  │  B  │    C     │ D  │  E  │   F    │  G  │    H     │   I   │ J │
+   │Date│ Day │ Exercise │Set │Reps │Weight  │ RPE │Auto note │ Notes │Grp│
+   │    │     │          │    │/Sec │  (LB)  │     │          │       │   │
+   ├────┼─────┼──────────┼────┼─────┼────────┼─────┼──────────┼───────┼───┤
+   │8-09│Push │Bench     │ 1  │ 12  │  25    │ 8   │          │ elbow │   │
+   │8-09│Push │Bench     │ 2  │ 10  │  30    │ 9   │ repeat   │ elbow │   │
+   │8-09│Push │Dead Bug  │ 1  │ 12  │   0    │     │ added    │       │ A │
+   │8-09│Push │Battle Rop│ 1  │ 30  │   0    │     │ added    │       │ A │
+   └────┴─────┴──────────┴────┴─────┴────────┴─────┴──────────┴───────┴───┘
           │                          ▲                  ▲        ▲
           │                          │                  │        │
           │            what actually happened     written by  written by
@@ -486,6 +488,42 @@ one the status bar names.
 
 `BLANK_RPE` travels here too — an unrecorded RPE last time shows as `was —`
 rather than `was 0`.
+
+---
+
+## Pages and supersets
+
+A session renders as a list of **pages**: one exercise, or one superset of two
+or more. `paginate()` walks the exercises in sheet order and folds any that
+share a column J label into a single page, positioned where the first member
+sits — so pairing something added late does not shuffle the session around.
+
+```
+   Log rows (sheet order)          pages
+   ─────────────────────           ─────
+   Bench          J:              ① Bench
+   Dead Bug       J: A            ② Dead Bug + Battle Ropes   (superset A)
+   Battle Ropes   J: A            ③ Seated Leg Curl
+   Seated Leg Curl J:
+```
+
+Every page is rendered and all but the current one hidden, rather than built
+on demand. A card holds live values, `onChange` hooks and registered queue
+watchers; re-creating one to switch pages would throw those away and could
+drop an edit that had not yet been queued.
+
+A superset card renders **round by round** — set 1 of each exercise, then set
+2 — because that is the order it is performed in, and because putting one
+exercise's sets above the other's is the scrolling the pages exist to remove.
+Set counts can differ, so a round only renders the exercises that have a set
+that far in.
+
+`setGroup()` is the only writer of column J. It normalises to a single letter,
+allocates a fresh one when asked for a new group, and clears any label left
+holding a single exercise — a superset of one is just an exercise. Membership
+is by label rather than by adjacency because rows are appended in the order
+they were added, and an exercise added later has to be able to join a pair
+logged above it.
 
 ---
 

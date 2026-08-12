@@ -170,6 +170,18 @@ async function awaitLoad(app) {
     .catch(() => {});
 }
 
+// An added exercise renders before the sheet has it — the card is dashed
+// until the rows exist, and the app refuses anything structural in between.
+// Anything that adds and then acts has to wait this out or it will meet an
+// alert instead of the control it clicked.
+//
+// On an older deployment the class never appears, so this returns at once.
+async function awaitAdd(app, timeout = 120_000) {
+  await app.locator('.ex.adding').first()
+    .waitFor({ state: 'detached', timeout })
+    .catch(() => {});
+}
+
 // The status bar is the app's own receipt: it reports values read back out of
 // the spreadsheet, so waiting on it is waiting on a confirmed write.
 async function waitForSaved(app) {
@@ -179,7 +191,7 @@ async function waitForSaved(app) {
 
 module.exports = {
   targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad,
-  awaitQueue, SCRATCH_DAY,
+  awaitQueue, awaitAdd, SCRATCH_DAY,
   deployedFeature,
   scratchDate, gotoDate, waitForSaved
 };

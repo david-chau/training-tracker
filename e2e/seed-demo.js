@@ -12,7 +12,7 @@
 
 const { chromium } = require('@playwright/test');
 const {
-  targets, appFrame, ready, gotoDate, awaitLoad, awaitQueue
+  targets, appFrame, ready, gotoDate, awaitLoad, awaitQueue, awaitAdd
 } = require('./app');
 
 // Weights climb week to week, which is what makes the records and the
@@ -137,6 +137,7 @@ async function addExercise(app, [name, sets, amount, weight]) {
       await panel.waitFor({ state: 'detached', timeout: 120_000 });
       await app.locator('.ex', { hasText: name }).first()
         .waitFor({ state: 'visible', timeout: 60_000 });
+      await awaitAdd(app);
       await app.page().waitForTimeout(600);
       return;
     }
@@ -144,6 +145,9 @@ async function addExercise(app, [name, sets, amount, weight]) {
   }
   await app.locator('.ex', { hasText: name }).first()
     .waitFor({ state: 'visible', timeout: 60_000 });
+  // The card appears before the rows exist, and the next add is refused
+  // while one is still in flight.
+  await awaitAdd(app);
   // Apps Script does not enjoy a tight loop of writes.
   await app.page().waitForTimeout(600);
 }
