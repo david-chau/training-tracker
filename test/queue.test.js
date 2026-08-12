@@ -125,9 +125,20 @@ const set = (row, reps, weight, rpe) => ({
 });
 
 let passed = 0;
+// A couple of checks are about something firing on a timer, so a test may
+// return a promise. Those are collected and awaited before the tally.
+const pending = [];
 function test(name, fn) {
   reset();
-  fn();
+  const out = fn();
+  if (out && typeof out.then === 'function') {
+    pending.push(out.then(() => {
+      clearTimeout(G.PEND.timer);
+      passed++;
+      console.log('  ok  ' + name);
+    }));
+    return;
+  }
   clearTimeout(G.PEND.timer);
   passed++;
   console.log('  ok  ' + name);
@@ -518,6 +529,49 @@ test('a superset card renders both halves round by round', () => {
   assert.ok(el);
 });
 
+test('a failure without a message still says something', () => {
+  // google.script.run does not guarantee an Error with .message. Reading it
+  // blindly throws inside the failure handler, which loses the reason and
+  // leaves the page dimmed mid-operation.
+  assert.strictEqual(G.why(undefined), 'no reason given');
+  assert.strictEqual(G.why({}), 'no reason given');
+  assert.strictEqual(G.why({ message: 'row 12 now holds something else' }),
+    'row 12 now holds something else');
+});
+
+test('a failure is shown even while the queue is busy', () => {
+  G.queueSave(set(14, 12, 25, 9));
+  G.flash('Failed: nope', false, true);
+  assert.strictEqual(sandbox.document.getElementById('barmsg').textContent,
+    'Failed: nope', 'an error the reader must act on cannot be swallowed');
+
+  G.flash('Saved', true);
+  assert.strictEqual(sandbox.document.getElementById('barmsg').textContent,
+    'Failed: nope', 'but a routine message still defers to the queue');
+});
+
+test('a structural write that never answers releases the page', () => {
+  // Apps Script can hang rather than fail. A dimmed page with no reload
+  // button is what "it just froze" looks like.
+  G.busy(true, 'Making a superset…');
+  G.S.working = 'Making a superset';
+  assert.strictEqual(G.S.busy, true);
+
+  const realLoad = G.load;
+  let reloaded = false;
+  G.load = () => { reloaded = true; };
+
+  const done = G.busyGuard('Making a superset', 0.05);
+  return new Promise(resolve => setTimeout(() => {
+    assert.strictEqual(G.S.busy, false, 'the page was released');
+    assert.strictEqual(G.S.working, null, 'the in-flight flag was cleared');
+    assert.ok(reloaded, 'and it re-read the session rather than guessing');
+    G.load = realLoad;
+    done();
+    resolve();
+  }, 120));
+});
+
 test('renaming hides the header of the exercise being renamed', () => {
   // A superset card has one header per exercise. Finding the first .exhead
   // renamed the second exercise while hiding the first one's header.
@@ -583,4 +637,4 @@ test('a card renders in kilograms', () => {
   G.S.unit = 'lb';
 });
 
-console.log('\n' + passed + ' passed');
+Promise.all(pending).then(() => console.log('\n' + passed + ' passed'));

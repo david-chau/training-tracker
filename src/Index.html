@@ -420,7 +420,7 @@ google.script.run.withSuccessHandler(function (b) {
   body.innerHTML = '';
   var m = document.createElement('div');
   m.className = 'msg';
-  m.textContent = 'Could not load: ' + e.message;
+  m.textContent = 'Could not load: ' + why(e);
   body.appendChild(m);
 }).getBootstrap(KEY);
 
@@ -432,15 +432,16 @@ document.getElementById('wipe').onclick = function () {
   if (blockedByQueue()) return;
   if (!confirm('Delete every ' + S.day + ' set logged on ' + S.date + '?')) return;
   busy(true, 'Deleting…');
+  var doneDel = busyGuard('Deleting');
   google.script.run
     .withSuccessHandler(function (n) {
-      busy(false);
+      doneDel(); busy(false);
       flash('Deleted ' + n + ' rows', true);
       load(false);
     })
     .withFailureHandler(function (e) {
-      busy(false);
-      flash('Delete failed: ' + e.message, false, true);
+      doneDel(); busy(false);
+      flash('Delete failed: ' + why(e), false, true);
     })
     .deleteSession(KEY, S.day, S.date);
 };
@@ -560,10 +561,31 @@ function busy(on, label) {
   if (on && label) flash(label, false);
 }
 
+// A failure handler that trusts e.message throws when the error arrives
+// without one, which loses the reason and leaves the page mid-operation.
+function why(e) {
+  return (e && (e.message || e.details)) || 'no reason given';
+}
+
+// Structural writes disable the session while they are in flight, and
+// google.script.run can hang rather than fail. Without this the page stays
+// disabled with a stale message and looks frozen — there is no reload button
+// on a dimmed page. The server is the truth, so a stuck call ends in a reload.
+function busyGuard(what, seconds) {
+  var timer = setTimeout(function () {
+    S.working = null;          // or load() would refuse the recovery
+    busy(false);
+    flash(what + ' is taking too long — reloading from the sheet', false, true);
+    load(false);
+  }, (seconds || 45) * 1000);
+  return function () { clearTimeout(timer); };
+}
+
 function load(create, source) {
   if (!S.day) return;
-  // Leaving the session mid-add would land the response on a different day.
+  // Leaving the session mid-write would land the response on a different day.
   if (S.adding) { flash('Still adding ' + S.adding.name + ' — one moment', false); return; }
+  if (S.working) { flash(S.working + ' — one moment', false); return; }
   // A different session starts at its first exercise. Only load() resets
   // this — a re-render (switching units, a set count changing) has to leave
   // the reader where they were.
@@ -588,7 +610,7 @@ function load(create, source) {
       body.innerHTML = '';
       var m = document.createElement('div');
       m.className = 'msg';
-      m.textContent = e.message;
+      m.textContent = why(e);
       body.appendChild(m);
     })
     .loadSession(S.day, S.date, !!create, KEY, source || 'auto');
@@ -997,7 +1019,7 @@ function addExercisePanel(prefill) {
             weight: toDisplay(weight), timed: unit.timed()
           }));
         }
-        flash(e.message, false, true);
+        flash(why(e), false, true);
       })
       .addExercise(KEY, S.day, S.date, wanted, count, reps, weight, unit.timed());
   };
@@ -1100,15 +1122,16 @@ function renamePanel(card, name, head) {
     ok.disabled = no.disabled = true;
     ok.textContent = 'Renaming…';
     busy(true, 'Renaming ' + name + '…');
+    var done = busyGuard('Renaming ' + name);
     google.script.run
       .withSuccessHandler(function (res) {
-        busy(false); render(res); flash('Renamed to ' + to, true);
+        done(); busy(false); render(res); flash('Renamed to ' + to, true);
       })
       .withFailureHandler(function (e) {
-        busy(false);
+        done(); busy(false);
         ok.disabled = no.disabled = false;
         ok.textContent = 'Rename';
-        flash(e.message, false, true);
+        flash(why(e), false, true);
       })
       .renameExercise(KEY, S.day, S.date, name, to);
   }
@@ -1335,18 +1358,49 @@ function setCounter(name, sets) {
 // guards as everything else that moves rows.
 function regroup(names, label) {
   if (blockedByQueue()) return;
-  busy(true, label === '' ? 'Unlinking…' : 'Making a superset…');
+  var what = label === '' ? 'Unlinking' : 'Making a superset';
+
+  // Pairing is a column J write plus two full reads of the log — five to
+  // eight seconds on a real session, which dimmed the whole page and read as
+  // a freeze. The pages re-flow here and the write follows, same as an add.
+  //
+  // The letter is picked locally only so the cards can group now; the server
+  // allocates the real one and the response re-renders with it.
+  var res = S.lastRes;
+  if (res && res.sets) {
+    var letter = label === '' ? '' : freeGroup(res.sets);
+    res.sets.forEach(function (s) {
+      if (names.indexOf(s.exercise) !== -1) s.group = letter;
+    });
+    S.working = what;
+    render(res);
+  }
+  flash(what + '…', false);
+
+  var done = busyGuard(what);
   google.script.run
-    .withSuccessHandler(function (res) {
-      busy(false);
-      render(res);
+    .withSuccessHandler(function (r) {
+      done(); S.working = null;
+      render(r);
       flash(label === '' ? 'Unlinked' : 'Superset created', true);
     })
     .withFailureHandler(function (e) {
-      busy(false);
-      flash('Failed: ' + e.message, false, true);
+      done(); S.working = null;
+      flash('Failed: ' + why(e), false, true);
+      load(false);            // the sheet is the truth; undo the guess
     })
     .setGroup(KEY, S.day, S.date, names, label);
+}
+
+// The first letter this session is not already using.
+function freeGroup(sets) {
+  var used = {};
+  sets.forEach(function (s) { if (s.group) used[s.group] = true; });
+  for (var i = 0; i < 26; i++) {
+    var letter = String.fromCharCode(65 + i);
+    if (!used[letter]) return letter;
+  }
+  return 'A';
 }
 
 function noteField(name, sets) {
@@ -1441,9 +1495,14 @@ function noteField(name, sets) {
 // a queued edit is addressed by. Rather than race, get the queue empty first.
 function blockedByQueue() {
   // An add in flight is the same hazard: the server is about to hand back row
-  // numbers for rows that do not exist yet.
+  // numbers for rows that do not exist yet. A regroup is the same again — the
+  // response it is about to land re-renders the whole session.
   if (S.adding) {
     alert('Still adding ' + S.adding.name + '. Try again in a moment.');
+    return true;
+  }
+  if (S.working) {
+    alert(S.working + ' is still saving. Try again in a moment.');
     return true;
   }
   if (!pendCount()) return false;
@@ -1468,15 +1527,16 @@ function resize(exercise, count, label) {
 
   label.textContent = '…';
   busy(true, count === 0 ? 'Removing ' + exercise + '…' : 'Updating sets…');
+  var done = busyGuard(count === 0 ? 'Removing ' + exercise : 'Updating sets');
   google.script.run
     .withSuccessHandler(function (res) {
-      busy(false);
+      done(); busy(false);
       render(res);
       flash(count === 0 ? exercise + ' removed' : 'Sets updated', true);
     })
     .withFailureHandler(function (e) {
-      busy(false);
-      flash('Failed: ' + e.message, false, true);
+      done(); busy(false);
+      flash('Failed: ' + why(e), false, true);
     })
     .setSetCount(KEY, S.day, S.date, exercise, count);
 }
@@ -1961,7 +2021,10 @@ paint();
 if (pendCount()) schedule(500);
 
 function flash(text, ok, bad) {
-  if (pendCount()) return;          // the pending state outranks a transient message
+  // The pending state outranks a transient message — but not a failure, which
+  // is the one message the reader has to see. paint() restores the queue's
+  // own text on its next event.
+  if (pendCount() && !bad) return;
   var bar = document.getElementById('bar');
   document.getElementById('barmsg').textContent = text;
   bar.className = 'bar' + (ok ? ' saved' : '') + (bad ? ' failed' : '');
