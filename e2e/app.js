@@ -193,6 +193,23 @@ async function awaitLoad(app) {
     .catch(() => {});
 }
 
+// How many exercise cards are on the page, once the page has stopped
+// changing. Clicking a day type starts one load and changing the date starts
+// another, so a single count can be taken against the previous session — which
+// is how a tidy-up concluded a day was empty and left sixteen rows on it.
+// Two consecutive reads have to agree.
+async function stableCards(app, tries = 8) {
+  let last = -1;
+  for (let i = 0; i < tries; i++) {
+    await awaitLoad(app);
+    const n = await app.locator('.ex').count();
+    if (n === last) return n;
+    last = n;
+    await app.page().waitForTimeout(600);
+  }
+  return last;
+}
+
 // An added exercise renders before the sheet has it — the card is dashed
 // until the rows exist, and the app refuses anything structural in between.
 // Anything that adds and then acts has to wait this out or it will meet an
@@ -214,7 +231,7 @@ async function waitForSaved(app) {
 
 module.exports = {
   targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad,
-  awaitQueue, awaitIdle, awaitAdd, SCRATCH_DAY,
+  awaitQueue, awaitIdle, awaitAdd, stableCards, SCRATCH_DAY,
   deployedFeature,
   scratchDate, gotoDate, waitForSaved
 };

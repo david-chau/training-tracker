@@ -17,7 +17,7 @@ const { execFileSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 const {
   targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue, awaitIdle,
-  awaitAdd, scratchDate, SCRATCH_DAY
+  awaitAdd, stableCards, scratchDate, SCRATCH_DAY
 } = require('./app');
 
 const OUT = path.join(__dirname, '..', 'docs', 'img');
@@ -70,11 +70,11 @@ async function emptyScratch(app) {
   // Twice: a wipe that raced a load leaves the cards up, and building the
   // clip on top of yesterday's leftovers is how a clip ends up filming the
   // wrong session.
-  for (let i = 0; i < 2 && await app.locator('.ex').count(); i++) {
+  for (let i = 0; i < 2 && await stableCards(app); i++) {
     await app.locator('#wipe').click();
     await awaitLoad(app);
   }
-  if (await app.locator('.ex').count()) {
+  if (await stableCards(app)) {
     throw new Error('the scratch day would not clear before recording');
   }
   const empty = app.locator('.choice', { hasText: 'Empty' });
@@ -175,7 +175,7 @@ async function tidyUp(browser, day) {
       await cleanup(app);
 
       // The day is only clean when nothing is left on it.
-      if (!await app.locator('.ex').count()) return;
+      if (!await stableCards(app)) return;
       console.log(`  (${day} ${DATE} still had rows — retrying the tidy)`);
     } finally {
       await page.close();
@@ -186,7 +186,7 @@ async function tidyUp(browser, day) {
 
 async function cleanup(app) {
   await awaitIdle(app);
-  if (await app.locator('.ex').count()) {
+  if (await stableCards(app)) {
     await app.locator('#wipe').click();
     await awaitLoad(app);
   }
