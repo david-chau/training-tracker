@@ -597,6 +597,26 @@ test('a rendered session marks the current page without being tapped', () => {
   assert.ok(painted > 0, 'a fresh load left every exercise looking current');
 });
 
+test('a render lands on the exercise that was just added', () => {
+  // One card at a time means an added exercise is on a page nobody is
+  // looking at. Adding something and being shown something else is wrong,
+  // and it hung the recorder waiting for a card that was never visible.
+  G.S.page = 0;
+  G.S.focus = 'Farmer Carry';
+
+  G.render({
+    exists: true, records: {}, lastNotes: {}, lastDates: {}, priorDate: null,
+    sets: [
+      sample('Bench'),
+      sample('Plank', { row: 20, exercise: 'Plank' }),
+      sample('Farmer Carry', { row: 30, exercise: 'Farmer Carry' })
+    ]
+  });
+
+  assert.strictEqual(G.S.page, 2, 'the new exercise is the one on screen');
+  assert.strictEqual(G.S.focus, null, 'and the next render is left alone');
+});
+
 test('renaming hides the header of the exercise being renamed', () => {
   // A superset card has one header per exercise. Finding the first .exhead
   // renamed the second exercise while hiding the first one's header.

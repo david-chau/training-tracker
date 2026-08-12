@@ -660,6 +660,16 @@ function render(res) {
 
   var pages = paginate(order, groups);
   S.pages = pages;
+
+  // Whatever was just added or paired is what the reader wants to be looking
+  // at. Without this an added exercise lands on a page at the end and the
+  // screen carries on showing the one you were already on.
+  if (S.focus) {
+    pages.forEach(function (p, i) {
+      if (p.names.indexOf(S.focus) !== -1) S.page = i;
+    });
+    S.focus = null;
+  }
   if (S.page >= pages.length) S.page = Math.max(0, pages.length - 1);
 
   if (pages.length) body.appendChild(rail(pages));
@@ -986,9 +996,15 @@ function addExercisePanel(prefill) {
 
     var el = card(wanted, sets);
     el.classList.add('adding');
+    el.classList.add('page');
     S.adding = { name: wanted, sets: sets, card: el };
+    S.focus = wanted;               // the response re-renders onto this page
     p.replaceWith(el);
     el.insertAdjacentElement('afterend', addExerciseControl());
+    // One card at a time: the exercise being added is the one on screen.
+    [].forEach.call(document.querySelectorAll('.page'), function (other) {
+      if (other !== el) other.style.display = 'none';
+    });
     flash('Adding ' + wanted + '…', false);
 
     // google.script.run can hang rather than fail, and S.adding holds back
@@ -1376,6 +1392,7 @@ function regroup(names, label) {
       if (names.indexOf(s.exercise) !== -1) s.group = letter;
     });
     S.working = what;
+    S.focus = names[0];             // stay on what was just paired or split
     render(res);
   }
   flash(what + '…', false);

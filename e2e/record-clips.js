@@ -111,8 +111,46 @@ async function addExercise(app, name, sets, amount, weight) {
   await app.page().waitForTimeout(300);
   await panel.locator('.go').click();
   await panel.waitFor({ state: 'detached', timeout: 120_000 });
-  await app.locator('.ex', { hasText: name }).first().waitFor({ state: 'visible' });
+  // Attached, not visible: one card is on screen at a time, and an added
+  // exercise can be on a page that is not the current one.
+  await app.locator('.ex', { hasText: name }).first()
+    .waitFor({ state: 'attached', timeout: 120_000 });
   await awaitAdd(app);
+  await showExercise(app, name);
+}
+
+// Bring an exercise on screen, wherever it ended up. One card is displayed at
+// a time, so a card that exists is not necessarily a card you can film.
+async function showExercise(app, name) {
+  const card = app.locator('.ex', { hasText: name }).first();
+  const item = app.locator('.railitem', { hasText: name });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (await card.isVisible()) return;
+    if (await item.count()) {
+      await item.first().click();
+      if (await card.isVisible().catch(() => false)) return;
+    }
+    // No rail entry yet, or the click did not land: walk the pager instead.
+    const pages = await app.locator('.railitem').count() || 1;
+    for (let i = 0; i < pages; i++) {
+      if (await card.isVisible().catch(() => false)) return;
+      const fwd = app.locator('#pagefwd');
+      if (!await fwd.count() || await fwd.isDisabled()) break;
+      await fwd.click();
+      await app.page().waitForTimeout(200);
+    }
+    await app.page().waitForTimeout(1000);
+  }
+
+  // Say what the app actually looked like rather than timing out blind.
+  const state = await app.evaluate(() => ({
+    page: S.page,
+    pages: (S.pages || []).map(p => p.names.join(' + ')),
+    cards: [].map.call(document.querySelectorAll('.ex'),
+      e => e.className + ' display=' + (e.style.display || 'shown'))
+  })).catch(() => null);
+  throw new Error(`"${name}" never came on screen: ${JSON.stringify(state)}`);
 }
 
 // Delete the scratch session a clip just built, and prove it went. This used
@@ -436,6 +474,13 @@ async function record(names) {
     if (CLIP_DAY[name] === null) continue;
     await tidyUp(browser, CLIP_DAY[name]);
   }
+  // A per-clip tidy can still report success and leave rows — it did, once,
+  // for a session it had just deleted. Sweep every day the run touched before
+  // finishing, because anything left on the scratch date turns into a
+  // personal best dated five years out in the demo log.
+  const touched = [...new Set(names.map(n => CLIP_DAY[n]).filter(Boolean))];
+  for (const day of touched) await tidyUp(browser, day);
+
   await browser.close();
   fs.rmSync(TMP, { recursive: true, force: true });
 }

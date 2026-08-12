@@ -144,8 +144,10 @@ async function addExercise(app, [name, sets, amount, weight]) {
     }
     throw new Error(`adding "${name}" failed: ${why || 'no message'}`);
   }
+  // Attached rather than visible: one card is on screen at a time, so an
+  // added exercise may be on a page that is not the current one.
   await app.locator('.ex', { hasText: name }).first()
-    .waitFor({ state: 'visible', timeout: 60_000 });
+    .waitFor({ state: 'attached', timeout: 60_000 });
   // The card appears before the rows exist, and the next add is refused
   // while one is still in flight.
   await awaitAdd(app);
@@ -186,6 +188,13 @@ async function buildSession(app, session) {
   // RPE on the newest session only — enough to show the field in use without
   // making every historical set look laboriously hand-entered.
   if (session.rpe) {
+    // RPE goes on the first exercise, which means putting its page on screen:
+    // typing into a hidden field throws.
+    const rail = app.locator('.railitem').first();
+    if (await rail.count()) {
+      await rail.click();
+      await app.locator('.ex').first().waitFor({ state: 'visible', timeout: 30_000 });
+    }
     const rows = app.locator('.ex').first().locator('.set');
     for (let i = 0; i < session.rpe.length && i < await rows.count(); i++) {
       const rpe = rows.nth(i).locator('.step input').last();
