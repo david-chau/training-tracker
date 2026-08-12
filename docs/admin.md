@@ -223,7 +223,7 @@ which ships with 255 movements — then choose **Reps** or **Seconds**,
 ```
 
 <img src="{{ site.baseurl }}/img/clip-unit.gif" loading="lazy"
-     alt="Adding Plank to an empty session: the unit toggle flips itself to Seconds, the weight box disappears, and the seconds are set to 45"
+     alt="Adding Plank to an empty session: the toggles pick Seconds and Bodyweight from the Exercises tab, the weight box goes, and the seconds are set to 45"
      style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
 
 Pick a known exercise and the toggle follows the `Exercises` tab and says so.

@@ -17,7 +17,7 @@ const { execFileSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 const {
   targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue, awaitIdle,
-  awaitAdd, stableCards, scratchDate, SCRATCH_DAY
+  awaitAdd, stableCards, exerciseCard, sessionSets, scratchDate, SCRATCH_DAY
 } = require('./app');
 
 const OUT = path.join(__dirname, '..', 'docs', 'img');
@@ -67,15 +67,16 @@ async function emptyScratch(app) {
   await gotoDate(app, DATE);
   await app.locator('.ex, .choice, .addex, .msg').first().waitFor({ state: 'visible' });
 
-  // Twice: a wipe that raced a load leaves the cards up, and building the
-  // clip on top of yesterday's leftovers is how a clip ends up filming the
-  // wrong session.
-  for (let i = 0; i < 2 && await stableCards(app); i++) {
+  // Twice, and judged by the sheet rather than by what is on screen: a clip
+  // filmed on top of the previous clip's session is worse than a failed run.
+  for (let i = 0; i < 2 && await sessionSets(app, SCRATCH_DAY, DATE) !== 0; i++) {
+    if (!await stableCards(app)) break;
     await app.locator('#wipe').click();
     await awaitLoad(app);
   }
-  if (await stableCards(app)) {
-    throw new Error('the scratch day would not clear before recording');
+  const left = await sessionSets(app, SCRATCH_DAY, DATE);
+  if (left > 0) {
+    throw new Error(`${SCRATCH_DAY} ${DATE} still holds ${left} sets`);
   }
   const empty = app.locator('.choice', { hasText: 'Empty' });
   if (await empty.count()) {
@@ -113,8 +114,7 @@ async function addExercise(app, name, sets, amount, weight) {
   await panel.waitFor({ state: 'detached', timeout: 120_000 });
   // Attached, not visible: one card is on screen at a time, and an added
   // exercise can be on a page that is not the current one.
-  await app.locator('.ex', { hasText: name }).first()
-    .waitFor({ state: 'attached', timeout: 120_000 });
+  await exerciseCard(app, name).waitFor({ state: 'attached', timeout: 120_000 });
   await awaitAdd(app);
   await showExercise(app, name);
 }
@@ -122,7 +122,7 @@ async function addExercise(app, name, sets, amount, weight) {
 // Bring an exercise on screen, wherever it ended up. One card is displayed at
 // a time, so a card that exists is not necessarily a card you can film.
 async function showExercise(app, name) {
-  const card = app.locator('.ex', { hasText: name }).first();
+  const card = exerciseCard(app, name);
   const item = app.locator('.railitem', { hasText: name });
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -174,8 +174,8 @@ async function tidyUp(browser, day) {
       await app.locator('.ex, .choice, .msg').first().waitFor({ state: 'visible' });
       await cleanup(app);
 
-      // The day is only clean when nothing is left on it.
-      if (!await stableCards(app)) return;
+      // The day is only clean when the sheet says so.
+      if (await sessionSets(app, day, DATE) === 0) return;
       console.log(`  (${day} ${DATE} still had rows — retrying the tidy)`);
     } finally {
       await page.close();

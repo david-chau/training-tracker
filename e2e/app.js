@@ -193,6 +193,33 @@ async function awaitLoad(app) {
     .catch(() => {});
 }
 
+// How many sets the sheet actually holds for a session, asked through the
+// page's own RPC. The DOM is a rendering with loads in flight behind it, and
+// counting cards to decide whether a day is empty has now produced two
+// different silent failures: a tidy-up that reported success while leaving
+// sixteen rows, and a clip filmed on top of the previous clip's session.
+// The server is the only answer that cannot be read a render too early.
+async function sessionSets(app, day, date) {
+  return app.evaluate(([d, k]) => new Promise(resolve => {
+    google.script.run
+      .withSuccessHandler(res => resolve((res && res.sets && res.sets.length) || 0))
+      .withFailureHandler(() => resolve(-1))          // unknown, not empty
+      .loadSession(d, k, false, KEY, 'auto');
+  }), [day, date]);
+}
+
+// The card for one exercise, matched on its own heading rather than on any
+// text it happens to contain. A card carries the ⇄ button for pairing with the
+// *next* exercise — "Superset with Battle Ropes" — so filtering .ex by that
+// text resolved to the card above it, which is on another page and therefore
+// hidden. A wait for it to be visible could never succeed.
+function exerciseCard(app, name) {
+  const exact = new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$');
+  return app.locator('.ex')
+    .filter({ has: app.locator('h2', { hasText: exact }) })
+    .first();
+}
+
 // How many exercise cards are on the page, once the page has stopped
 // changing. Clicking a day type starts one load and changing the date starts
 // another, so a single count can be taken against the previous session — which
@@ -231,7 +258,8 @@ async function waitForSaved(app) {
 
 module.exports = {
   targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad,
-  awaitQueue, awaitIdle, awaitAdd, stableCards, SCRATCH_DAY,
+  awaitQueue, awaitIdle, awaitAdd, stableCards, exerciseCard, sessionSets,
+  SCRATCH_DAY,
   deployedFeature,
   scratchDate, gotoDate, waitForSaved
 };
