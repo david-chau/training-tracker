@@ -255,6 +255,11 @@ throws those away. A superset renders round by round (set 1 of each, then set
   this repo happened to commit. `logTimeZone()` prefers
   `getSpreadsheetTimeZone()` and falls back. An evening session under the
   wrong zone lands on the previous day, silently.
+- **The add form's toggles only write flags for a NEW name.** Reps/Seconds and
+  Weighted/Bodyweight follow the `Exercises` tab for a known exercise and say
+  so; an explicit pick changes this session's rows and, for a name the tab has
+  never seen, the row it appends (`rememberExercise(name, timed, noWeight)`).
+  An existing exercise keeps its flags — fix those on the tab, or rename.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the

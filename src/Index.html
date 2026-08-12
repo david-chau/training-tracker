@@ -26,10 +26,24 @@
   body.booting .datebar,
   body.booting .sessnav,
   body.booting #tools,
-  body.booting #days { display:none; }
-  body.booting h1 { color:transparent; background:var(--line);
-                    border-radius:6px; max-width:11em; }
-  body.booting .kicker { visibility:hidden; }
+  body.booting #days,
+  body.booting .top,
+  body.booting #body,
+  body.booting .bar { display:none; }
+  /* Until getBootstrap returns there is nothing true to show: no name, no
+     date, no day types. A half-built screen is what made a slow first load
+     look broken, so the whole page is one centred message instead. */
+  #boot { position:fixed; inset:0; z-index:20; display:none;
+          flex-direction:column; align-items:center; justify-content:center;
+          gap:14px; background:var(--bg); color:var(--muted); font-size:16px;
+          padding:24px; text-align:center; }
+  body.booting #boot { display:flex; }
+  #boot::before { content:''; width:26px; height:26px;
+                  border:3px solid var(--line); border-top-color:var(--muted);
+                  border-radius:50%; animation:spin 0.7s linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    #boot::before { animation-duration:2.4s; }
+  }
   h1 { font-size:20px; font-weight:600; margin:0 0 2px;
        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   /* It opens the spreadsheet, so it should read as a link rather than as a
@@ -52,10 +66,14 @@
                      font-size:13px; font-weight:600; color:var(--muted);
                      cursor:pointer; }
   .unitpick button.on { background:var(--ink); color:#fff; }
-  body.booting .unitpick { visibility:hidden; }
   .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .day { flex:1; min-width:84px; padding:13px 8px; border:1px solid var(--line);
-         background:#fff; border-radius:10px; font-size:17px; cursor:pointer; }
+         background:#fff; border-radius:10px; font-size:17px; cursor:pointer;
+         transition:padding 0.12s ease, font-size 0.12s ease; }
+  /* Before a day is picked these are the only thing to press, so they are
+     big. Afterwards they are just navigation and the session needs the room —
+     still a comfortable target, half the height. */
+  .days.chosen .day { padding:8px 8px; font-size:15px; }
   .day.on { background:var(--ink); color:#fff; border-color:var(--ink); }
   .datebar { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
   /* Two different kinds of stepping, so they get two different controls:
@@ -269,6 +287,7 @@
 </style>
 </head>
 <body class="booting">
+<div id="boot">Loading Web App…</div>
 
 <script>
   var CAN_EDIT = ('<?= canEdit ?>' === 'true');
@@ -301,7 +320,7 @@
   <button class="danger" id="wipe">Delete this day</button>
 </div>
 <datalist id="exlist"></datalist>
-<div id="body"><div class="spinner">Loading…</div></div>
+<div id="body"></div>
 <div class="bar" id="bar"><span id="barmsg">Ready</span><button class="retry" id="retry" hidden>Retry now</button></div>
 
 <script>
@@ -534,6 +553,9 @@ function markDay() {
   [].forEach.call(document.querySelectorAll('.day'), function (b) {
     b.classList.toggle('on', b.textContent === S.day);
   });
+  // Once a day is chosen the row is navigation rather than the main choice,
+  // so it gives its height back to the session.
+  document.getElementById('days').classList.toggle('chosen', !!S.day);
 }
 
 // Whole-session work: loading a day, or a structural change that rewrites
@@ -934,8 +956,62 @@ function addExercisePanel(prefill) {
     };
   })();
 
+  // Loaded / Bodyweight, same shape as the unit toggle. Without it there was
+  // no way to say a new exercise carries no weight, and the form asked for the
+  // weight of a dead bug.
+  var load = (function () {
+    var row = document.createElement('div');
+    row.className = 'unit';
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    var chosen = false, bodyweight = false;
+
+    var loaded = document.createElement('button');
+    loaded.textContent = 'Weighted';
+    var body = document.createElement('button');
+    body.textContent = 'Bodyweight';
+
+    function paint() {
+      loaded.classList.toggle('on', !bodyweight);
+      body.classList.toggle('on', bodyweight);
+      wraps.weight.style.display = bodyweight ? 'none' : '';
+      mini.style.gridTemplateColumns = bodyweight ? '1fr 1fr' : '1fr 1fr 1fr';
+      if (bodyweight) fields.weight.value = 0;
+    }
+    function pick(b) {
+      chosen = true;
+      bodyweight = b;
+      paint();
+      hint.textContent = '';
+    }
+    loaded.onclick = function () { pick(false); };
+    body.onclick = function () { pick(true); };
+
+    row.appendChild(loaded); row.appendChild(body);
+    paint();
+
+    return {
+      row: row,
+      hint: hint,
+      bodyweight: function () { return bodyweight; },
+      set: pick,
+      // Follow the sheet until the user says otherwise.
+      suggest: function (nameText) {
+        if (chosen) return;
+        var known = S.noWeight && S.noWeight[nameText];
+        bodyweight = !!known;
+        paint();
+        hint.textContent = (nameText && known)
+          ? nameText + ' carries no weight, from the Exercises tab'
+          : '';
+      }
+    };
+  })();
+
   p.appendChild(unit.row);
   p.appendChild(unit.hint);
+  p.appendChild(load.row);
+  p.appendChild(load.hint);
   p.appendChild(mini);
   syncUnits();
 
@@ -944,11 +1020,8 @@ function addExercisePanel(prefill) {
 
   function syncUnits() {
     var chosen = name.value.trim();
-    var none = S.noWeight && S.noWeight[chosen];
-    wraps.weight.style.display = none ? 'none' : '';
-    mini.style.gridTemplateColumns = none ? '1fr 1fr' : '1fr 1fr 1fr';
-    if (none) fields.weight.value = 0;
     unit.suggest(chosen);
+    load.suggest(chosen);          // owns the weight field, hint included
   }
   name.addEventListener('input', syncUnits);
   name.addEventListener('change', syncUnits);
@@ -956,6 +1029,7 @@ function addExercisePanel(prefill) {
   if (prefill) {
     name.value = prefill.name;
     unit.set(!!prefill.timed);        // before the numbers: picking rewrites them
+    load.set(!!prefill.bodyweight);
     fields.sets.value = prefill.sets;
     fields.reps.value = prefill.reps;
     fields.weight.value = prefill.weight;
@@ -986,7 +1060,7 @@ function addExercisePanel(prefill) {
     // what the panel was told about it — otherwise the optimistic card would
     // render a timed exercise in reps.
     if (unit.timed()) S.timed[wanted] = true;
-    if (wraps.weight.style.display === 'none') S.noWeight[wanted] = true;
+    if (load.bodyweight()) S.noWeight[wanted] = true;
 
     var sets = [];
     for (var i = 1; i <= count; i++) {
@@ -1035,12 +1109,14 @@ function addExercisePanel(prefill) {
         if (ctl) {
           ctl.replaceWith(addExercisePanel({
             name: wanted, sets: count, reps: reps,
-            weight: toDisplay(weight), timed: unit.timed()
+            weight: toDisplay(weight), timed: unit.timed(),
+            bodyweight: load.bodyweight()
           }));
         }
         flash(why(e), false, true);
       })
-      .addExercise(KEY, S.day, S.date, wanted, count, reps, weight, unit.timed());
+      .addExercise(KEY, S.day, S.date, wanted, count, reps, weight,
+                   unit.timed(), load.bodyweight());
   };
   cancel.onclick = function () { p.replaceWith(addExerciseControl()); };
 

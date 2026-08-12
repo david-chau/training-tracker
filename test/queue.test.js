@@ -410,6 +410,20 @@ test('the add-exercise panel builds without throwing', () => {
   assert.ok(panel);
 });
 
+test('the add panel offers a bodyweight choice, prefilled or not', () => {
+  // Regression: there was no way to say a new exercise carries no weight, so
+  // the form asked for the weight of a dead bug.
+  const plain = G.addExercisePanel();
+  assert.ok(plain);
+
+  // A refused add comes back with both toggles as they were.
+  const again = G.addExercisePanel({
+    name: 'Dead Bug', sets: 3, reps: 12, weight: 0,
+    timed: false, bodyweight: true
+  });
+  assert.ok(again);
+});
+
 test('the start chooser builds for each combination of sources', () => {
   assert.ok(G.starter({ priorDate: '2026-08-02', templateCount: 5, blank: false }));
   assert.ok(G.starter({ priorDate: null, templateCount: 5, blank: false }));

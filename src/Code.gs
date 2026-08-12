@@ -1031,7 +1031,7 @@ function setGroup(k, dayType, dayKey, names, label) {
 
 // Add an exercise to a session that's already underway. Unknown names get
 // appended to the Exercises tab so they're autocompleted next time.
-function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed) {
+function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed, noWeight) {
   assertEdit(k);
   name = String(name).trim();
   if (!name) throw new Error('Name required.');
@@ -1058,7 +1058,7 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed) {
   sheet.getRange(sheet.getLastRow() - out.length + 1, 1, out.length, 1)
     .setNumberFormat('yyyy-mm-dd');
 
-  rememberExercise(name, timed);
+  rememberExercise(name, timed, noWeight);
   SpreadsheetApp.flush();
   return loadSession(dayType, dayKey, false, k);
 }
@@ -1107,16 +1107,16 @@ function renameExercise(k, dayType, dayKey, from, to) {
 
 
 // A name typed into the app joins the Exercises tab so it autocompletes next
-// time. `timed` is only honoured for a genuinely new row — an existing
-// exercise keeps whatever unit the sheet already says it uses.
-function rememberExercise(name, timed) {
+// time. `timed` and `noWeight` are only honoured for a genuinely new row — an
+// existing exercise keeps whatever the sheet already says about it.
+function rememberExercise(name, timed, noWeight) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet) return;
   const known = exerciseList().map(function (n) { return n.toLowerCase(); });
   if (known.indexOf(name.toLowerCase()) !== -1) return;
 
   // A | B | C | D image | E no weight | F video | G time based
-  sheet.appendRow([name, '', '', '', '', '', timed ? 'yes' : '']);
+  sheet.appendRow([name, '', '', '', noWeight ? 'yes' : '', '', timed ? 'yes' : '']);
 }
 
 

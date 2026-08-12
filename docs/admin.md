@@ -33,7 +33,13 @@ Top to bottom:
 | **last done 2026-08-05** | Only when that date is not the one the status bar names — see [what "last time" means](#what-last-time-means). |
 | **Comparing against 2026-08-09** | The status bar. After a save it reports the row and the values read back **out of the spreadsheet**. |
 
-The heading and the status bar stay put as you scroll.
+The heading and the status bar stay put as you scroll. Once you pick a day
+type, that row of buttons shrinks — it is navigation from then on, and the
+session needs the room.
+
+Opening the link shows **Loading Web App…** centred on the page until the
+spreadsheet answers. Nothing above it means anything until then: no name, no
+date, no day types.
 
 While a day is loading, or while a change that rewrites rows is in flight, the
 session dims and the controls disable until it settles.
@@ -201,17 +207,19 @@ then deletes those rows from the sheet.
 ### A different exercise
 
 **+ Add exercise**, type the name — it autocompletes from the `Exercises` tab,
-which ships with 255 movements — then choose **Reps** or **Seconds** and
-set the numbers.
+which ships with 255 movements — then choose **Reps** or **Seconds**,
+**Weighted** or **Bodyweight**, and set the numbers.
 
 ```
    ┌────────────────────────────────────────────┐
    │ Plank                                    ▾ │
    ├──────────────────────┬─────────────────────┤
-   │        Reps          │      Seconds        │  ← pre-picked from the
-   ├──────────────────────┴─────────────────────┤     Exercises tab, yours
-   │  Sets 3   │  Seconds 30  │                 │     to override
-   └────────────────────────────────────────────┘
+   │        Reps          │      Seconds        │  ← both pre-picked from
+   ├──────────────────────┼─────────────────────┤     the Exercises tab,
+   │      Weighted        │     Bodyweight      │     yours to override
+   ├──────────────────────┴─────────────────────┤
+   │  Sets 3   │  Seconds 30  │                 │  ← no weight box: a plank
+   └────────────────────────────────────────────┘     carries none
 ```
 
 <img src="{{ site.baseurl }}/img/clip-unit.gif" loading="lazy"
@@ -240,9 +248,16 @@ than leaving the page wedged.
 
 {: .note }
 **A name that is not on the list gets added to the `Exercises` tab**, so it
-autocompletes from then on — and if you set the toggle to *Seconds*, the new
-row is marked `time based` too. An existing exercise keeps whatever unit the
-tab already says it uses; the toggle only changes this one session's rows.
+autocompletes from then on — carrying whatever you picked, so *Seconds* marks
+it `time based` and *Bodyweight* marks it `no weight`. An existing exercise
+keeps what the tab already says about it; the toggles only change this one
+session's rows.
+
+{: .warning }
+A name is an exercise. `Dead Bug (ss)` is not `Dead Bug` — it gets its own row
+on the `Exercises` tab, its own flags, and its own records. If you have been
+marking supersets in the name, **✎** back to the real name now that
+[supersets](#supersets) have a column of their own.
 
 ### Supersets
 
@@ -445,11 +460,15 @@ hidden and the card shows reps and RPE only.
 ```
 
 An easy set then earns **reps** rather than weight, so a push-up never becomes
-a 5 lb push-up. Records track most reps instead of heaviest. **+ Add
-exercise** drops the weight box for these too.
+a 5 lb push-up. Records track most reps instead of heaviest.
 
-Column **E** of the `Exercises` tab, headed `no weight`, controls it — `yes`
-to hide the field, blank otherwise. 52 rows ship marked.
+The add form has a **Weighted / Bodyweight** switch beside the Reps / Seconds
+one. A known exercise pre-picks itself from the `Exercises` tab and says so;
+pick **Bodyweight** for a new one and the weight box goes, along with the
+weight column on its card from then on.
+
+Column **E** of the `Exercises` tab, headed `no weight`, is what that writes —
+`yes` to hide the field, blank otherwise. 52 rows ship marked.
 
 {: .note }
 Doing weighted pull-ups or dips? Clear the `yes` on that row. `Weighted
