@@ -12,7 +12,8 @@
 
 const { chromium } = require('@playwright/test');
 const {
-  targets, appFrame, ready, gotoDate, awaitLoad, awaitQueue, awaitAdd
+  targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue,
+  awaitAdd
 } = require('./app');
 
 // Weights climb week to week, which is what makes the records and the
@@ -225,6 +226,7 @@ async function seed({ quiet = false } = {}) {
     await page.goto(T.adminUrl, { waitUntil: 'domcontentloaded' });
     const app = await appFrame(page);
     await ready(app);
+    await settled(app);          // today's session may be auto-opening
     for (const session of PLAN) await buildSession(app, session);
   } finally {
     await browser.close();
@@ -245,6 +247,7 @@ async function isSeeded() {
     await page.goto(T.viewerUrl, { waitUntil: 'domcontentloaded' });
     const app = await appFrame(page);
     await ready(app);
+    await settled(app);          // today's session may be auto-opening
     return (await app.locator('.day').count()) > 0;
   } catch (e) {
     // A pre-flight check that can fail the whole suite is worse than no

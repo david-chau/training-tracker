@@ -564,6 +564,10 @@ function load(create, source) {
   if (!S.day) return;
   // Leaving the session mid-add would land the response on a different day.
   if (S.adding) { flash('Still adding ' + S.adding.name + ' — one moment', false); return; }
+  // A different session starts at its first exercise. Only load() resets
+  // this — a re-render (switching units, a set count changing) has to leave
+  // the reader where they were.
+  S.page = 0;
   var body = document.getElementById('body');
   body.classList.remove('busy');
   body.innerHTML = '<div class="spinner">Loading ' + S.day + '…</div>';

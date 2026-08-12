@@ -45,6 +45,12 @@ async function open(page, url) {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   const app = await appFrame(page);
   await ready(app);
+  // Bootstrap opens today's session when there is one, and that load starts
+  // after the day buttons appear. Clicking into the app while it is in flight
+  // means the response lands on top of whatever the test just did — which is
+  // exactly what happened the first day the demo log had a session dated
+  // today. Wait for the app to be idle before handing it over.
+  await settled(app);
   return app;
 }
 

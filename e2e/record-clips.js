@@ -16,7 +16,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 const {
-  targets, appFrame, ready, gotoDate, awaitLoad, awaitQueue, awaitAdd,
+  targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue, awaitAdd,
   scratchDate, SCRATCH_DAY
 } = require('./app');
 
@@ -57,6 +57,7 @@ async function openAdmin(page) {
   await page.goto(targets().adminUrl, { waitUntil: 'domcontentloaded' });
   const app = await appFrame(page);
   await ready(app);
+  await settled(app);            // today's session may be auto-opening
   return app;
 }
 
