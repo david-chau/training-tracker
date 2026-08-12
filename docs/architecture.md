@@ -129,17 +129,19 @@ dialog.
   no build step, no npm            │    ├─ reads ?key=
                                    │    └─ renders Index.html
     ┌──────────────────┐           │       with canEdit / editKey
-    │ render()         │           │
-    │ card()           │           │  getBootstrap()   day types, exercises
-    │ setRow()         │           │  listDates()      sessions that exist
-    │ stepper()        │           │  loadSession()    one day's sets
+    │ render()         │           │  getBootstrap()   day types, exercises
+    │ paginate()       │           │  listDates()      sessions that exist
+    │ card()           │           │  loadSession()    one day's sets
+    │ supersetCard()   │           │  ─────────────────────────────────
+    │ setRow()         │           │  computeRecords() personal bests
+    │ stepper()        │           │  lastByExercise() what to compare with
     │ noteField()      │           │  ─────────────────────────────────
-    └────────┬─────────┘           │  computeRecords() personal bests
-             │                     │  ─────────────────────────────────
-             │ google.script.run   │  saveBatch()      ┐
-             ├────────────────────▶│  setSetCount()    │ all call
-             │                     │  addExercise()    │ assertEdit(k)
-             │◀────────────────────┤  deleteSession()  ┘ first
+    └────────┬─────────┘           │  saveBatch()      ┐
+             │                     │  setSetCount()    │
+             │ google.script.run   │  addExercise()    │ all call
+             ├────────────────────▶│  renameExercise() │ assertEdit(k)
+             │                     │  setGroup()       │ first
+             │◀────────────────────┤  deleteSession()  ┘
              │   plain JS objects  │  progress()       the progression rule
                                    │
 ```
@@ -180,17 +182,18 @@ derived from it.
    Exercises  ┌──────────┬───────┬─────────┬───────┬───────────┬───────┬────────────┐
               │ exercise │ group │ pattern │ image │ no weight │ video │ time based │
               └──────────┴───────┴─────────┴───────┴───────────┴───────┴────────────┘
-              autocomplete source; grows when a new name is used.
-              D optional picture URL, F a how-to link — both http(s)
-              only. E hides the weight field and stops progress()
-              adding load. G makes column E of the Log mean seconds
+              autocomplete source; grows when a new name is used, with
+              E and G set from the add form's two toggles. D optional
+              picture URL, F a how-to link — both http(s) only. E hides
+              the weight field and stops progress() adding load. G makes
+              column E of the Log mean seconds
 
-   Templates  ┌─────┬──────────┬──────┬──────┬────────┬────────────────┐
-              │ day │ exercise │ sets │ reps │ weight │ include in new │
-              └─────┴──────────┴──────┴──────┴────────┴────────────────┘
+   Templates  ┌─────┬──────────┬──────┬──────┬────────┬────────────────┬───────┐
+              │ day │ exercise │ sets │ reps │ weight │ include in new │ group │
+              └─────┴──────────┴──────┴──────┴────────┴────────────────┴───────┘
               the "from the template" source; `day` also defines the
               day-type buttons. F = "no" keeps a row on the plan
-              without it being generated
+              without it being generated, G pairs rows into a superset
 
    Settings   ┌─────┬───────┬──────────────┐
               │ key │ value │ what it does │  key/value; C is for the human.

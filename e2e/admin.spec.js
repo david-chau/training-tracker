@@ -14,6 +14,25 @@ const {
 const T = targets();
 const DATE = scratchDate();
 
+// Put an empty session on the scratch date and return once it is ready to add
+// to. Both the chooser and the add control are server-rendered, so a click
+// that lands mid-load quietly does nothing and the next step then waits out
+// its timeout on a control that was never going to appear.
+async function startEmpty(app) {
+  await gotoDate(app, DATE);
+  const addex = app.locator('.addex');
+  for (let i = 0; i < 3; i++) {
+    if (await addex.isVisible().catch(() => false)) return;
+    const empty = app.locator('.choice', { hasText: 'Empty' });
+    if (await empty.count()) {
+      await empty.click();
+      await awaitLoad(app);
+    }
+    await addex.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
+  }
+  await addex.waitFor({ state: 'visible', timeout: 20_000 });
+}
+
 // Leave nothing behind, whether the test passed or not.
 async function wipe(app) {
   // Structural changes are refused while a write is outstanding, so wait for
@@ -87,9 +106,7 @@ test.describe('admin link', () => {
       const app = await open(page, T.adminUrl);
 
       await app.locator('.day', { hasText: SCRATCH_DAY }).click();
-      await gotoDate(app, DATE);
-      await app.locator('.choice', { hasText: 'Empty' }).click();
-      await awaitLoad(app);
+      await startEmpty(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
@@ -117,9 +134,7 @@ test.describe('admin link', () => {
       const app = await open(page, T.adminUrl);
 
       await app.locator('.day', { hasText: SCRATCH_DAY }).click();
-      await gotoDate(app, DATE);
-      await app.locator('.choice', { hasText: 'Empty' }).click();
-      await awaitLoad(app);
+      await startEmpty(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
@@ -150,9 +165,7 @@ test.describe('admin link', () => {
       const app = await open(page, T.adminUrl);
 
       await app.locator('.day', { hasText: SCRATCH_DAY }).click();
-      await gotoDate(app, DATE);
-      await app.locator('.choice', { hasText: 'Empty' }).click();
-      await awaitLoad(app);
+      await startEmpty(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
@@ -188,9 +201,7 @@ test.describe('admin link', () => {
       const app = await open(page, T.adminUrl);
 
       await app.locator('.day', { hasText: SCRATCH_DAY }).click();
-      await gotoDate(app, DATE);
-      await app.locator('.choice', { hasText: 'Empty' }).click();
-      await awaitLoad(app);
+      await startEmpty(app);
 
       await app.locator('.addex').click();
       const panel = app.locator('.panel');
@@ -224,9 +235,7 @@ test.describe('admin link', () => {
         const app = await open(page, T.adminUrl);
 
         await app.locator('.day', { hasText: SCRATCH_DAY }).click();
-        await gotoDate(app, DATE);
-        await app.locator('.choice', { hasText: 'Empty' }).click();
-        await awaitLoad(app);
+        await startEmpty(app);
 
         for (const name of ['Plank', 'Push-Up']) {
           await app.locator('.addex').click();
@@ -277,9 +286,7 @@ test.describe('admin link', () => {
       const app = await open(page, T.adminUrl);
 
       await app.locator('.day', { hasText: SCRATCH_DAY }).click();
-      await gotoDate(app, DATE);
-      await app.locator('.choice', { hasText: 'Empty' }).click();
-      await awaitLoad(app);
+      await startEmpty(app);
 
       for (const name of ['Plank', 'Push-Up']) {
         await app.locator('.addex').click();
