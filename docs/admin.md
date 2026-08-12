@@ -27,8 +27,10 @@ Top to bottom:
 | **‹ date ›** | One calendar day at a time. |
 | **‹ Previous session** / **Next session ›** | The nearest date that has a session of this day type. Greyed out when there is none. |
 | **Push / Pull / Legs / Custom** | Day type. |
+| **lb / kg** | Which unit weights are shown and typed in. See [pounds or kilograms](#pounds-or-kilograms). |
 | **Best 8 × 15 lb · est 1RM 19** | [Records](records.html) for that exercise, with a **★ personal best today** tag when a set beats them. |
-| **was 8 · was 5 · was 7** | What you did for that same set last time, under the field it belongs to. |
+| **was 8 · was 5 · was 7** | What you did for that same set **the last time you did that exercise**, under the field it belongs to. |
+| **last done 2026-08-05** | Only when that date is not the one the status bar names — see [what "last time" means](#what-last-time-means). |
 | **Comparing against 2026-08-09** | The status bar. After a save it reports the row and the values read back **out of the spreadsheet**. |
 
 The heading and the status bar stay put as you scroll.
@@ -111,6 +113,28 @@ half a second later; there is no save button.
 
 Under each field is what you did for **that same set** last time — `was 10`,
 `was 20`, `was 8`. A blank means there was no matching set.
+
+### What "last time" means
+
+The last time you did **that exercise**, whenever that was and whatever day
+type it was under — not whatever happened in the previous session of this day
+type.
+
+That distinction matters as soon as sessions stop being identical. Skip an
+exercise one week, do it on a Custom day instead, or add it halfway through a
+cycle, and the old rule had nothing to show you even with months of it in the
+log.
+
+The status bar still names the previous session of this day type, since that
+is what *From last time* would build from. When a card's comparison comes from
+a different date, the card says so:
+
+```
+   Bulgarian Split Squat                        [− 3 sets +]
+   Best 12 × 30 lb  ·  est 1RM 42  ·  on 2026-08-11  ·  last done 2026-08-05
+```
+
+Personal records were already per exercise and are unchanged.
 
 <img src="{{ site.baseurl }}/img/clip-logging.gif" loading="lazy"
      alt="Reps and weight being stepped up on the first set, and the status bar reporting the row and values it read back"
@@ -209,11 +233,47 @@ The name is **free text** — it autocompletes, but nothing stops you typing
 something that is not on the list. The same exercise cannot be added to one
 session twice.
 
+**The card appears straight away** and the rows are written behind it, so you
+can start logging the first set while the sheet catches up. Its edge stays
+dashed until the sheet has it. Anything typed in that window is kept and
+saved the moment the rows exist — nothing is thrown away by the response
+landing.
+
+While an add is in flight the app will not let you change day, date or set
+counts: those move rows, and the add is about to be given some. It clears in a
+second or two, and a stuck one falls back to reloading from the sheet rather
+than leaving the page wedged.
+
 {: .note }
 **A name that is not on the list gets added to the `Exercises` tab**, so it
 autocompletes from then on — and if you set the toggle to *Seconds*, the new
 row is marked `time based` too. An existing exercise keeps whatever unit the
 tab already says it uses; the toggle only changes this one session's rows.
+
+### Pounds or kilograms
+
+The **lb / kg** switch beside the heading changes every weight on screen —
+the fields, the `was` lines, the records, the add form. Tap it when you walk
+up to a machine marked in the other unit; it takes effect immediately and
+mid-session is a normal time to use it.
+
+**The sheet is always pounds.** Column F stays `Weight (LB)`, so records,
+progression and every comparison keep working on one unit. Kilograms are
+converted as you read and type, nothing more.
+
+| | |
+|---|---|
+| Typing `60` in kg | Stores `132.3` lb, reads back as `60` |
+| **+** in kg | Steps 2.5 kg — clean numbers, not what 2.5 lb converts to |
+| Switching unit | Changes nothing in the sheet and saves nothing |
+
+The choice is remembered on that device, not in the log, because it belongs to
+the machine in front of you rather than to the person training. The admin's
+tablet and a viewer's phone can disagree.
+
+{: .note }
+Progression is worked out in pounds, so a kg user sees steps of 2.3 kg rather
+than a round 2.5. The generated number is a proposal you overwrite anyway.
 
 ### Renaming an exercise
 

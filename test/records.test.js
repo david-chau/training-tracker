@@ -337,4 +337,81 @@ test('the no-weight and default flags read the spellings people type', () => {
     assert.strictEqual(isNo(v), false, String(v)));
 });
 
+// ---------- what "last time" compares against ----------
+//
+// Per exercise, not per session: keying it to the previous session of the same
+// day type left an exercise with plenty of history showing no comparison at
+// all if it had been skipped, moved, or added mid-cycle.
+
+const { lastByExercise } = sandbox;
+
+// row() only fills the columns the record rules need; these need the note too.
+const noted = (date, day, ex, set, reps, weight, note) => {
+  const r = row(date, day, ex, set, reps, weight);
+  r[COL.userNote] = note;
+  return r;
+};
+
+test('last time is the last time that exercise was done, not last week', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Bench', 1, 8, 95),
+    row('2026-07-27', 'Push', 'Bench', 1, 8, 100),
+    row('2026-08-03', 'Push', 'Lateral Raise', 1, 15, 10)   // Bench skipped
+  ];
+  const hist = lastByExercise(rows, '2026-08-10', ['Bench']);
+
+  assert.strictEqual(hist.bench.date, '2026-07-27');
+  assert.strictEqual(hist.bench.sets[1].weight, 100);
+});
+
+test('an exercise done under another day type still has a comparison', () => {
+  const rows = [
+    row('2026-07-31', 'Legs', 'Split Squat', 1, 10, 30),
+    row('2026-08-05', 'Custom', 'Split Squat', 1, 12, 35)
+  ];
+  const hist = lastByExercise(rows, '2026-08-11', ['Split Squat']);
+
+  assert.strictEqual(hist['split squat'].date, '2026-08-05',
+    'the most recent one wins whatever day it was logged under');
+  assert.strictEqual(hist['split squat'].sets[1].reps, 12);
+});
+
+test('the session being viewed is never its own comparison', () => {
+  const rows = [
+    row('2026-08-11', 'Legs', 'Split Squat', 1, 10, 30),
+    row('2026-08-18', 'Legs', 'Split Squat', 1, 12, 35)      // a later session
+  ];
+  const hist = lastByExercise(rows, '2026-08-11', ['Split Squat']);
+  assert.strictEqual(hist['split squat'], undefined, 'nothing earlier exists');
+});
+
+test('sheet order is not date order, so an older row cannot overwrite', () => {
+  const rows = [
+    row('2026-08-05', 'Custom', 'Plank', 1, 45, 0),
+    row('2026-07-01', 'Custom', 'Plank', 1, 20, 0)    // appended out of order
+  ];
+  const hist = lastByExercise(rows, '2026-08-11', ['Plank']);
+
+  assert.strictEqual(hist.plank.date, '2026-08-05');
+  assert.strictEqual(hist.plank.sets[1].reps, 45);
+});
+
+test('the note comes from the same session the numbers did', () => {
+  const rows = [
+    noted('2026-07-20', 'Push', 'Bench', 1, 8, 95, 'old cue'),
+    noted('2026-07-27', 'Push', 'Bench', 1, 8, 100, 'elbows tucked')
+  ];
+  const hist = lastByExercise(rows, '2026-08-03', ['Bench']);
+  assert.strictEqual(hist.bench.note, 'elbows tucked');
+});
+
+test('only the exercises asked for are looked up', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Bench', 1, 8, 95),
+    row('2026-07-20', 'Push', 'Lateral Raise', 1, 15, 10)
+  ];
+  const hist = lastByExercise(rows, '2026-08-03', ['Bench']);
+  assert.deepStrictEqual(Object.keys(hist), ['bench']);
+});
+
 console.log('\n' + passed + ' passed');

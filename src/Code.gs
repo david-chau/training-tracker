@@ -380,7 +380,8 @@ function loadSession(dayType, dayKey, create, k, source) {
   }
 
   const priorKey = listDates(dayType).filter(function (d) { return d < dayKey; })[0] || null;
-  const history = priorKey ? snapshot(rows, dayType, priorKey) : {};
+  const names = dedupe(mine.map(function (r) { return String(r[COL.exercise]); }));
+  const history = lastByExercise(rows, dayKey, names);
 
   // Records exclude this session, so "personal best" means "better than
   // anything before today" rather than "better than the set I just typed".
@@ -388,6 +389,7 @@ function loadSession(dayType, dayKey, create, k, source) {
   const records = computeRecords(rows, cfg, { day: dayType, date: dayKey });
 
   const sets = mine.map(function (r) {
+    const prev = history[String(r[COL.exercise]).trim().toLowerCase()];
     return {
       row: r.sheetRow,
       exercise: String(r[COL.exercise]),
@@ -396,13 +398,13 @@ function loadSession(dayType, dayKey, create, k, source) {
       weight: num(r[COL.weight]),
       rpe: r[COL.rpe] === '' ? BLANK_RPE : num(r[COL.rpe]),
       note: String(r[COL.userNote] || ''),
-      last: history[key(r[COL.exercise], num(r[COL.set]))] || null
+      last: (prev && prev.sets[num(r[COL.set])]) || null
     };
   });
 
   // Only what is on screen — no need to ship the whole history.
   const shown = {};
-  dedupe(mine.map(function (r) { return String(r[COL.exercise]); })).forEach(function (name) {
+  names.forEach(function (name) {
     const rec = records[name];
     if (!rec || !rec.heaviest) return;
     shown[name] = {
@@ -412,7 +414,16 @@ function loadSession(dayType, dayKey, create, k, source) {
     };
   });
 
-  const lastNotes = priorKey ? notesOn(rows, dayType, priorKey) : {};
+  // The note and the date come from the same session the numbers did, per
+  // exercise — a note about a machine setting belongs with the last time that
+  // machine was used, not with whatever else happened that week.
+  const lastNotes = {}, lastDates = {};
+  names.forEach(function (name) {
+    const prev = history[name.trim().toLowerCase()];
+    if (!prev) return;
+    lastDates[name] = prev.date;
+    if (prev.note) lastNotes[name] = prev.note;
+  });
 
   // An empty session has no rows until an exercise is added, so "started"
   // can't be read back off the sheet — it only holds for the call that
@@ -426,38 +437,49 @@ function loadSession(dayType, dayKey, create, k, source) {
     sets: sets,
     priorDate: priorKey,
     lastNotes: lastNotes,
+    lastDates: lastDates,
     records: shown
   };
 }
 
-// One note per exercise from a given day — the first non-empty wins.
-function notesOn(rows, dayType, dayKey) {
-  const map = {};
-  rows.filter(function (r) {
-    return sameDay(r[COL.day], dayType) && dateKey(r[COL.date]) === dayKey;
-  }).forEach(function (r) {
-    const txt = String(r[COL.userNote] || '').trim();
-    const name = String(r[COL.exercise]);
-    if (txt && !map[name]) map[name] = txt;
-  });
-  return map;
-}
-
-
-// Last week's numbers, per set, as values rather than a rendered string —
+// Last time's numbers, per set, as values rather than a rendered string —
 // the browser shows them under the field they belong to.
-function snapshot(rows, dayType, dayKey) {
-  const map = {};
-  rows.filter(function (r) {
-    return sameDay(r[COL.day], dayType) && dateKey(r[COL.date]) === dayKey;
-  }).forEach(function (r) {
-    map[key(r[COL.exercise], num(r[COL.set]))] = {
+//
+// Per exercise, not per session: the comparison is with the last time you did
+// *this movement*, whenever that was and whatever day type it was logged
+// under. Keying it to the previous session of the same day type meant an
+// exercise skipped one week, moved to another day, or added mid-cycle showed
+// no comparison at all, even with plenty of history behind it.
+//
+// Each exercise reports the date it came from, because they can now differ
+// within one session.
+function lastByExercise(rows, dayKey, names) {
+  const want = {};
+  names.forEach(function (n) { want[String(n).trim().toLowerCase()] = true; });
+
+  const out = {};
+  rows.forEach(function (r) {
+    const name = String(r[COL.exercise]).trim();
+    const lc = name.toLowerCase();
+    if (!want[lc]) return;
+
+    const date = dateKey(r[COL.date]);
+    if (!date || date >= dayKey) return;          // only earlier sessions
+
+    // Rows are in sheet order, which is not date order — an older session can
+    // follow a newer one, so an earlier date never overwrites a later one.
+    let hit = out[lc];
+    if (hit && date < hit.date) return;
+    if (!hit || date > hit.date) hit = out[lc] = { date: date, sets: {}, note: '' };
+
+    hit.sets[num(r[COL.set])] = {
       reps: num(r[COL.reps]),
       weight: num(r[COL.weight]),
       rpe: r[COL.rpe] === '' ? BLANK_RPE : num(r[COL.rpe])
     };
+    if (!hit.note) hit.note = String(r[COL.userNote] || '').trim();
   });
-  return map;
+  return out;
 }
 
 
@@ -755,9 +777,18 @@ function writeArchive(name, rows) {
 }
 
 
-// Called after the operations that change which rows exist. Never on the
-// save path, and never allowed to break the write that triggered it — a
-// failed rendering of the records must not cost someone their logged set.
+// Rewrites the Records tab. Never allowed to break the write that triggered
+// it — a failed rendering of the records must not cost someone their logged
+// set.
+//
+// Deliberately NOT on any interactive path. It is a whole-sheet scan plus a
+// tab rewrite, and hanging it off "add an exercise" made every add slower as
+// the log grew — the one thing an admin does mid-session, standing up, on gym
+// wifi. It runs on the menu item, on delete, and on archive.
+//
+// The app itself never reads it: the ★ and the record strip come from
+// computeRecords() on every load, so they are always current. Only the tab
+// itself can lag, and it is a rendering, not a source.
 function refreshRecords() {
   try {
     rebuildRecords();
@@ -865,7 +896,6 @@ function setSetCount(k, dayType, dayKey, exercise, count) {
   }
 
   SpreadsheetApp.flush();
-  refreshRecords();
   return loadSession(dayType, dayKey, false, k);
 }
 
@@ -922,7 +952,6 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed) {
 
   rememberExercise(name, timed);
   SpreadsheetApp.flush();
-  refreshRecords();
   return loadSession(dayType, dayKey, false, k);
 }
 
@@ -965,7 +994,6 @@ function renameExercise(k, dayType, dayKey, from, to) {
 
   rememberExercise(to);
   SpreadsheetApp.flush();
-  refreshRecords();
   return loadSession(dayType, dayKey, false, k);
 }
 
@@ -1034,7 +1062,6 @@ function generateInto(dayType, dayKey, rows, from) {
   sheet.getRange(sheet.getLastRow() - output.length + 1, 1, output.length, 1)
     .setNumberFormat('yyyy-mm-dd');
   SpreadsheetApp.flush();
-  refreshRecords();
 }
 
 function fromHistory(prior, dayType, dayKey) {

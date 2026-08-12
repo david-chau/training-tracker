@@ -405,4 +405,98 @@ test('the start chooser builds for each combination of sources', () => {
   assert.ok(G.starter({ priorDate: null, templateCount: 0, blank: true }));
 });
 
+// ---------- optimistic add ----------
+//
+// The card is on screen before the sheet has the rows, so its sets have no
+// row number to be addressed by. Anything typed in that window has to survive
+// the response that replaces them.
+
+test('a set with no row yet is held rather than queued', () => {
+  const s = { row: 0, exercise: 'Farmer Carry', set: 1, reps: 40, weight: 50, rpe: -1 };
+  G.queueSave(s);
+
+  assert.strictEqual(G.pendCount(), 0, 'nothing can be addressed by row 0');
+  assert.strictEqual(s.dirty, true, 'but the edit is remembered');
+});
+
+test('values typed during an add land on the rows the server assigns', () => {
+  const held = [
+    { row: 0, exercise: 'Farmer Carry', set: 1, reps: 40, weight: 50, rpe: -1 },
+    { row: 0, exercise: 'Farmer Carry', set: 2, reps: 40, weight: 50, rpe: -1 }
+  ];
+  G.S.adding = { name: 'Farmer Carry', sets: held, card: null };
+
+  held[0].reps = 55;                 // typed while the add was in flight
+  G.queueSave(held[0]);
+
+  G.absorbAdd({ sets: [
+    { row: 30, exercise: 'Farmer Carry', set: 1, reps: 40, weight: 50, rpe: -1 },
+    { row: 31, exercise: 'Farmer Carry', set: 2, reps: 40, weight: 50, rpe: -1 }
+  ]});
+
+  assert.strictEqual(G.S.adding, null, 'the add is no longer in flight');
+  assert.strictEqual(G.pendCount(), 1, 'only the set that was touched is written');
+  assert.strictEqual(G.PEND.items['s|30'].reps, 55);
+});
+
+test('a note typed during an add is carried onto the new rows', () => {
+  const held = [{ row: 0, exercise: 'Farmer Carry', set: 1, reps: 40,
+                  weight: 50, rpe: -1, note: 'heavy handles' }];
+  G.S.adding = { name: 'Farmer Carry', sets: held, card: null };
+
+  const res = { sets: [{ row: 30, exercise: 'Farmer Carry', set: 1, reps: 40,
+                         weight: 50, rpe: -1, note: '' }] };
+  G.absorbAdd(res);
+
+  assert.strictEqual(res.sets[0].note, 'heavy handles', 'survives the re-render');
+  assert.strictEqual(G.PEND.items['n|Push|2026-08-09|Farmer Carry'].text,
+    'heavy handles', 'and is queued once there are rows to write to');
+});
+
+test('an add in flight blocks the operations that move rows', () => {
+  G.S.adding = { name: 'Farmer Carry', sets: [], card: null };
+  assert.strictEqual(G.blockedByQueue(), true);
+  G.S.adding = null;
+  assert.strictEqual(G.blockedByQueue(), false);
+});
+
+// ---------- weight units ----------
+//
+// The sheet is always pounds. Kilograms are a display choice, so the numbers
+// have to survive the round trip and stepping has to stay on clean 2.5s.
+
+test('kilograms convert back to the pounds the sheet stores', () => {
+  G.S.unit = 'kg';
+  const lb = G.toPounds(60);
+  assert.ok(Math.abs(lb - 132.3) < 0.05, `60 kg should be ~132.3 lb, got ${lb}`);
+  assert.strictEqual(G.toDisplay(lb), 60, 'and read back as the same 60');
+
+  G.S.unit = 'lb';
+  assert.strictEqual(G.toPounds(45), 45, 'pounds pass straight through');
+  assert.strictEqual(G.toDisplay(45), 45);
+});
+
+test('a weight reads in whichever unit is picked', () => {
+  G.S.unit = 'lb';
+  assert.strictEqual(G.weightText(100), '100 lb');
+  G.S.unit = 'kg';
+  assert.strictEqual(G.weightText(132.3), '60 kg');
+  G.S.unit = 'lb';
+});
+
+test('switching unit never touches the sheet or the queue', () => {
+  G.S.lastRes = { exists: true, sets: [], records: {}, lastNotes: {}, lastDates: {} };
+  G.setUnit('kg');
+  assert.strictEqual(G.pendCount(), 0, 'a display change is not an edit');
+  assert.strictEqual(outbox.length, 0, 'and not a server call');
+  G.setUnit('lb');
+});
+
+test('a card renders in kilograms', () => {
+  G.S.unit = 'kg';
+  const el = G.card('Bench', [sample('Bench')]);
+  assert.ok(el);
+  G.S.unit = 'lb';
+});
+
 console.log('\n' + passed + ' passed');

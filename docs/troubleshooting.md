@@ -204,11 +204,13 @@ and bodyweight work only ever produces a *Most reps* record.
 <details markdown="block">
 <summary>The Records tab looks out of date</summary>
 
-It is rewritten when a session is started or deleted, or an exercise or set is
-added — not on every tap, so logging stays quick.
-**Training → Rebuild records** catches it up.
+It is rewritten by **Training → Rebuild records**, by deleting a day, and by
+archiving — not while you are logging. Rebuilding it is a full pass over the
+Log, which is exactly what you do not want hanging off adding an exercise
+mid-session.
 
-The `Best` strip inside the app is always live regardless.
+The `Best` strip and the ★ inside the app are always live regardless: they are
+worked out from the Log on every load and never read that tab.
 
 </details>
 

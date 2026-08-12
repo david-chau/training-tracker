@@ -244,7 +244,7 @@ The only branch that matters in the whole app:
         │            │               │               │
         │            └───────┬───────┴───────────────┘
         │                    ▼
-        │       append rows to Log, flush(), refreshRecords()
+        │       append rows to Log, flush()
         └────────────────────┬──────────────────────┘
                              ▼
                  re-read and return the session
@@ -447,25 +447,64 @@ Two deliberate asymmetries:
 - **The browser judges the star, not the server.** `loadSession` ships the
   record; the comparison happens in `isPr()` on the page, so the star appears
   as a weight is typed rather than on the next reload.
-- **The Records tab is refreshed on structural change only** — session
-  created, deleted, exercise or set added — plus the menu item. Never on
-  `saveBatch`. A full rebuild is a whole-sheet scan and a tab rewrite, and
-  putting that on the save path would tax every tap to keep a view fresh that
-  nobody is looking at mid-set. `refreshRecords()` also swallows its own
-  errors: a failed rendering must never cost someone their logged set.
+- **The Records tab is refreshed off the interactive path entirely** — the
+  menu item, deleting a day, and archiving. Never on `saveBatch`, and no
+  longer on adding an exercise, changing a set count, renaming, or starting a
+  session. A full rebuild is a whole-sheet scan and a tab rewrite, so it got
+  slower as the log grew and it was hanging off the things an admin does
+  standing at a machine. Nothing in the app reads that tab — the ★ and the
+  record strip come from `computeRecords()` on every load — so only the tab
+  itself can lag, and it is a rendering, not a source. `refreshRecords()` also
+  swallows its own errors: a failed rendering must never cost someone their
+  logged set.
 
 ---
 
 ## Per-set history
 
-`snapshot()` returns the previous session's values as `{reps, weight, rpe}`
-per `exercise|set` key rather than a formatted string, because the browser
-renders each number under the field it belongs to. It used to be joined into
-one `Last time: 10 x 20 @8 · 8 x 30 @9` line at the top of the card, which
-made the reader match set to number by counting.
+`lastByExercise(rows, dayKey, names)` returns, for each exercise on screen,
+the values from the last time **that exercise** was done — `{reps, weight,
+rpe}` per set number, plus the date and note it came from. Values rather than
+a formatted string, because the browser renders each number under the field it
+belongs to. It used to be joined into one `Last time: 10 x 20 @8 · 8 x 30 @9`
+line at the top of the card, which made the reader match set to number by
+counting.
 
-`BLANK_RPE` travels here too — an unrecorded RPE last week shows as `was —`
+**Per exercise, not per session.** It was keyed to the previous session of the
+same day type, which is right only when every session repeats the last one
+exactly. Skip an exercise for a week, move it to another day, or add it
+mid-cycle and there was no comparison at all despite a log full of it. The
+lookup now walks every earlier row for the exercise and keeps the latest,
+whatever day type it was logged under.
+
+Sheet order is not date order — rows are appended, and a day recorded late
+lands after newer ones — so an earlier date can never overwrite a later one.
+
+Because two exercises in one session can now compare against two different
+dates, each card carries a `last done <date>` cell when its date is not the
+one the status bar names.
+
+`BLANK_RPE` travels here too — an unrecorded RPE last time shows as `was —`
 rather than `was 0`.
+
+---
+
+## Pounds, kilograms, and what is stored
+
+Column F is `Weight (LB)` and always holds pounds. Records, the progression
+rule and every comparison read it, and a column that mixed units could not be
+compared with itself.
+
+Kilograms are a **display choice**, converted on the way in and on the way
+out: `toDisplay()` when a weight is rendered, `toPounds()` when one is typed
+or stepped. Stepping happens in the unit on screen, so kg lands on clean 2.5s
+instead of on whatever 2.5 lb converts to, and stored pounds are rounded to
+one decimal so the round trip is stable.
+
+The choice lives in `localStorage` per device, not in the sheet — it is a
+property of the machine in front of you, not of the log. Switching it
+re-renders from the response already in hand (`redraw()`); it never writes,
+and never touches the queue.
 
 ---
 

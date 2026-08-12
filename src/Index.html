@@ -41,6 +41,18 @@
   h1 a:hover { text-decoration-color:var(--link); }
   .kicker { font-size:12px; color:var(--muted); letter-spacing:0.06em;
             text-transform:uppercase; margin:0; }
+  /* The heading takes the room it needs and the unit picker sits beside it,
+     because the unit is a property of the machine you are standing at — it
+     has to be reachable without scrolling back up mid-set. */
+  .topline { display:flex; align-items:flex-start; gap:10px; }
+  .topline > div:first-child { flex:1; min-width:0; }
+  .unitpick { display:flex; border:1px solid var(--line); border-radius:8px;
+              overflow:hidden; background:#fff; flex:none; }
+  .unitpick button { padding:7px 11px; border:0; background:transparent;
+                     font-size:13px; font-weight:600; color:var(--muted);
+                     cursor:pointer; }
+  .unitpick button.on { background:var(--ink); color:#fff; }
+  body.booting .unitpick { visibility:hidden; }
   .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .day { flex:1; min-width:84px; padding:13px 8px; border:1px solid var(--line);
          background:#fff; border-radius:10px; font-size:17px; cursor:pointer; }
@@ -61,6 +73,9 @@
          border-radius:10px; font-size:18px; cursor:pointer; }
   .ex { background:#fff; border:1px solid var(--line); border-radius:12px;
         padding:14px; margin-bottom:14px; }
+  /* On screen before the sheet has it. Entry works; the dashed edge is the
+     only sign anything is outstanding. */
+  .ex.adding { border-style:dashed; }
   .exhead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .title { display:flex; align-items:center; gap:10px; min-width:0; }
   .ex h2 { font-size:17px; font-weight:600; margin:0; }
@@ -215,8 +230,16 @@
   var KEY = '<?= editKey ?>';
 </script>
 <header class="top">
-  <h1 id="who">Training log</h1>
-  <div class="kicker">Training log</div>
+  <div class="topline">
+    <div>
+      <h1 id="who">Training log</h1>
+      <div class="kicker">Training log</div>
+    </div>
+    <div class="unitpick" id="unit" role="group" aria-label="Weight unit">
+      <button type="button" data-unit="lb">lb</button>
+      <button type="button" data-unit="kg">kg</button>
+    </div>
+  </div>
 </header>
 <div id="robanner"></div>
 <div class="datebar">
@@ -239,6 +262,55 @@
 <script>
 var S = { day:null, date:null, dates:[] };
 var BLANK = -1;
+
+// ---------- weight units ----------
+//
+// The sheet is always pounds — column F is headed "Weight (LB)", records and
+// progression compare against it, and a mixed column could not be compared
+// with itself. Kilograms are a display choice, converted on the way in and on
+// the way out, so switching mid-session changes what you read and type and
+// nothing that is stored.
+//
+// Per device, not per sheet: the toggle is for the machine in front of you.
+var LB_PER_KG = 2.20462262;
+var UNIT_STORE = 'wl.unit.v1';
+
+function unitLabel() { return S.unit === 'kg' ? 'KG' : 'LB'; }
+function toDisplay(lb) {
+  return S.unit === 'kg' ? Math.round((Number(lb) / LB_PER_KG) * 10) / 10 : Number(lb);
+}
+function toPounds(shown) {
+  return S.unit === 'kg' ? Math.round(Number(shown) * LB_PER_KG * 10) / 10 : Number(shown);
+}
+// Reads as a weight wherever one is printed rather than typed.
+function weightText(lb) {
+  return String(toDisplay(lb)).replace(/\.0$/, '') + ' ' + unitLabel().toLowerCase();
+}
+
+S.unit = (function () {
+  try { return localStorage.getItem(UNIT_STORE) === 'kg' ? 'kg' : 'lb'; }
+  catch (e) { return 'lb'; }
+})();
+
+function setUnit(u) {
+  S.unit = u === 'kg' ? 'kg' : 'lb';
+  try { localStorage.setItem(UNIT_STORE, S.unit); } catch (e) { /* framed storage */ }
+  paintUnit();
+  // Every weight on screen is now written in the other unit. Values live in
+  // the set objects in pounds, so a re-render is all it takes — and it must
+  // not touch the sheet or the queue.
+  if (S.day && S.date) redraw();
+}
+
+function paintUnit() {
+  var box = document.getElementById('unit');
+  if (!box) return;
+  [].forEach.call(box.querySelectorAll('button'), function (b) {
+    var mine = b.getAttribute('data-unit') === S.unit;
+    b.classList.toggle('on', mine);
+    b.setAttribute('aria-pressed', mine ? 'true' : 'false');
+  });
+}
 
 if (!CAN_EDIT) {
   document.getElementById('tools').style.display = 'none';
@@ -328,6 +400,11 @@ document.getElementById('wipe').onclick = function () {
     .deleteSession(KEY, S.day, S.date);
 };
 
+[].forEach.call(document.querySelectorAll('#unit button'), function (b) {
+  b.onclick = function () { setUnit(b.getAttribute('data-unit')); };
+});
+paintUnit();
+
 document.getElementById('dayback').onclick = function () { shiftDay(-1); };
 document.getElementById('dayfwd').onclick = function () { shiftDay(1); };
 document.getElementById('prevsess').onclick = function () { hop(1); };
@@ -416,6 +493,8 @@ function busy(on, label) {
 
 function load(create, source) {
   if (!S.day) return;
+  // Leaving the session mid-add would land the response on a different day.
+  if (S.adding) { flash('Still adding ' + S.adding.name + ' — one moment', false); return; }
   var body = document.getElementById('body');
   body.classList.remove('busy');
   body.innerHTML = '<div class="spinner">Loading ' + S.day + '…</div>';
@@ -442,7 +521,13 @@ function load(create, source) {
     .loadSession(S.day, S.date, !!create, KEY, source || 'auto');
 }
 
+// Re-render what is already on screen, without asking the server. The set
+// objects hold the live values, so switching units costs nothing and cannot
+// lose an edit.
+function redraw() { if (S.lastRes) render(S.lastRes); }
+
 function render(res) {
+  S.lastRes = res;
   var body = document.getElementById('body');
   body.innerHTML = '';
 
@@ -473,6 +558,8 @@ function render(res) {
   });
 
   S.lastNotes = res.lastNotes || {};
+  S.lastDates = res.lastDates || {};
+  S.priorDate = res.priorDate || null;
   S.records = res.records || {};
   PEND.watchers = {};          // the old elements are about to be discarded
   order.forEach(function (name) { body.appendChild(card(name, groups[name])); });
@@ -529,7 +616,9 @@ function addExerciseControl() {
   return btn;
 }
 
-function addExercisePanel() {
+// `prefill` is only used to reopen the panel after the server refused an add,
+// so the typed values come back with it.
+function addExercisePanel(prefill) {
   var p = document.createElement('div');
   p.className = 'panel';
 
@@ -542,7 +631,8 @@ function addExercisePanel() {
   var mini = document.createElement('div');
   mini.className = 'mini';
   var fields = {}, wraps = {};
-  [['sets', 'Sets', 3], ['reps', 'Reps', 10], ['weight', 'Weight (LB)', 0]].forEach(function (f) {
+  [['sets', 'Sets', 3], ['reps', 'Reps', 10],
+   ['weight', 'Weight (' + unitLabel() + ')', 0]].forEach(function (f) {
     // label is re-set by syncUnits() once a name is chosen
     var wrap = document.createElement('div');
     wrap.innerHTML = '<label>' + f[1] + '</label>';
@@ -591,6 +681,7 @@ function addExercisePanel() {
       row: row,
       hint: hint,
       timed: function () { return timed; },
+      set: pick,
       // Follow the sheet until the user says otherwise.
       suggest: function (nameText) {
         if (chosen) return;
@@ -625,6 +716,15 @@ function addExercisePanel() {
   name.addEventListener('input', syncUnits);
   name.addEventListener('change', syncUnits);
 
+  if (prefill) {
+    name.value = prefill.name;
+    unit.set(!!prefill.timed);        // before the numbers: picking rewrites them
+    fields.sets.value = prefill.sets;
+    fields.reps.value = prefill.reps;
+    fields.weight.value = prefill.weight;
+    syncUnits();
+  }
+
   var row = document.createElement('div');
   row.style.display = 'flex'; row.style.gap = '8px';
   var go = document.createElement('button');
@@ -632,22 +732,72 @@ function addExercisePanel() {
   var cancel = document.createElement('button');
   cancel.className = 'cancel'; cancel.textContent = 'Cancel';
 
+  // The card appears immediately and the write happens behind it. An add is a
+  // round trip to Apps Script that appends rows and re-reads the whole log —
+  // seconds on gym wifi — and blocking the screen for that meant standing at
+  // the machine waiting for a spinner before the first set could be entered.
   go.onclick = function () {
-    if (!name.value.trim()) { name.focus(); return; }
-    if (blockedByQueue()) return;
-    go.textContent = 'Adding…'; go.disabled = true;
-    busy(true, 'Adding ' + name.value.trim() + '…');
+    var wanted = name.value.trim();
+    if (!wanted) { name.focus(); return; }
+    if (blockedByQueue()) return;      // also covers an add already in flight
+
+    var count = Math.max(1, Math.min(10, Math.round(parseFloat(fields.sets.value) || 3)));
+    var reps = Math.max(1, Math.round(parseFloat(fields.reps.value) || 10));
+    var weight = toPounds(Math.max(0, parseFloat(fields.weight.value) || 0));
+
+    // A name that is new here is not in the bootstrap lookups yet, so record
+    // what the panel was told about it — otherwise the optimistic card would
+    // render a timed exercise in reps.
+    if (unit.timed()) S.timed[wanted] = true;
+    if (wraps.weight.style.display === 'none') S.noWeight[wanted] = true;
+
+    var sets = [];
+    for (var i = 1; i <= count; i++) {
+      sets.push({ row: 0, exercise: wanted, set: i, reps: reps, weight: weight,
+                  rpe: BLANK, note: '', last: null });
+    }
+
+    var el = card(wanted, sets);
+    el.classList.add('adding');
+    S.adding = { name: wanted, sets: sets, card: el };
+    p.replaceWith(el);
+    el.insertAdjacentElement('afterend', addExerciseControl());
+    flash('Adding ' + wanted + '…', false);
+
+    // google.script.run can hang rather than fail, and S.adding holds back
+    // everything structural while it is set. The server is the truth either
+    // way, so a stuck add ends in a reload rather than a wedged page.
+    var guard = setTimeout(function () {
+      if (!S.adding || S.adding.card !== el) return;
+      S.adding = null;
+      flash('Add is taking a while — checking the sheet', false);
+      load(false);
+    }, 25000);
+
     google.script.run
       .withSuccessHandler(function (res) {
-        busy(false); render(res); flash('Exercise added', true);
+        clearTimeout(guard);
+        absorbAdd(res);
+        render(res);
+        flash('Exercise added', true);
       })
       .withFailureHandler(function (e) {
-        busy(false);
-        go.textContent = 'Add'; go.disabled = false;
+        clearTimeout(guard);
+        S.adding = null;
+        el.remove();
+        redraw();
+        // Put the panel back with what was typed still in it, rather than
+        // making them retype an exercise the server refused.
+        var ctl = document.querySelector('.addex');
+        if (ctl) {
+          ctl.replaceWith(addExercisePanel({
+            name: wanted, sets: count, reps: reps,
+            weight: toDisplay(weight), timed: unit.timed()
+          }));
+        }
         flash(e.message, false, true);
       })
-      .addExercise(KEY, S.day, S.date, name.value, fields.sets.value,
-                   fields.reps.value, fields.weight.value, unit.timed());
+      .addExercise(KEY, S.day, S.date, wanted, count, reps, weight, unit.timed());
   };
   cancel.onclick = function () { p.replaceWith(addExerciseControl()); };
 
@@ -888,6 +1038,16 @@ function noteField(name, sets) {
     if (!dirty()) return;
     saved = box.value;
     sets.forEach(function (s) { s.note = saved; });
+
+    // A note is written by exercise name to rows that must already exist, so
+    // there is nothing to write to until the add lands. Hold it on the sets;
+    // absorbAdd carries it across and queues it.
+    if (S.adding && S.adding.name === name) {
+      btn.classList.remove('dirty');
+      state.textContent = 'Queued';
+      return;
+    }
+
     var key = queueNote(name, saved);
     watch(key, function (result) { state.textContent = result; });
     btn.classList.remove('dirty');
@@ -904,6 +1064,13 @@ function noteField(name, sets) {
   box.addEventListener('input', function () {
     dirty();
     clearTimeout(timer);
+    // The card is about to be re-rendered under a note that has not been
+    // committed anywhere, so keep every keystroke on the set objects while an
+    // add is in flight rather than waiting out the debounce.
+    if (S.adding && S.adding.name === name) {
+      sets.forEach(function (s) { s.note = box.value; });
+      return;
+    }
     timer = setTimeout(function () { commit(true); }, 1500);
   });
   box.onblur = function () { commit(true); };
@@ -926,6 +1093,12 @@ function noteField(name, sets) {
 // Adding, removing and deleting all shift row numbers, which is exactly what
 // a queued edit is addressed by. Rather than race, get the queue empty first.
 function blockedByQueue() {
+  // An add in flight is the same hazard: the server is about to hand back row
+  // numbers for rows that do not exist yet.
+  if (S.adding) {
+    alert('Still adding ' + S.adding.name + '. Try again in a moment.');
+    return true;
+  }
   if (!pendCount()) return false;
   flush();
   paint();
@@ -1010,14 +1183,21 @@ function metaLine(el, name, sets) {
 
   var t = isTimed(name);
   if (rec && rec.heaviest && rec.heaviest.weight > 0) {
-    cell('Best', amount(name, rec.heaviest.reps) + ' × ' + rec.heaviest.weight + ' lb');
-    if (rec.est1rm && !t) cell('est 1RM', rec.est1rm);   // meaningless for a hold
+    cell('Best', amount(name, rec.heaviest.reps) + ' × ' + weightText(rec.heaviest.weight));
+    // est 1RM is a weight too, and meaningless for a hold.
+    if (rec.est1rm && !t) cell('est 1RM', weightText(rec.est1rm));
     cell('on', rec.heaviest.date);
   } else if (rec && rec.reps) {
     cell(t ? 'Longest' : 'Best', t ? amount(name, rec.reps.reps)
                                    : rec.reps.reps + ' reps');
     cell('on', rec.reps.date);
   }
+
+  // "was 12" now comes from the last time this exercise was done rather than
+  // from the last session of this day type, so say which date that was when
+  // it is not the one the status bar is naming.
+  var from = S.lastDates && S.lastDates[name];
+  if (from && from !== S.priorDate) cell('last done', from);
 
   var tag = document.createElement('span');
   tag.className = 'prtag';
@@ -1063,7 +1243,9 @@ function setRow(s) {
   if (S.noWeight && S.noWeight[s.exercise]) {
     row.classList.add('bw');
   } else {
-    row.appendChild(stepper(s, 'weight', 'Weight (LB)', 2.5, 1));
+    // 2.5 of whichever unit is on screen: plates go up in 2.5 kg as readily
+    // as in 2.5 lb, so converting the step would only produce ugly numbers.
+    row.appendChild(stepper(s, 'weight', 'Weight (' + unitLabel() + ')', 2.5, 1));
   }
   row.appendChild(stepper(s, 'rpe', 'RPE', 0.5, 1));
   return row;
@@ -1077,6 +1259,7 @@ function wasLine(s, key, dp) {
   var prev = s.last && s.last[key];
   if (prev === undefined || prev === null) return el;
   if (key === 'rpe' && prev === BLANK) { el.textContent = 'was —'; return el; }
+  if (key === 'weight') prev = toDisplay(prev);
   var shown = Number(prev).toFixed(dp).replace(/\.0$/, '');
   el.textContent = 'was ' + (key === 'reps' ? amount(s.exercise, shown) : shown);
   return el;
@@ -1091,6 +1274,7 @@ function stepper(s, key, label, step, dp) {
     var ro = document.createElement('div');
     ro.className = 'val';
     var v = s[key];
+    if (key === 'weight') v = toDisplay(v);
     ro.textContent = (key === 'rpe' && v === BLANK)
       ? '—' : Number(v).toFixed(dp).replace(/\.0$/, '');
     wrap.appendChild(ro);
@@ -1107,10 +1291,16 @@ function stepper(s, key, label, step, dp) {
   val.setAttribute('aria-label', label);
   var plus = document.createElement('button'); plus.textContent = '+';
 
+  // Weights are held in pounds and shown in whichever unit is picked; every
+  // other field is the same number either way.
+  var isWeight = key === 'weight';
+  function view(lb) { return isWeight ? toDisplay(lb) : Number(lb); }
+  function stored(shown) { return isWeight ? toPounds(shown) : Number(shown); }
+
   function show() {
     var v = s[key];
     val.value = (key === 'rpe' && v === BLANK)
-      ? '' : Number(v).toFixed(dp).replace(/\.0$/, '');
+      ? '' : view(v).toFixed(dp).replace(/\.0$/, '');
     val.placeholder = (key === 'rpe') ? '—' : '0';
   }
 
@@ -1119,9 +1309,11 @@ function stepper(s, key, label, step, dp) {
     return Math.max(0, n);
   }
 
+  // Stepping happens in the unit on screen, so kg lands on clean 2.5s rather
+  // than on whatever 2.5 lb converts to.
   function bump(delta) {
-    var base = (key === 'rpe' && s[key] === BLANK) ? 8 : Number(s[key]);
-    s[key] = Math.round(clamp(base + delta) / step) * step;
+    var base = (key === 'rpe' && s[key] === BLANK) ? 8 : view(s[key]);
+    s[key] = stored(clamp(Math.round((base + delta) / step) * step));
     show(); queueSave(s);
   }
 
@@ -1151,7 +1343,7 @@ function stepper(s, key, label, step, dp) {
     }
     var n = parseFloat(raw);
     if (isNaN(n)) { show(); return; }
-    var next = clamp(n);
+    var next = stored(clamp(n));
     if (next === Number(s[key])) { show(); return; }
     s[key] = next;
     show(); queueSave(s);
@@ -1349,12 +1541,41 @@ function paint() {
   bar.className = 'bar pending';
 }
 
+// A set on an optimistic card has no row yet — the server assigns those. Its
+// edits are held on the object and queued by absorbAdd() once the real rows
+// come back, because a queued write is addressed by row and there is nothing
+// yet to address.
 function queueSave(s) {
   if (s.onChange) s.onChange();
+  if (!(s.row > 1)) { s.dirty = true; return; }
   enqueue({
     kind: 'set', row: s.row, exercise: s.exercise, set: s.set,
     reps: s.reps, weight: s.weight, rpe: s.rpe, day: S.day, date: S.date
   });
+}
+
+// Move anything typed into the optimistic card onto the rows the server just
+// created, and queue those writes. Without this, values entered in the couple
+// of seconds an add takes would be overwritten by the response.
+function absorbAdd(res) {
+  var add = S.adding;
+  S.adding = null;
+  if (!add) return;
+
+  var dirty = {};
+  add.sets.forEach(function (s) { if (s.dirty) dirty[s.set] = s; });
+  var note = (add.sets[0] && add.sets[0].note) || '';
+
+  (res.sets || []).forEach(function (t) {
+    if (t.exercise !== add.name) return;
+    if (note) t.note = note;
+    var d = dirty[t.set];
+    if (!d) return;
+    t.reps = d.reps; t.weight = d.weight; t.rpe = d.rpe;
+    queueSave(t);
+  });
+
+  if (note) queueNote(add.name, note);
 }
 
 function queueNote(exercise, text) {

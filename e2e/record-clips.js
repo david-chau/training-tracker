@@ -108,6 +108,14 @@ async function cleanup(app) {
   }
 }
 
+// Which day type each clip works on, so the tidy-up afterwards wipes the day
+// the clip actually used. A regex matching both and taking .first() picked the
+// wrong one and left 19 rows on the scratch date, which then showed up as
+// personal bests dated five years out.
+const CLIP_DAY = {
+  logging: SCRATCH_DAY, rename: SCRATCH_DAY, unit: SCRATCH_DAY, start: 'Push'
+};
+
 // Each clip: set the scene off-camera as far as possible, then do the one
 // thing the clip is about, slowly enough to follow.
 const CLIPS = {
@@ -244,8 +252,8 @@ async function record(names) {
     await after.goto(targets().adminUrl, { waitUntil: 'domcontentloaded' });
     const tidy = await appFrame(after);
     await ready(tidy);
-    await tidy.locator('.day', { hasText: new RegExp(`^(${SCRATCH_DAY}|Push)$`) })
-      .first().click();
+    await tidy.locator('.day', { hasText: new RegExp(`^${CLIP_DAY[name]}$`) })
+      .click();
     await gotoDate(tidy, DATE);
     await tidy.locator('.ex, .choice, .msg').first().waitFor({ state: 'visible' });
     await cleanup(tidy);

@@ -116,6 +116,15 @@ Repo
 └── README.md               — summary + link to the Pages site, nothing else
 ```
 
+### Weight is always pounds
+
+Column F is `Weight (LB)` and stores pounds, whatever the UI shows. `lb`/`kg`
+is a display toggle in the browser (`toDisplay` / `toPounds`), kept in
+`localStorage` per device — not in the sheet, because it is a property of the
+machine in front of you. Stepping happens in the displayed unit so kg lands
+on clean 2.5s. Don't store kg, and don't add a per-row unit column: records
+and progression compare column F against itself.
+
 ### Log columns (order matters — code reads by index, not header name)
 
 ```
@@ -178,9 +187,15 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   input. Test any stepper change at 390px wide.
 - **Notes losing text on blur.** Now saves three ways: explicit button,
   1.5s debounce while typing, and blur.
-- **`snapshot()` returns values, not a string.** The browser renders last
-  week under each field (`was 12`), so it needs `{reps, weight, rpe}` per
-  set. Don't fold it back into one line.
+- **`lastByExercise()` returns values, not a string.** The browser renders
+  last time under each field (`was 12`), so it needs `{reps, weight, rpe}`
+  per set. Don't fold it back into one line.
+- **"Last time" is per exercise, not per session.** It was keyed to the
+  previous session of the same day type, which only works if every session
+  repeats the last one. Skip a movement for a week, do it on another day, or
+  add it mid-cycle and there was no comparison at all. Records were always
+  per exercise; the two now agree. Sheet order is not date order, so the
+  lookup never lets an earlier date overwrite a later one.
 - **Row indices go stale** after add/remove. Every mutation returns a fresh
   `loadSession()` rather than patching client state.
 - **Queued writes are addressed by row, and rows move.** `writeSet` verifies
@@ -190,6 +205,13 @@ Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
   is a permanent reject, never a retry. Structural ops (`setSetCount`,
   `addExercise`, `deleteSession`) are blocked client-side while the queue is
   non-empty, for the same reason.
+- **An optimistic add has no row numbers yet.** The card renders before the
+  server has appended anything, so its sets carry `row: 0`. `queueSave` marks
+  those dirty instead of queueing — there is nothing to address — and
+  `absorbAdd` moves the values onto the real rows and queues them when the
+  response lands. `S.adding` blocks day, date and structural changes for the
+  same reason the queue does, with a 25s guard that reloads rather than
+  leaving the page wedged.
 - **`localStorage` in the Apps Script iframe is best-effort.** The page is
   sandboxed `googleusercontent.com`; browsers may partition or block framed
   storage. Feature-detected, never assumed. Durability across a dropped
@@ -234,10 +256,13 @@ free of SpreadsheetApp so it stays testable — keep it that way.
   becomes the bar for today's second and nothing ever reads as a PR.
 - The ★ is judged in the browser (`isPr()`), not shipped per set, so it
   updates as a value is typed.
-- `refreshRecords()` runs on structural writes and the menu only — NEVER on
-  `saveBatch`. A rebuild is a whole-sheet scan plus a tab rewrite; putting
-  it on the save path taxes every tap. It also swallows its own errors: a
-  failed rendering must not cost someone their logged set.
+- `refreshRecords()` runs on the menu item, `deleteSession` and archiving —
+  NEVER on `saveBatch`, `addExercise`, `setSetCount`, `renameExercise` or
+  `generateInto`. A rebuild is a whole-sheet scan plus a tab rewrite, so it
+  gets slower as the log grows, and it was hanging off the one thing an admin
+  does mid-session standing at a machine. Nothing in the app reads that tab.
+  It also swallows its own errors: a failed rendering must not cost someone
+  their logged set.
 - `Records` tab is output. Anything typed there dies on the next rebuild.
 
 ## Known gaps
