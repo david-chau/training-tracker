@@ -25,6 +25,14 @@ the admin link, which someone else holds.
 ![A Push session in the read-only view: values shown as plain boxes with no
 buttons]({{ site.baseurl }}/img/viewer-session.png)
 
+One exercise is shown at a time, with the whole session listed above it. Move
+with **‹ Previous / Next ›** under the card, by swiping, or by tapping any
+line in the list:
+
+<img src="{{ site.baseurl }}/img/clip-viewer.gif" loading="lazy"
+     alt="Moving through a logged session in the read-only view using the pager and the list of exercises"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+
 {: .tip }
 To keep it handy, open the link and use *Share → Add to Home Screen* on
 iPhone or iPad, or the browser menu → *Add to Home screen* on Android. It

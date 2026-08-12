@@ -11,13 +11,11 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-[![A Push session open on a tablet: exercise cards showing personal bests,
-last week's numbers under each field, and the status bar reporting an unsaved
-change](docs/img/tablet-demo-poster.png)](https://david-chau.github.io/training-tracker/)
+![Starting a Push session from last week, stepping reps and weight up, and
+moving on to the next exercise](docs/img/clip-tour.gif)
 
-**[▶ Watch the tablet demo](https://david-chau.github.io/training-tracker/)** —
-40 seconds: starting a session, logging sets, adding an exercise. It plays
-inline at the top of the documentation site.
+One exercise on screen at a time, last week's numbers under each field, and
+every tap read back out of the spreadsheet before it counts as saved.
 
 ## Documentation
 

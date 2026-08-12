@@ -572,6 +572,31 @@ test('a structural write that never answers releases the page', () => {
   }, 120));
 });
 
+test('the rail marks the page you are on', () => {
+  const items = [sandbox.document.createElement(), sandbox.document.createElement()];
+  const box = sandbox.document.getElementById('rail');
+  box.querySelectorAll = () => items;
+
+  G.S.page = 1;
+  G.paintRail();
+  assert.ok(items[1].classes.on, 'the current exercise is lit');
+  assert.ok(!items[0].classes.on, 'and only that one');
+});
+
+test('a rendered session marks the current page without being tapped', () => {
+  const real = G.paintRail;
+  let painted = 0;
+  G.paintRail = () => { painted++; };
+
+  G.render({
+    exists: true, records: {}, lastNotes: {}, lastDates: {}, priorDate: null,
+    sets: [sample('Bench'), sample('Plank', { row: 20, exercise: 'Plank' })]
+  });
+
+  G.paintRail = real;
+  assert.ok(painted > 0, 'a fresh load left every exercise looking current');
+});
+
 test('renaming hides the header of the exercise being renamed', () => {
   // A superset card has one header per exercise. Finding the first .exhead
   // renamed the second exercise while hiding the first one's header.

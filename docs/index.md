@@ -12,11 +12,9 @@ Open it on a tablet at the rack, tap numbers up and down, and the sheet fills
 itself in. Next week it looks at what was lifted and how hard it felt, then
 proposes slightly more.
 
-<video src="{{ site.baseurl }}/img/tablet-demo.mp4"
-       autoplay loop muted playsinline controls
-       aria-label="Starting a Push session on a tablet, entering reps and weights, and adding an exercise"
-       style="max-width:360px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
-</video>
+<img src="{{ site.baseurl }}/img/clip-tour.gif" loading="lazy"
+     alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
 
 ---
 

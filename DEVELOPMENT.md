@@ -108,39 +108,6 @@ Column H is written by the generator (`from template`, `was easy`, `repeat`,
 `backed off`). Column I is the admin's free text. They are separate on
 purpose.
 
-## The demo clip
-
-`docs/img/tablet-demo.mp4` is generated from a phone recording of a tablet,
-which is kept out of the repo. It is silent — `-an`, not just muted playback.
-
-```bash
-ffmpeg -i example.mp4 -an -vf "crop=612:915:60:57,scale=540:-2" \
-  -c:v libx264 -crf 30 -preset slow -pix_fmt yuv420p -movflags +faststart \
-  -y docs/img/tablet-demo.mp4
-```
-
-The crop trims the desk around the tablet. `+faststart` moves the index to
-the front so it starts playing before it has finished downloading.
-
-`docs/img/tablet-demo-poster.png` is a still from it, used in the README.
-
-{: .note }
-The README cannot play the clip inline. GitHub's `media-src` CSP allows only
-its own hosts — `github.com`, `*.githubusercontent.com` user uploads, and its
-asset S3 bucket. Neither the Pages URL nor `raw.githubusercontent.com` is on
-that list, so a `<video>` pointing at a repo file renders as nothing. Only
-files uploaded through GitHub's browser attachment flow get a playable URL.
-Hence the poster image, linked to the documentation home page where the clip
-plays inline — a blob link works too, but lands on a download rather than a
-player. The docs pages have no such restriction and use `<video>` directly.
-
-A GIF was tried and dropped. Hand-held footage is the worst case for the
-format — camera shake changes every pixel every frame, so inter-frame
-compression has nothing to work with. Even cropped, at 5 fps and 64 colours,
-it was 5.9 MB and visibly banded, against 1.2 MB of much better H.264. Both
-GitHub and the Pages site render `<video>`, so there is no reason to carry
-the GIF.
-
 ## The demo data
 
 The links in the README point at a real log. `e2e/seed-demo.js` rebuilds its
@@ -185,6 +152,8 @@ node e2e/record-clips.js rename     # just one
 
 Each clip works on the same scratch date the tests use, and the day is deleted
 afterwards — in a separate browser context, so the wipe is never in frame.
+`CLIP_DAY` says which day type each one used; `null` means it only reads, like
+the viewer clip, and nothing is tidied.
 
 Two things keep the files small enough to put on a page. Playwright records a
 whole browser context, but most of that is scaffolding: navigating to the
@@ -192,13 +161,15 @@ scratch date, waiting on Apps Script, adding the exercise the clip is *about*.
 Each clip calls `mark()` once the scene is set, and everything before that is
 seeked past on conversion — 8 to 31 seconds per clip. The frame is then cropped
 by `BANNER_PX` to drop Google's "created by a Google Apps Script user" strip.
-Together those took the four clips from 6.5 MB to 2.3 MB.
 
 {: .note }
-Screen recordings are the good case for GIF — flat colour, static background,
-a small changing region — which is why these are GIFs while the hand-held
-tablet clip is an MP4. That footage was 39 MB as a GIF; see
-[the demo clip](#the-demo-clip).
+Screen recordings are the good case for GIF — flat colour, a static
+background, a small changing region — which is why these compress to a few
+hundred KB each. Hand-held footage is the opposite: an earlier phone recording
+of a tablet came out at 39 MB as a GIF and had to ship as an MP4, which GitHub
+then refused to play in the README (its `media-src` CSP allows only its own
+hosts). Recording the app directly removed both problems, and the README shows
+a GIF inline.
 
 {: .warning }
 Do not run this at the same time as the test suite. Both drive the same

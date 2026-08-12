@@ -50,12 +50,6 @@ mid-session would take any not-yet-saved changes with it.
 
 ## Running a session
 
-<video src="{{ site.baseurl }}/img/tablet-demo.mp4"
-       autoplay loop muted playsinline controls
-       aria-label="A Push session being started and logged on a tablet"
-       style="max-width:360px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
-</video>
-
 ### 1. Pick the date and day
 
 | Control | Moves |
@@ -276,6 +270,10 @@ have to be scrolled between the two halves between reps.
 with the exercise that follows it. **Unlink** at the top of a superset card
 takes it apart again.
 
+<img src="{{ site.baseurl }}/img/clip-superset.gif" loading="lazy"
+     alt="Two exercises on separate pages being paired into one superset card laid out round by round"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+
 | | |
 |---|---|
 | Set counts | Independent. Three of one and two of the other is fine — a round only shows the exercises that still have a set that far in. |
@@ -316,6 +314,10 @@ above it:
    [ ‹ Previous ]      2 of 3      [ Next › ]
 ```
 
+<img src="{{ site.baseurl }}/img/clip-pages.gif" loading="lazy"
+     alt="Moving through a session with the Next button and by tapping straight to an exercise in the list"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+
 Three ways to move: **swipe** left or right, the **‹ Previous / Next ›**
 buttons under the card, or tap any line in the list to jump straight to it.
 The list is the overview — where you are, what is left, and which exercises
@@ -331,6 +333,10 @@ The **lb / kg** switch beside the heading changes every weight on screen —
 the fields, the `was` lines, the records, the add form. Tap it when you walk
 up to a machine marked in the other unit; it takes effect immediately and
 mid-session is a normal time to use it.
+
+<img src="{{ site.baseurl }}/img/clip-kg.gif" loading="lazy"
+     alt="Tapping kg converts every weight on the card, and tapping lb converts them back"
+     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
 
 **The sheet is always pounds.** Column F stays `Weight (LB)`, so records,
 progression and every comparison keep working on one unit. Kilograms are

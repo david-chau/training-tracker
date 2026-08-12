@@ -672,6 +672,9 @@ function render(res) {
   });
 
   if (pages.length > 1) body.appendChild(pager(pages));
+  // The rail only marked the current page when one was tapped, so a freshly
+  // loaded session showed every exercise looking equally current.
+  paintRail();
   if (CAN_EDIT) body.appendChild(addExerciseControl());
   flash(res.priorDate ? 'Comparing against ' + res.priorDate : 'First session', false);
   if (!res.sets.length) flash('Empty session', false);
