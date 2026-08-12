@@ -241,9 +241,15 @@ test.describe('admin link', () => {
         test.skip(!await deployedFeature(app, '.rail'),
           'the live app has no superset pages yet — redeploy Index.html');
 
-        // Two exercises, two pages.
+        // Two exercises, two pages. Adding leaves you on the one you added,
+        // so pairing means going back to the first — its card carries the
+        // button, and a card on another page is not clickable.
         await expect(app.locator('.railitem')).toHaveCount(2);
+        await expect(app.locator('#pageat')).toHaveText('2 of 2');
 
+        await app.locator('.railitem').first().click();
+        await expect(app.locator('.ex').first()).toBeVisible();
+        await awaitIdle(app);
         await app.locator('.pair').first().click();
         await awaitLoad(app);
 
@@ -255,8 +261,13 @@ test.describe('admin link', () => {
         await expect(card.locator('.round').first()).toBeVisible();
         await expect(card.locator('.sswho', { hasText: 'Plank' })).toHaveCount(3);
 
+        // Pairing shows the superset card straight away and writes behind it.
+        // Unlinking before that write lands is refused — correctly — and the
+        // refusal is a dialog, which a test auto-dismisses without seeing.
+        await awaitIdle(app);
         await card.locator('.link', { hasText: 'Unlink' }).click();
         await awaitLoad(app);
+        await awaitIdle(app);
 
         await expect(app.locator('.ex.ss')).toHaveCount(0);
         await expect(app.locator('.railitem')).toHaveCount(2);
@@ -283,21 +294,23 @@ test.describe('admin link', () => {
       test.skip(!await deployedFeature(app, '.pager'),
         'the live app has no pager yet — redeploy Index.html');
 
-      // One card on screen at a time, whichever way you move between them.
+      // Adding an exercise leaves you looking at it, which is the last page.
       const cards = app.locator('.ex');
+      await expect(app.locator('#pageat')).toHaveText('2 of 2');
+      await expect(cards.nth(1)).toBeVisible();
+      await expect(cards.nth(0)).toBeHidden();
+      await expect(app.locator('#pagefwd')).toBeDisabled();
+
+      // One card on screen at a time, whichever way you move between them.
+      await app.locator('#pageback').click();
       await expect(cards.nth(0)).toBeVisible();
       await expect(cards.nth(1)).toBeHidden();
       await expect(app.locator('#pageat')).toHaveText('1 of 2');
+      await expect(app.locator('#pageback')).toBeDisabled();
 
-      await app.locator('#pagefwd').click();
+      await app.locator('.railitem').nth(1).click();
       await expect(cards.nth(1)).toBeVisible();
-      await expect(cards.nth(0)).toBeHidden();
-      await expect(app.locator('#pageback')).toBeEnabled();
-      await expect(app.locator('#pagefwd')).toBeDisabled();
-
-      await app.locator('.railitem').first().click();
-      await expect(cards.nth(0)).toBeVisible();
-      await expect(app.locator('#pageat')).toHaveText('1 of 2');
+      await expect(app.locator('#pageat')).toHaveText('2 of 2');
     });
   });
 });
