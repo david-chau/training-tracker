@@ -7,7 +7,7 @@
 
 const { test, expect } = require('@playwright/test');
 const {
-  targets, open, scratchDate, gotoDate, deployedFeature, awaitLoad, awaitQueue,
+  targets, open, scratchDate, gotoDate, deployedFeature, awaitLoad, awaitIdle,
   awaitAdd, SCRATCH_DAY
 } = require('./app');
 
@@ -16,9 +16,9 @@ const DATE = scratchDate();
 
 // Leave nothing behind, whether the test passed or not.
 async function wipe(app) {
-  // Structural changes are refused while writes are outstanding, so drain
-  // first rather than racing the app's own guard.
-  await awaitQueue(app);
+  // Structural changes are refused while a write is outstanding, so wait for
+  // the app to be idle rather than racing its own guard.
+  await awaitIdle(app);
   const del = app.locator('#wipe');
   if (!await del.count()) return;
   app.page().once('dialog', d => d.accept());

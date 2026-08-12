@@ -165,6 +165,23 @@ async function awaitQueue(app, timeout = 60_000) {
     .catch(() => {});
 }
 
+// The queue is not the only thing that makes the app refuse a structural
+// change: an add or a regroup in flight does too, and it says so in a dialog.
+// A driver auto-accepts dialogs, so the refusal is invisible and the click
+// becomes a silent no-op — which is how a tidy-up "succeeded" and left
+// sixteen rows on the scratch date. Ask the app whether it is actually idle.
+async function awaitIdle(app, timeout = 90_000) {
+  await awaitQueue(app, timeout);
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const working = await app
+      .evaluate(() => !!(window.S && (S.adding || S.working)))
+      .catch(() => false);          // older deployment, or mid-navigation
+    if (!working) return;
+    await app.page().waitForTimeout(300);
+  }
+}
+
 // Wait for the spinner to appear and then go. Waiting only for it to detach
 // races with it not having appeared yet, which lets stale cards from the
 // previous date look like the new session.
@@ -197,7 +214,7 @@ async function waitForSaved(app) {
 
 module.exports = {
   targets, appFrame, open, ready, openSession, settled, navReady, awaitLoad,
-  awaitQueue, awaitAdd, SCRATCH_DAY,
+  awaitQueue, awaitIdle, awaitAdd, SCRATCH_DAY,
   deployedFeature,
   scratchDate, gotoDate, waitForSaved
 };

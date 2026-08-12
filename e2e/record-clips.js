@@ -16,8 +16,8 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { chromium } = require('@playwright/test');
 const {
-  targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue, awaitAdd,
-  scratchDate, SCRATCH_DAY
+  targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue, awaitIdle,
+  awaitAdd, scratchDate, SCRATCH_DAY
 } = require('./app');
 
 const OUT = path.join(__dirname, '..', 'docs', 'img');
@@ -62,7 +62,7 @@ async function openAdmin(page, url) {
 }
 
 async function emptyScratch(app) {
-  await awaitQueue(app);
+  await awaitIdle(app);
   await app.locator('.day', { hasText: new RegExp(`^${SCRATCH_DAY}$`) }).click();
   await gotoDate(app, DATE);
   await app.locator('.ex, .choice, .addex, .msg').first().waitFor({ state: 'visible' });
@@ -185,7 +185,7 @@ async function tidyUp(browser, day) {
 }
 
 async function cleanup(app) {
-  await awaitQueue(app);
+  await awaitIdle(app);
   if (await app.locator('.ex').count()) {
     await app.locator('#wipe').click();
     await awaitLoad(app);
@@ -207,7 +207,7 @@ const CLIP_DAY = {
 // A generated session on the scratch date: five exercises, real numbers, and
 // the records and "was" lines that come with them.
 async function fromLastTime(app, day) {
-  await awaitQueue(app);
+  await awaitIdle(app);
   await app.locator('.day', { hasText: new RegExp(`^${day}$`) }).click();
   await gotoDate(app, DATE);
   await app.locator('.ex, .choice, .msg').first().waitFor({ state: 'visible' });

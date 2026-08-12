@@ -12,7 +12,7 @@
 
 const { chromium } = require('@playwright/test');
 const {
-  targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue,
+  targets, appFrame, ready, settled, gotoDate, awaitLoad, awaitQueue, awaitIdle,
   awaitAdd
 } = require('./app');
 
@@ -158,7 +158,7 @@ async function addExercise(app, [name, sets, amount, weight]) {
 async function buildSession(app, session) {
   process.stdout.write(`  ${session.date} ${session.day} … `);
 
-  await awaitQueue(app);
+  await awaitIdle(app);
   await app.locator('.day', { hasText: new RegExp(`^${session.day}$`) }).click();
   await gotoDate(app, session.date);
   await rendered(app);
