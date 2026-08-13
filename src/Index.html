@@ -213,7 +213,7 @@
                 text-align:center; font-size:18px; font-family:inherit; padding:0 1px;
                 font-variant-numeric:tabular-nums; color:var(--ink); }
   .step input:focus { outline:0; background:#fffbe8; }
-  .tools { display:flex; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .tools { display:flex; justify-content:space-between; gap:8px; margin:4px 0 16px; }
   .addex { width:100%; padding:15px; border:1px dashed var(--line); background:#fff;
            border-radius:10px; font-size:16px; color:var(--muted); cursor:pointer; }
   .panel { background:#fff; border:1px solid var(--line); border-radius:12px;
@@ -331,11 +331,13 @@
   <button class="sess" id="nextsess">Next session ›</button>
 </div>
 <div class="days" id="days"></div>
-<div class="tools" id="tools">
-  <button class="danger" id="wipe">Delete this day</button>
-</div>
 <datalist id="exlist"></datalist>
 <div id="body"></div>
+<!-- Below the session, not beside the day buttons: it deletes the session on
+     screen, and next to "Legs" it read as deleting the day type itself. -->
+<div class="tools" id="tools">
+  <button class="danger" id="wipe">Delete this session</button>
+</div>
 <div class="bar" id="bar"><span id="barmsg">Ready</span><button class="retry" id="retry" hidden>Retry now</button></div>
 
 <script>
@@ -641,6 +643,7 @@ function pickDay(name) {
     S.page = 0;
     S.dates = [];
     markSessNav();
+    showTools(false);
     document.getElementById('body').innerHTML =
       '<div class="msg">Pick a day to start.</div>';
     flash('Ready', false);
@@ -733,6 +736,7 @@ function load(create, source) {
   var body = document.getElementById('body');
   body.classList.remove('busy');
   body.innerHTML = '<div class="spinner">Loading ' + S.day + '…</div>';
+  showTools(false);
   busy(true);
   // Until the date list arrives, hop() has nothing to work with — so the two
   // session buttons stay disabled rather than looking live and doing nothing.
@@ -756,6 +760,33 @@ function load(create, source) {
     .loadSession(S.day, S.date, !!create, KEY, source || 'auto');
 }
 
+// What the status bar says about history. "Comparing against 2026-07-31" was
+// printed whenever an earlier session of this day type existed — even when
+// not one exercise on screen had been done that day, which is what a changed
+// programme looks like. It named a date the page said nothing about.
+// "Delete this session" only means something while one is on screen.
+function showTools(on) {
+  var el = document.getElementById('tools');
+  if (el && CAN_EDIT) el.style.display = on ? '' : 'none';
+}
+
+function comparisonText(res, order) {
+  var dates = res.lastDates || {};
+  var seen = (order || []).filter(function (name) { return dates[name]; })
+    .map(function (name) { return dates[name]; });
+
+  if (!seen.length) {
+    return (order && order.length) ? 'First time for these exercises'
+                                   : 'Nothing logged yet';
+  }
+  var same = seen.every(function (d) { return d === seen[0]; });
+  if (same && seen.length === order.length) return 'Comparing against ' + seen[0];
+  if (seen.length < order.length) {
+    return 'Comparing each exercise with its last time — some are new';
+  }
+  return 'Comparing each exercise with its last time';
+}
+
 // Re-render what is already on screen, without asking the server. The set
 // objects hold the live values, so switching units costs nothing and cannot
 // lose an edit.
@@ -769,6 +800,7 @@ function render(res) {
   if (!res.exists) {
     noteSession(S.date, S.day, false);      // deleted, or never started
     markDay();
+    showTools(false);
     if (!CAN_EDIT) {
       var none = document.createElement('div');
       none.className = 'msg';
@@ -796,6 +828,7 @@ function render(res) {
 
   noteSession(S.date, S.day, !!(res.sets && res.sets.length));
   markDay();
+  showTools(!!(res.sets && res.sets.length));
   S.lastNotes = res.lastNotes || {};
   S.lastDates = res.lastDates || {};
   S.priorDate = res.priorDate || null;
@@ -830,7 +863,7 @@ function render(res) {
   // loaded session showed every exercise looking equally current.
   paintRail();
   if (CAN_EDIT) body.appendChild(addExerciseControl());
-  flash(res.priorDate ? 'Comparing against ' + res.priorDate : 'First session', false);
+  flash(comparisonText(res, order), false);
   if (!res.sets.length) flash('Empty session', false);
 }
 

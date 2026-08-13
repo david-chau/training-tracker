@@ -31,7 +31,7 @@ Top to bottom:
 | **Best 8 × 15 lb · est 1RM 19** | [Records](records.html) for that exercise, with a **★ personal best today** tag when a set beats them. |
 | **was 8 · was 5 · was 7** | What you did for that same set **the last time you did that exercise**, under the field it belongs to. |
 | **last done 2026-08-05** | Only when that date is not the one the status bar names — see [what "last time" means](#what-last-time-means). |
-| **Comparing against 2026-08-09** | The status bar. After a save it reports the row and the values read back **out of the spreadsheet**. |
+| **Comparing against 2026-08-09** | The status bar. It names a date only when every exercise on screen was last done that day; otherwise it says the comparisons come from different days, or that these exercises are new. After a save it reports the row and the values read back **out of the spreadsheet**. |
 
 The heading and the status bar stay put as you scroll. Once you pick a day
 type, that row of buttons shrinks — it is navigation from then on, and the
@@ -192,7 +192,7 @@ Carry on training. It retries on reconnect and when you return to the tab.
 
 {: .warning }
 Do not close the tab while it is amber — the browser will warn you. Set
-counts, adding an exercise and *Delete this day* are refused until it clears,
+counts, adding an exercise and *Delete this session* are refused until it clears,
 because they shuffle rows underneath changes that have not landed.
 
 ---
@@ -419,8 +419,9 @@ stop typing, and when you tap out. Last week's note appears underneath.
 
 ### Starting over
 
-**Delete this day** removes every row for that day type and date. No undo in
-the app — but the spreadsheet has *File → Version history*.
+**Delete this session** sits under the session it deletes, and removes every
+row for that day type and date. It is hidden when there is no session to
+delete. No undo in the app — but the spreadsheet has *File → Version history*.
 
 ---
 

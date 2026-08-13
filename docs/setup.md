@@ -10,12 +10,10 @@ minutes the first time.
 
 You need a Google account. Anyone you send a viewer link to does not.
 
-```
-  1. Import the template      2. Paste in the code
-              │                          │
-              ▼                          ▼
-  4. Send out the links  ◀──  3. Publish the web app
-```
+1. **Import the template** into a new Google Sheet
+2. **Paste in the code** — two files, into the Apps Script editor
+3. **Publish the web app**
+4. **Send out the links** — one that edits, one that only reads
 
 ---
 
@@ -172,7 +170,7 @@ behaves like an app icon.
    the row and the values read back **out of the sheet**.
 3. Confirm the number really is in the `Log` tab.
 4. Open the viewer link in a private window: same session, no buttons.
-5. Back on the admin link, **Delete this day** to clear the test.
+5. Back on the admin link, **Delete this session** to clear the test.
 
 ---
 

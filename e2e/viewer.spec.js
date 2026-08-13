@@ -24,7 +24,7 @@ test.describe('viewer link', () => {
     const app = await open(page, T.viewerUrl);
 
     // Read-only is enforced server-side; this is about not offering controls
-    // that would fail. The steppers, the counter, Delete this day and
+    // that would fail. The steppers, the counter, Delete this session and
     // Add exercise are all admin-only.
     await expect(app.locator('.step')).toHaveCount(0);
     await expect(app.locator('.cnt')).toHaveCount(0);

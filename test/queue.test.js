@@ -866,6 +866,41 @@ test('changing date re-marks the day row even with nothing picked', () => {
   sandbox.document.querySelectorAll = () => [];
 });
 
+// ---------- what the status bar claims ----------
+
+test('the bar does not name a date nothing on screen compares to', () => {
+  // A changed programme has an earlier session of that day type and not one
+  // exercise in common with it. "Comparing against 2026-07-31" then pointed
+  // at a date the page said nothing about.
+  const order = ['Bulgarian Split Squat', 'Dead Bug'];
+  assert.strictEqual(
+    G.comparisonText({ priorDate: '2026-07-31', lastDates: {} }, order),
+    'First time for these exercises');
+});
+
+test('the bar names the date when everything came from it', () => {
+  const order = ['Bench', 'Plank'];
+  const dates = { Bench: '2026-08-03', Plank: '2026-08-03' };
+  assert.strictEqual(
+    G.comparisonText({ priorDate: '2026-08-03', lastDates: dates }, order),
+    'Comparing against 2026-08-03');
+});
+
+test('the bar says so when the comparisons are from different days', () => {
+  const order = ['Bench', 'Plank', 'Row'];
+  const dates = { Bench: '2026-08-03', Plank: '2026-08-05', Row: '2026-08-05' };
+  assert.match(
+    G.comparisonText({ priorDate: '2026-08-05', lastDates: dates }, order),
+    /each exercise with its last time/);
+
+  // One of them is new: worth saying, because a blank "was" is otherwise
+  // indistinguishable from a bug.
+  assert.match(
+    G.comparisonText({ priorDate: '2026-08-05', lastDates: { Bench: '2026-08-03' } },
+                     order),
+    /some are new/);
+});
+
 // ---------- read-only ----------
 
 test('a superset card offers a viewer nothing to type into', () => {

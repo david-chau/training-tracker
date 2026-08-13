@@ -131,7 +131,7 @@ Keep training. The numbers on screen are what you entered.
 
 {: .warning }
 Do not close the tab while it is amber, and expect set counts, new exercises
-and *Delete this day* to be refused until it clears — they move rows around
+and *Delete this session* to be refused until it clears — they move rows around
 underneath the pending writes.
 
 <details markdown="block">
@@ -172,7 +172,7 @@ rows for it to the `Templates` tab.
 <details markdown="block">
 <summary>The numbers do not go up when I tap +</summary>
 
-- **You are on the viewer link** — check for the *Read only* badge.
+- **You are on the viewer link** — check for the blue *READ ONLY* banner.
 - **You tapped the number, not the button.** Tapping selects it for typing.
 - **It is at its limit.** RPE clamps to 1–10, set counts to 0–10.
 
