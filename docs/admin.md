@@ -15,9 +15,10 @@ Applies whether you are logging your own training or recording someone else's
 
 ## The screen
 
-![A Push session open in the admin view, showing the date and session
-navigation, day-type buttons, and two exercise cards with their records and
-last-time values]({{ site.baseurl }}/img/admin-session.png)
+![A Push session open in the admin view: date and session navigation, the
+day-type row with a dot on the day that has a session, the exercise list
+across the width, and the first exercise's card with its records, last-time
+values and note]({{ site.baseurl }}/img/admin-session.png)
 
 Top to bottom:
 

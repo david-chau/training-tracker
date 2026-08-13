@@ -26,7 +26,8 @@ someone else holds.
 Nothing on the page can be typed into: values are plain boxes, notes are plain
 text, and there are no buttons that would change anything.
 
-![A Push session in the read-only view: values shown as plain boxes with no
+![A Push session in the read-only view: the READ ONLY banner across the top,
+the page outlined to match, and values shown as plain boxes with no
 buttons]({{ site.baseurl }}/img/viewer-session.png)
 
 One exercise is shown at a time, with the whole session listed above it. Move
