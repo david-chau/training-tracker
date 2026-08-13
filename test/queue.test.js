@@ -82,8 +82,11 @@ function runner(state) {
     withSuccessHandler(f) { return runner(Object.assign({}, state, { ok: f })); },
     withFailureHandler(f) { return runner(Object.assign({}, state, { bad: f })); },
     saveBatch(key, batch) { outbox.push(Object.assign({ batch, key }, state)); },
+    setSetCount(key, day, date, exercise, count) {
+      outbox.push(Object.assign({ call: 'setSetCount', exercise, count }, state));
+    },
     getBootstrap() {}, listDates() {}, loadSession() {},
-    setSetCount() {}, addExercise() {}, deleteSession() {}
+    addExercise() {}, deleteSession() {}
   };
 }
 sandbox.google = { script: { run: runner({}) } };
@@ -655,6 +658,147 @@ test('the rail and the pager build for a session', () => {
   G.S.page = 0;
   assert.ok(G.rail(pages));
   assert.ok(G.pager(pages));
+});
+
+// ---------- set counts ----------
+//
+// Each tap used to be its own round trip with the page dimmed for it, so
+// three sets to none was three waits.
+
+function session(exercise, sets) {
+  const out = [];
+  for (let i = 1; i <= sets; i++) {
+    out.push(sample(exercise, { set: i, row: 100 + i, exercise }));
+  }
+  return { exists: true, records: {}, lastNotes: {}, lastDates: {},
+           priorDate: null, sets: out };
+}
+
+test('taking three sets to none is one call, not three', () => {
+  G.S.lastRes = session('Bench', 3);
+  G.S.resize = null;
+  G.S.working = null;
+  sandbox.confirm = () => true;
+
+  G.resize('Bench', 2, sandbox.document.createElement());
+  G.resize('Bench', 1, sandbox.document.createElement());
+  G.resize('Bench', 0, sandbox.document.createElement());
+
+  assert.strictEqual(outbox.length, 0, 'nothing sent while still tapping');
+  assert.strictEqual(G.S.resize.want, 0, 'the last tap is what gets written');
+
+  G.sendResize();
+  assert.strictEqual(outbox.length, 1, 'one write for three taps');
+  assert.strictEqual(outbox[0].count, 0);
+  sandbox.confirm = () => false;
+});
+
+test('the sets go from the screen before the sheet answers', () => {
+  G.S.lastRes = session('Bench', 3);
+  G.S.resize = null;
+  G.S.working = null;
+
+  G.resize('Bench', 1, sandbox.document.createElement());
+
+  const left = G.S.lastRes.sets.filter(s => s.exercise === 'Bench');
+  assert.strictEqual(left.length, 1, 'two rows dropped immediately');
+  assert.strictEqual(G.S.working, 'Updating sets', 'and it says so');
+  clearTimeout(G.S.resize.timer);
+});
+
+test('an added set has no row until the server gives it one', () => {
+  G.S.lastRes = session('Bench', 2);
+  G.S.resize = null;
+  G.S.working = null;
+
+  G.resize('Bench', 3, sandbox.document.createElement());
+
+  const mine = G.S.lastRes.sets.filter(s => s.exercise === 'Bench');
+  assert.strictEqual(mine.length, 3);
+  assert.strictEqual(mine[2].row, 0, 'nothing to address it by yet');
+  assert.strictEqual(mine[2].reps, mine[1].reps, 'it copies the last set');
+  clearTimeout(G.S.resize.timer);
+});
+
+test('a resize in flight does not block the next tap on the same exercise', () => {
+  G.S.lastRes = session('Bench', 3);
+  G.S.resize = null;
+  G.S.working = null;
+
+  G.resize('Bench', 2, sandbox.document.createElement());
+  assert.ok(G.S.working, 'something is outstanding');
+
+  // Same exercise: allowed. Anything else structural: refused.
+  G.resize('Bench', 1, sandbox.document.createElement());
+  assert.strictEqual(G.S.resize.want, 1, 'the second tap counted');
+  assert.strictEqual(G.blockedByQueue(), true, 'but a different change waits');
+  clearTimeout(G.S.resize.timer);
+  G.S.working = null;
+  G.S.resize = null;
+});
+
+test('an emptied date field falls back to today, not to nothing', () => {
+  // iOS's date picker has a Reset that clears the field. An empty date asked
+  // the server for "the Custom session on ", which renders as a session that
+  // can never exist.
+  G.S.today = '2026-08-12';
+  G.S.date = '2026-08-09';
+
+  const box = sandbox.document.getElementById('date');
+  box.value = '';
+  G.document.getElementById('date').onchange.call(box);
+
+  assert.strictEqual(G.S.date, '2026-08-12', 'today, not blank');
+  assert.strictEqual(box.value, '2026-08-12', 'and the field says so');
+});
+
+// ---------- the day row ----------
+
+test('a day type is marked when that date already has a session', () => {
+  const buttons = ['Push', 'Pull', 'Legs'].map(name => {
+    const b = sandbox.document.createElement();
+    b.setAttribute = (k, v) => { b._attrs = Object.assign(b._attrs || {}, { [k]: v }); };
+    b.getAttribute = k => (b._attrs || {})[k];
+    b.setAttribute('data-day', name);
+    return b;
+  });
+  sandbox.document.querySelectorAll = () => buttons;
+
+  G.S.sessions = { '2026-08-11': ['Legs'] };
+  G.S.date = '2026-08-11';
+  G.S.day = 'Push';
+  G.markDay();
+
+  assert.ok(buttons[2].classes.has, 'Legs has a session that day');
+  assert.ok(!buttons[0].classes.has, 'Push does not');
+  assert.ok(buttons[0].classes.on, 'and Push is the one being shown');
+
+  sandbox.document.querySelectorAll = () => [];
+});
+
+test('tapping the day you are on drops back to the day list', () => {
+  G.S.day = 'Legs';
+  G.S.lastRes = { exists: true, sets: [] };
+  G.S.adding = null;
+  G.S.working = null;
+
+  G.pickDay(null);
+
+  assert.strictEqual(G.S.day, null, 'nothing is selected');
+  assert.strictEqual(G.S.lastRes, null, 'and no session is held on to');
+  assert.match(sandbox.document.getElementById('body').innerHTML, /Pick a day/);
+});
+
+test('the session map follows what is created and deleted', () => {
+  G.S.sessions = {};
+  G.noteSession('2026-08-11', 'Legs', true);
+  assert.deepStrictEqual(plain(G.S.sessions['2026-08-11']), ['Legs']);
+
+  G.noteSession('2026-08-11', 'Legs', true);
+  assert.strictEqual(G.S.sessions['2026-08-11'].length, 1, 'no duplicates');
+
+  G.noteSession('2026-08-11', 'Legs', false);
+  assert.deepStrictEqual(plain(G.S.sessions['2026-08-11']), []);
 });
 
 // ---------- weight units ----------

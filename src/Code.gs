@@ -204,7 +204,8 @@ function showSidebar() {
 // buttons that always answer "nothing logged".
 function getBootstrap(k) {
   const canEdit = String(k) === editKey();
-  const logged = allRows().map(function (r) { return String(r[COL.day]).trim(); });
+  const rows = allRows();
+  const logged = rows.map(function (r) { return String(r[COL.day]).trim(); });
 
   let days = dedupe(logged).filter(Boolean);
   if (canEdit) {
@@ -216,10 +217,22 @@ function getBootstrap(k) {
     }
   }
 
+  // Which dates already have which day types. One entry per session, not per
+  // row, so it stays small — and it saves a round trip per date the browser
+  // looks at, which is what marking the day buttons would otherwise cost.
+  const sessions = {};
+  rows.forEach(function (r) {
+    const date = dateKey(r[COL.date]);
+    const day = String(r[COL.day]).trim();
+    if (!date || !day) return;
+    const seen = sessions[date] || (sessions[date] = []);
+    if (seen.indexOf(day) === -1) seen.push(day);
+  });
+
   // If something is already logged for today, the app opens straight into it
   // rather than asking which day type you meant.
   const today = dateKey(new Date());
-  const openToday = dedupe(allRows()
+  const openToday = dedupe(rows
     .filter(function (r) { return dateKey(r[COL.date]) === today; })
     .map(function (r) { return String(r[COL.day]).trim(); }))
     .filter(function (d) {
@@ -228,6 +241,7 @@ function getBootstrap(k) {
 
   return {
     days: days,
+    sessions: sessions,
     openDay: openToday,
     exercises: exerciseList(),
     images: exerciseImages(),

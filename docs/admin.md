@@ -26,7 +26,7 @@ Top to bottom:
 | **Training — David** | The spreadsheet's name. Tap it to open the sheet itself. |
 | **‹ date ›** | One calendar day at a time. |
 | **‹ Previous session** / **Next session ›** | The nearest date that has a session of this day type. Greyed out when there is none. |
-| **Push / Pull / Legs / Custom** | Day type. |
+| **Push / Pull / Legs / Custom** | Day type. A green dot means that day already has a session on the date shown. Tap the one you are on to drop back to the day list. |
 | **lb / kg** | Which unit weights are shown and typed in. See [pounds or kilograms](#pounds-or-kilograms). |
 | **Best 8 × 15 lb · est 1RM 19** | [Records](records.html) for that exercise, with a **★ personal best today** tag when a set beats them. |
 | **was 8 · was 5 · was 7** | What you did for that same set **the last time you did that exercise**, under the field it belongs to. |
@@ -36,6 +36,9 @@ Top to bottom:
 The heading and the status bar stay put as you scroll. Once you pick a day
 type, that row of buttons shrinks — it is navigation from then on, and the
 session needs the room.
+
+If your phone's date picker offers a **Reset**, it empties the field rather
+than restoring anything — the app takes that as today.
 
 Opening the link shows **Loading Web App…** centred on the page until the
 spreadsheet answers. Nothing above it means anything until then: no name, no
@@ -200,6 +203,9 @@ because they shuffle rows underneath changes that have not landed.
 
 The **− n sets +** counter adds or removes sets from the end. Adding copies
 the last set's reps and weight.
+
+Sets appear and disappear as you tap, and the write follows about a second
+later — three taps from three sets to none is **one** write, not three waits.
 
 Going **below one set removes the exercise** from the session. It asks first,
 then deletes those rows from the sheet.

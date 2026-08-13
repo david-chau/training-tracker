@@ -69,7 +69,14 @@
   .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .day { flex:1; min-width:84px; padding:13px 8px; border:1px solid var(--line);
          background:#fff; border-radius:10px; font-size:17px; cursor:pointer;
+         display:flex; align-items:center; justify-content:center; gap:7px;
          transition:padding 0.12s ease, font-size 0.12s ease; }
+  /* A session already exists for this day type on the date being shown. Worth
+     knowing before tapping: it is the difference between opening a session and
+     starting one. */
+  .day.has::before { content:''; width:7px; height:7px; border-radius:50%;
+                     background:var(--ok); flex:none; }
+  .day.on.has::before { background:#fff; }
   /* Before a day is picked these are the only thing to press, so they are
      big. Afterwards they are just navigation and the session needs the room —
      still a comfortable target, half the height. */
@@ -384,11 +391,13 @@ if (!CAN_EDIT) {
 
 google.script.run.withSuccessHandler(function (b) {
   S.date = b.today;
+  S.today = b.today;          // what an emptied date field falls back to
   document.getElementById('date').value = b.today;
   S.images = b.images || {};
   S.videos = b.videos || {};
   S.noWeight = b.noWeight || {};
   S.timed = b.timed || {};
+  S.sessions = b.sessions || {};
   var who = document.getElementById('who');
   if (b.name) who.textContent = b.name;
   if (b.sheetUrl) {
@@ -408,8 +417,12 @@ google.script.run.withSuccessHandler(function (b) {
   var d = document.getElementById('days');
   b.days.forEach(function (name) {
     var el = document.createElement('button');
-    el.className = 'day'; el.textContent = name;
-    el.onclick = function () { S.day = name; markDay(); load(false); };
+    el.className = 'day';
+    el.textContent = name;
+    el.setAttribute('data-day', name);
+    // Tapping the day you are on drops back to the day list rather than doing
+    // nothing — the way back out of a session you opened by mistake.
+    el.onclick = function () { pickDay(S.day === name ? null : name); };
     d.appendChild(el);
   });
 
@@ -444,8 +457,18 @@ google.script.run.withSuccessHandler(function (b) {
 }).getBootstrap(KEY);
 
 document.getElementById('date').onchange = function () {
-  S.date = this.value; load(false);
+  // iOS offers a Reset in its date picker, which empties the field rather
+  // than restoring anything. An empty date is not a date: it asked the server
+  // for "the Custom session on ", which can only ever come back with nothing.
+  var picked = validDate(this.value) ? this.value : (S.today || S.date);
+  this.value = picked;
+  S.date = picked;
+  load(false);
 };
+
+function validDate(v) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+}
 document.getElementById('wipe').onclick = function () {
   if (!S.day || !S.date) return;
   if (blockedByQueue()) return;
@@ -501,6 +524,7 @@ document.getElementById('nextsess').onclick = function () { hop(-1); };
 
 // One calendar day, whether or not anything was logged on it.
 function shiftDay(n) {
+  if (!validDate(S.date)) S.date = S.today;
   var p = S.date.split('-');
   var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
   d.setDate(d.getDate() + n);
@@ -549,13 +573,51 @@ function markSessNav() {
   document.getElementById('nextsess').disabled = !fwd;
 }
 
+// Choosing a day type, or unchoosing it. Nothing picked means the day list is
+// the whole screen again, which is where the app starts.
+function pickDay(name) {
+  if (S.adding || S.working) { flash('One moment — still saving', false); return; }
+  S.day = name;
+  markDay();
+  if (!name) {
+    S.lastRes = null;
+    S.pages = [];
+    S.page = 0;
+    S.dates = [];
+    markSessNav();
+    document.getElementById('body').innerHTML =
+      '<div class="msg">Pick a day to start.</div>';
+    flash('Ready', false);
+    return;
+  }
+  load(false);
+}
+
 function markDay() {
+  var here = (S.sessions && S.sessions[S.date]) || [];
   [].forEach.call(document.querySelectorAll('.day'), function (b) {
-    b.classList.toggle('on', b.textContent === S.day);
+    var name = b.getAttribute('data-day') || b.textContent;
+    b.classList.toggle('on', name === S.day);
+    b.classList.toggle('has', here.indexOf(name) !== -1);
   });
   // Once a day is chosen the row is navigation rather than the main choice,
   // so it gives its height back to the session.
   document.getElementById('days').classList.toggle('chosen', !!S.day);
+}
+
+// The day buttons are built from the sheet, so their label is their name —
+// except the dot, which is a pseudo-element and would otherwise end up in
+// textContent comparisons. Kept as an attribute so the name survives it.
+function dayName(el) { return el.getAttribute('data-day') || el.textContent; }
+
+// What the browser knows about which dates have sessions, kept current as
+// sessions are created and deleted rather than re-fetched.
+function noteSession(date, day, exists) {
+  if (!S.sessions) S.sessions = {};
+  var here = S.sessions[date] || (S.sessions[date] = []);
+  var at = here.indexOf(day);
+  if (exists && at === -1) here.push(day);
+  if (!exists && at !== -1) here.splice(at, 1);
 }
 
 // Whole-session work: loading a day, or a structural change that rewrites
@@ -649,6 +711,8 @@ function render(res) {
   body.innerHTML = '';
 
   if (!res.exists) {
+    noteSession(S.date, S.day, false);      // deleted, or never started
+    markDay();
     if (!CAN_EDIT) {
       var none = document.createElement('div');
       none.className = 'msg';
@@ -674,6 +738,8 @@ function render(res) {
     groups[s.exercise].push(s);
   });
 
+  noteSession(S.date, S.day, !!(res.sets && res.sets.length));
+  markDay();
   S.lastNotes = res.lastNotes || {};
   S.lastDates = res.lastDates || {};
   S.priorDate = res.priorDate || null;
@@ -1601,6 +1667,13 @@ function blockedByQueue() {
     alert(S.working + ' is still saving. Try again in a moment.');
     return true;
   }
+  return queueBusy();
+}
+
+// Edits waiting to be written are addressed by row, and anything structural
+// moves rows. Split out from the guard above because a set count that is
+// already changing has to re-check this without complaining about itself.
+function queueBusy() {
   if (!pendCount()) return false;
   flush();
   paint();
@@ -1609,32 +1682,113 @@ function blockedByQueue() {
   return true;
 }
 
+// How long to wait for more taps before writing a set count. Long enough to
+// go from three sets to none in one call, short enough not to feel deferred.
+var RESIZE_MS = 800;
+
+// Set counts change on screen and the write follows. Each tap used to be its
+// own round trip with the page dimmed for it, so taking an exercise from
+// three sets to none meant three waits — on gym wifi, most of a minute.
 function resize(exercise, count, label) {
   if (count < 0 || count > 10) return;
-  if (blockedByQueue()) return;
 
-  // Going below one set is how an exercise is taken out of the session, so
-  // it asks first — this deletes rows rather than changing a number.
+  // A resize already under way for this exercise is not a reason to refuse
+  // the next tap — it is the same operation continuing.
+  var mine = S.resize && S.resize.name === exercise;
+  if (mine ? queueBusy() : blockedByQueue()) return;
+
+  // Going below one set is how an exercise is taken out of the session, so it
+  // asks first — this deletes rows rather than changing a number.
   if (count === 0 &&
       !confirm('Remove ' + exercise + ' from this session?\n\n' +
                'Its sets are deleted from the sheet.')) {
     return;
   }
 
-  label.textContent = '…';
-  busy(true, count === 0 ? 'Removing ' + exercise + '…' : 'Updating sets…');
-  var done = busyGuard(count === 0 ? 'Removing ' + exercise : 'Updating sets');
+  if (!applyResize(exercise, count)) return;
+  S.working = count === 0 ? 'Removing ' + exercise : 'Updating sets';
+  if (count) S.focus = exercise;
+  render(S.lastRes);
+  flash(count === 0 ? 'Removing ' + exercise + '…' : 'Sets updated', false);
+
+  if (S.resize) clearTimeout(S.resize.timer);
+  S.resize = {
+    name: exercise,
+    want: count,
+    timer: setTimeout(function () { sendResize(); }, RESIZE_MS)
+  };
+}
+
+// Add or drop set rows in the response already on screen. New rows have no
+// row number until the server assigns one, exactly like an optimistic add.
+function applyResize(exercise, count) {
+  var res = S.lastRes;
+  if (!res || !res.sets) return false;
+
+  var mine = res.sets.filter(function (s) { return s.exercise === exercise; });
+  if (!mine.length) return false;
+
+  if (count < mine.length) {
+    var doomed = mine.slice(count);
+    res.sets = res.sets.filter(function (s) { return doomed.indexOf(s) === -1; });
+  } else {
+    var last = mine[mine.length - 1];
+    for (var n = mine.length + 1; n <= count; n++) {
+      res.sets.push({
+        row: 0, exercise: exercise, set: n, reps: last.reps, weight: last.weight,
+        rpe: BLANK, note: last.note, group: last.group, last: null
+      });
+    }
+  }
+  return true;
+}
+
+function sendResize() {
+  var want = S.resize;
+  if (!want) return;
+  clearTimeout(want.timer);
+
+  var done = busyGuard(S.working || 'Updating sets');
   google.script.run
     .withSuccessHandler(function (res) {
-      done(); busy(false);
+      done();
+      // A tap that landed while this was in flight is the newer truth: send
+      // it rather than letting the response overwrite it.
+      var next = S.resize && S.resize.want !== want.want ? S.resize : null;
+      S.resize = next;
+      S.working = next ? S.working : null;
+      absorbResize(res, want.name);
       render(res);
-      flash(count === 0 ? exercise + ' removed' : 'Sets updated', true);
+      if (next) { clearTimeout(next.timer); sendResize(); return; }
+      flash(want.want === 0 ? want.name + ' removed' : 'Sets updated', true);
     })
     .withFailureHandler(function (e) {
-      done(); busy(false);
+      done();
+      S.resize = null;
+      S.working = null;
       flash('Failed: ' + why(e), false, true);
+      load(false);              // the sheet is the truth; drop the guess
     })
-    .setSetCount(KEY, S.day, S.date, exercise, count);
+    .setSetCount(KEY, S.day, S.date, want.name, want.want);
+}
+
+// Anything typed into a set that did not exist yet moves onto the row the
+// server just created, the same way an added exercise does.
+function absorbResize(res, exercise) {
+  var shown = (S.lastRes && S.lastRes.sets) || [];
+  var dirty = {};
+  shown.forEach(function (s) {
+    if (s.exercise === exercise && s.dirty && !(s.row > 1)) dirty[s.set] = s;
+  });
+  if (!Object.keys(dirty).length) return;
+
+  (res.sets || []).forEach(function (t) {
+    if (t.exercise !== exercise) return;
+    var d = dirty[t.set];
+    if (!d) return;
+    t.reps = d.reps; t.weight = d.weight; t.rpe = d.rpe;
+    queueSave(t);
+  });
 }
 
 // Column E of the Log means reps for most exercises and seconds for holds

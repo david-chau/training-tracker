@@ -260,6 +260,12 @@ throws those away. A superset renders round by round (set 1 of each, then set
   so; an explicit pick changes this session's rows and, for a name the tab has
   never seen, the row it appends (`rememberExercise(name, timed, noWeight)`).
   An existing exercise keeps its flags — fix those on the tab, or rename.
+- **Structural writes are optimistic and debounced, not blocking.** Adding an
+  exercise, pairing a superset and changing a set count all render at once and
+  write behind it (`S.adding`, `S.working`, `S.resize`). Each round trip is
+  seconds on gym wifi, and a dimmed page with a status line reads as a freeze —
+  which is exactly what got reported. New rows carry `row: 0` until the server
+  answers; `absorbAdd` / `absorbResize` move anything typed onto the real rows.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the
