@@ -273,8 +273,16 @@
   @media (prefers-reduced-motion: reduce) {
     .spinner::before { animation-duration:2.4s; }
   }
-  .ro { display:inline-block; padding:6px 12px; border-radius:8px; background:#eef1ee;
-        color:var(--muted); font-size:13px; margin-bottom:12px; }
+  /* Read-only has to be obvious at a glance: a badge in the flow was easy to
+     scroll past and then wonder why nothing saved. A banner across the top
+     and a border around the whole page cannot be missed. */
+  body.ro { box-shadow:inset 0 0 0 3px var(--link); }
+  .robanner { position:fixed; top:0; left:0; right:0; z-index:30;
+              background:var(--link); color:#fff; font-size:13px;
+              font-weight:600; letter-spacing:0.02em; text-align:center;
+              padding:7px 12px; }
+  body.ro { padding-top:34px; }
+  body.ro .top { top:31px; }
   .val { display:flex; align-items:center; justify-content:center; height:46px;
          border:1px solid var(--line); border-radius:10px; background:#fff;
          font-size:18px; font-variant-numeric:tabular-nums; }
@@ -346,7 +354,8 @@ var BLANK = -1;
 var LB_PER_KG = 2.20462262;
 var UNIT_STORE = 'wl.unit.v1';
 
-function unitLabel() { return S.unit === 'kg' ? 'KG' : 'LB'; }
+// Lower case, the same as the picker in the heading reads.
+function unitLabel() { return S.unit === 'kg' ? 'kg' : 'lb'; }
 function toDisplay(lb) {
   return S.unit === 'kg' ? Math.round((Number(lb) / LB_PER_KG) * 10) / 10 : Number(lb);
 }
@@ -355,7 +364,7 @@ function toPounds(shown) {
 }
 // Reads as a weight wherever one is printed rather than typed.
 function weightText(lb) {
-  return String(toDisplay(lb)).replace(/\.0$/, '') + ' ' + unitLabel().toLowerCase();
+  return String(toDisplay(lb)).replace(/\.0$/, '') + ' ' + unitLabel();
 }
 
 S.unit = (function () {
@@ -385,8 +394,10 @@ function paintUnit() {
 
 if (!CAN_EDIT) {
   document.getElementById('tools').style.display = 'none';
-  document.getElementById('robanner').innerHTML =
-    '<span class="ro">Read only — you can look, not change</span>';
+  document.body.classList.add('ro');
+  document.getElementById('robanner').className = 'robanner';
+  document.getElementById('robanner').textContent =
+    'READ ONLY — you can look, not change';
 }
 
 google.script.run.withSuccessHandler(function (b) {
@@ -1491,7 +1502,14 @@ function supersetCard(page, groups) {
     var line = document.createElement('div');
     line.className = 'exhead';
     line.appendChild(title(name, el, line));
-    if (CAN_EDIT) line.appendChild(setCounter(name, sets));
+    if (CAN_EDIT) {
+      line.appendChild(setCounter(name, sets));
+    } else {
+      var count = document.createElement('span');
+      count.className = 'notestate';
+      count.textContent = sets.length + (sets.length === 1 ? ' set' : ' sets');
+      line.appendChild(count);
+    }
     block.appendChild(line);
 
     var setTag = metaLine(block, name, sets);
@@ -1534,7 +1552,26 @@ function supersetCard(page, groups) {
   refresh();
 
   page.names.forEach(function (name) {
-    var note = noteField(name, groups[name]);
+    var sets = groups[name];
+
+    // A viewer gets the note as text. It used to get the editor: typing into
+    // it looked like it worked, and the write was refused server-side.
+    if (!CAN_EDIT) {
+      var text = (sets[0] && sets[0].note) || '';
+      if (!text) return;
+      var block = document.createElement('div');
+      var who = document.createElement('div');
+      who.className = 'notelabel';
+      who.textContent = name;
+      var body = document.createElement('div');
+      body.className = 'rotext';
+      body.textContent = text;
+      block.appendChild(who); block.appendChild(body);
+      el.appendChild(block);
+      return;
+    }
+
+    var note = noteField(name, sets);
     note.classList.add('ssnote');
     var label = document.createElement('div');
     label.className = 'notelabel';

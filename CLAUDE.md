@@ -266,6 +266,11 @@ throws those away. A superset renders round by round (set 1 of each, then set
   seconds on gym wifi, and a dimmed page with a status line reads as a freeze —
   which is exactly what got reported. New rows carry `row: 0` until the server
   answers; `absorbAdd` / `absorbResize` move anything typed onto the real rows.
+- **Every card has to answer `CAN_EDIT` for itself.** `card()` returns a
+  read-only branch early; `supersetCard()` shipped without one and gave
+  viewers a working note box and no set counts. The write was refused
+  server-side, so typing looked like it worked and then did not. Any new card
+  type needs the same branch.
 - **`Index.html` is a template**, not static HTML. It uses `<?= canEdit ?>`
   and must be rendered with `createTemplateFromFile`.
 - **Setup is browser-only.** Import the `.xlsx`, paste the two files into the

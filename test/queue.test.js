@@ -866,6 +866,44 @@ test('changing date re-marks the day row even with nothing picked', () => {
   sandbox.document.querySelectorAll = () => [];
 });
 
+// ---------- read-only ----------
+
+test('a superset card offers a viewer nothing to type into', () => {
+  // Regression: the superset card ignored read-only entirely, so a viewer got
+  // a working note box and no set counts. The write was refused server-side,
+  // which meant typing looked like it worked and then did not.
+  const wasEdit = vm.runInContext('CAN_EDIT', sandbox);
+  vm.runInContext('CAN_EDIT = false;', sandbox);
+
+  const groups = {
+    'Dead Bug': grouped('Dead Bug', 'A', 2),
+    'Battle Ropes': grouped('Battle Ropes', 'A', 2)
+  };
+  groups['Dead Bug'].forEach(s => { s.note = 'slow tempo'; });
+
+  const el = G.supersetCard({ group: 'A', names: ['Dead Bug', 'Battle Ropes'] },
+                            groups);
+  // Walk the children by hand: the stub's firstChild getter makes nodes on
+  // demand, so JSON.stringify never terminates.
+  const dump = n => [n.className, n.textContent]
+    .concat((n.children || []).map(dump)).join(' ');
+  const flat = dump(el);
+  assert.ok(!/notesave|Save note/.test(flat), 'no note editor for a viewer');
+  assert.ok(/slow tempo/.test(flat), 'the note is still readable');
+  assert.ok(/2 sets/.test(flat), 'and the set count is stated');
+
+  vm.runInContext(`CAN_EDIT = ${wasEdit};`, sandbox);
+});
+
+test('the unit label reads the same as the picker', () => {
+  G.S.unit = 'kg';
+  assert.strictEqual(G.unitLabel(), 'kg');
+  assert.strictEqual(G.weightText(132.3), '60 kg');
+  G.S.unit = 'lb';
+  assert.strictEqual(G.unitLabel(), 'lb');
+  assert.strictEqual(G.weightText(100), '100 lb');
+});
+
 // ---------- weight units ----------
 //
 // The sheet is always pounds. Kilograms are a display choice, so the numbers

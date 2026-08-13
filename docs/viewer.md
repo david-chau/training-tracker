@@ -18,9 +18,13 @@ Tap the link. You will see the current session for whichever day you pick —
 Push, Pull or Legs — with every set, the weight, the reps and the RPE that
 were recorded.
 
-A grey badge at the top says **Read only — you can look, not change**. That is
-normal. This link is for looking things up; the numbers are entered through
-the admin link, which someone else holds.
+A blue banner across the top says **READ ONLY — you can look, not change**,
+and the whole page is outlined in the same blue. That is normal. This link is
+for looking things up; the numbers are entered through the admin link, which
+someone else holds.
+
+Nothing on the page can be typed into: values are plain boxes, notes are plain
+text, and there are no buttons that would change anything.
 
 ![A Push session in the read-only view: values shown as plain boxes with no
 buttons]({{ site.baseurl }}/img/viewer-session.png)
