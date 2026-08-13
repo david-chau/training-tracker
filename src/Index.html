@@ -106,6 +106,14 @@
      is what a stack of cards gave for free: where you are, what is left, and
      which exercises are paired. */
   .rail { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
+  /* On a phone the session reads as a list. Given the width it reads better
+     as a row — a tablet in landscape was showing five names down the left of
+     an otherwise empty screen. */
+  @media (min-width: 620px) {
+    .rail { flex-direction:row; flex-wrap:wrap; gap:6px; }
+    .rail .railitem { width:auto; flex:0 1 auto; }
+    .rail .raillabel { max-width:24ch; }
+  }
   .railitem { display:flex; align-items:center; gap:8px; width:100%;
               padding:8px 10px; border:1px solid transparent; border-radius:9px;
               background:transparent; font-size:14px; color:var(--muted);
