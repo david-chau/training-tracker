@@ -39,7 +39,9 @@ async function wipe(app) {
   // the app to be idle rather than racing its own guard.
   await awaitIdle(app);
   const del = app.locator('#wipe');
-  if (!await del.count()) return;
+  // Hidden when there is no session — which is the normal state after a test
+  // that removed everything it created.
+  if (!await del.isVisible().catch(() => false)) return;
   app.page().once('dialog', d => d.accept());
   await del.click();
   await awaitLoad(app);
@@ -51,8 +53,10 @@ test.describe('admin link', () => {
   test('offers the editing controls a viewer does not', async ({ page }) => {
     const app = await open(page, T.adminUrl);
 
-    await expect(app.locator('.ro')).toHaveCount(0);
-    await expect(app.locator('#tools')).toBeVisible();
+    await expect(app.locator('.robanner')).toHaveCount(0);
+    // Present for an admin; it only becomes visible once there is a session
+    // to delete, so this is about the control existing at all.
+    await expect(app.locator('#wipe')).toHaveCount(1);
     // Custom is entry-only, so it is offered here and not to a viewer.
     await expect(app.locator('.day', { hasText: SCRATCH_DAY })).toHaveCount(1);
   });

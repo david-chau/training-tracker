@@ -14,7 +14,10 @@ test.describe('viewer link', () => {
   test('loads and says it is read only', async ({ page }) => {
     const app = await open(page, T.viewerUrl);
 
-    await expect(app.locator('.ro')).toContainText('Read only');
+    // A banner across the top and a border around the page, rather than a
+    // badge in the flow that scrolled away.
+    await expect(app.locator('.robanner')).toContainText('READ ONLY');
+    await expect(app.locator('body.ro')).toHaveCount(1);
     await expect(app.locator('h1')).not.toBeEmpty();
     // Uppercased by CSS, so the DOM text is still sentence case.
     await expect(app.locator('.kicker')).toHaveText('Training log');
