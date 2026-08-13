@@ -750,12 +750,26 @@ function load(create, source) {
   // session buttons stay disabled rather than looking live and doing nothing.
   S.dates = [];
   markSessNav();
+
+  // Two loads can be in flight at once — clicking a day type starts one and
+  // changing the date starts another — and Apps Script does not answer in the
+  // order it was asked. The older response was landing last and rendering the
+  // wrong day over the right one, which looked like a session that would not
+  // open at all. Only the newest request may paint.
+  var seq = (S.loadSeq = (S.loadSeq || 0) + 1);
+
   google.script.run.withSuccessHandler(function (d) {
+    if (seq !== S.loadSeq) return;
     S.dates = d; markSessNav();
   }).listDates(S.day);
   google.script.run
-    .withSuccessHandler(function (res) { busy(false); render(res); })
+    .withSuccessHandler(function (res) {
+      if (seq !== S.loadSeq) return;      // a newer load owns the screen
+      busy(false);
+      render(res);
+    })
     .withFailureHandler(function (e) {
+      if (seq !== S.loadSeq) return;
       busy(false);
       // Server messages quote sheet values back, so this is text, not markup.
       var body = document.getElementById('body');

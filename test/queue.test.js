@@ -85,7 +85,10 @@ function runner(state) {
     setSetCount(key, day, date, exercise, count) {
       outbox.push(Object.assign({ call: 'setSetCount', exercise, count }, state));
     },
-    getBootstrap() {}, listDates() {}, loadSession() {},
+    loadSession(day, date) {
+      outbox.push(Object.assign({ call: 'loadSession', day, date }, state));
+    },
+    getBootstrap() {}, listDates() {},
     addExercise() {}, deleteSession() {}
   };
 }
@@ -574,16 +577,17 @@ test('a structural write that never answers releases the page', () => {
   G.S.working = 'Making a superset';
   assert.strictEqual(G.S.busy, true);
 
-  const realLoad = G.load;
-  let reloaded = false;
-  G.load = () => { reloaded = true; };
+  // Deliberately not stubbing load(): a spy left in place of it leaks into
+  // every synchronous test that follows, because the restore can only happen
+  // once this timer fires.
+  G.S.day = 'Push';
+  outbox.length = 0;
 
   const done = G.busyGuard('Making a superset', 0.05);
   return new Promise(resolve => setTimeout(() => {
-    assert.strictEqual(G.S.busy, false, 'the page was released');
     assert.strictEqual(G.S.working, null, 'the in-flight flag was cleared');
-    assert.ok(reloaded, 'and it re-read the session rather than guessing');
-    G.load = realLoad;
+    assert.ok(outbox.some(o => o.call === 'loadSession'),
+      'and it re-read the session rather than guessing');
     done();
     resolve();
   }, 120));
@@ -864,6 +868,37 @@ test('changing date re-marks the day row even with nothing picked', () => {
   assert.ok(!buttons[0].classes.has, 'not Legs on the 5th');
   assert.ok(buttons[1].classes.has, 'Custom on the 5th');
   sandbox.document.querySelectorAll = () => [];
+});
+
+// ---------- two loads at once ----------
+
+test('a stale load cannot paint over a newer one', () => {
+  // Clicking a day type starts one load and changing the date starts another.
+  // Apps Script does not answer in the order it was asked, and the older
+  // response was landing last — rendering a day with no session over the one
+  // that had just been opened.
+  G.S.day = 'Legs';
+  G.S.adding = null;
+  G.S.working = null;
+
+  G.S.date = '2026-08-13';
+  G.load(false);                          // a date with nothing on it
+  G.S.date = '2026-08-11';
+  G.load(false);                          // the session we want
+
+  const loads = outbox.filter(o => o.call === 'loadSession');
+  assert.strictEqual(loads.length, 2, 'both loads went out');
+
+  const session = {
+    exists: true, records: {}, lastNotes: {}, lastDates: {}, priorDate: null,
+    sets: [sample('Bench')]
+  };
+
+  loads[1].ok(session);                   // the newer answer arrives first
+  assert.strictEqual(G.S.lastRes, session, 'the session is on screen');
+
+  loads[0].ok({ exists: false, sets: [] });   // the older one turns up late
+  assert.strictEqual(G.S.lastRes, session, 'and stays there');
 });
 
 // ---------- what the status bar claims ----------
