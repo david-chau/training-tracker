@@ -25,7 +25,7 @@ Top to bottom:
 |---|---|
 | **Training — David** | The spreadsheet's name. Tap it to open the sheet itself. |
 | **‹ date ›** | One calendar day at a time. |
-| **‹ Previous session** / **Next session ›** | The nearest date that has a session of this day type. Greyed out when there is none. |
+| **‹ Previous session** / **Next session ›** | The nearest date with a session of this day type — or, with no day type picked, the nearest date with **any** session, which it then opens. Greyed out when there is none. |
 | **Push / Pull / Legs / Custom** | Day type. A green dot means that day already has a session on the date shown. Tap the one you are on to drop back to the day list. |
 | **lb / kg** | Which unit weights are shown and typed in. See [pounds or kilograms](#pounds-or-kilograms). |
 | **Best 8 × 15 lb · est 1RM 19** | [Records](records.html) for that exercise, with a **★ personal best today** tag when a set beats them. |
@@ -64,7 +64,7 @@ mid-session would take any not-yet-saved changes with it.
 | Control | Moves |
 |---|---|
 | **‹ ›** beside the date | One calendar day, logged or not |
-| **‹ Previous session** / **Next session ›** | To the nearest date with a session of this day type |
+| **‹ Previous session** / **Next session ›** | To the nearest date with a session of this day type. With no day picked, to the last session of any type — the quickest way back to what you did last. |
 
 Then tap a day type. **Push / Pull / Legs** are just what the starter template
 contains — see [day types are yours](#day-types-are-yours). **Custom** is

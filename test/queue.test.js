@@ -801,6 +801,71 @@ test('the session map follows what is created and deleted', () => {
   assert.deepStrictEqual(plain(G.S.sessions['2026-08-11']), []);
 });
 
+test('session navigation works with no day type picked', () => {
+  G.S.sessions = {
+    '2026-07-31': ['Legs'], '2026-08-03': ['Push'], '2026-08-05': ['Custom']
+  };
+  G.S.day = null;
+  G.S.date = '2026-08-04';
+  G.S.adding = null;
+  G.S.working = null;
+
+  // "Previous session" is the newest date older than the one shown, whatever
+  // day type it happens to be — the last thing you did, without guessing.
+  G.hop(1);
+  assert.strictEqual(G.S.date, '2026-08-03');
+  assert.strictEqual(G.S.day, 'Push', 'and it selects the day it landed on');
+
+  G.S.day = null;
+  G.S.date = '2026-08-04';
+  G.hop(-1);
+  assert.strictEqual(G.S.date, '2026-08-05');
+  assert.strictEqual(G.S.day, 'Custom');
+});
+
+test('the session buttons enable without a day type', () => {
+  G.S.sessions = { '2026-07-31': ['Legs'], '2026-08-05': ['Custom'] };
+  G.S.day = null;
+
+  G.S.date = '2026-08-04';
+  G.markSessNav();
+  assert.strictEqual(sandbox.document.getElementById('prevsess').disabled, false);
+  assert.strictEqual(sandbox.document.getElementById('nextsess').disabled, false);
+
+  G.S.date = '2026-07-01';                 // before everything
+  G.markSessNav();
+  assert.strictEqual(sandbox.document.getElementById('prevsess').disabled, true,
+    'nothing older to go back to');
+  assert.strictEqual(sandbox.document.getElementById('nextsess').disabled, false);
+});
+
+test('changing date re-marks the day row even with nothing picked', () => {
+  // load() returns early without a day type, so the dots and the session
+  // buttons described the date before the change.
+  const buttons = ['Legs', 'Custom'].map(name => {
+    const b = sandbox.document.createElement();
+    b.setAttribute = (k, v) => { b._attrs = Object.assign(b._attrs || {}, { [k]: v }); };
+    b.getAttribute = k => (b._attrs || {})[k];
+    b.setAttribute('data-day', name);
+    return b;
+  });
+  sandbox.document.querySelectorAll = () => buttons;
+
+  G.S.sessions = { '2026-08-05': ['Custom'], '2026-08-11': ['Legs'] };
+  G.S.day = null;
+  G.S.date = '2026-08-11';
+  G.markDay();
+  assert.ok(buttons[0].classes.has, 'Legs on the 11th');
+
+  const box = sandbox.document.getElementById('date');
+  box.value = '2026-08-05';
+  G.document.getElementById('date').onchange.call(box);
+
+  assert.ok(!buttons[0].classes.has, 'not Legs on the 5th');
+  assert.ok(buttons[1].classes.has, 'Custom on the 5th');
+  sandbox.document.querySelectorAll = () => [];
+});
+
 // ---------- weight units ----------
 //
 // The sheet is always pounds. Kilograms are a display choice, so the numbers

@@ -463,8 +463,17 @@ document.getElementById('date').onchange = function () {
   var picked = validDate(this.value) ? this.value : (S.today || S.date);
   this.value = picked;
   S.date = picked;
-  load(false);
+  dateChanged();
 };
+
+// Everything that depends on which date is shown, whether or not a day type
+// is picked. load() returns early without one, which left the dots and the
+// session buttons describing the previous date.
+function dateChanged() {
+  markDay();
+  markSessNav();
+  load(false);
+}
 
 function validDate(v) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
@@ -530,14 +539,21 @@ function shiftDay(n) {
   d.setDate(d.getDate() + n);
   S.date = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
   document.getElementById('date').value = S.date;
-  load(false);
+  dateChanged();
 }
 
 function two(n) { return (n < 10 ? '0' : '') + n; }
 
 // Jump to a date that has a session of this day type. S.dates is newest
 // first, so dir = 1 goes back in time.
+// Session navigation, with or without a day type.
+//
+// With one picked it walks that day type's own sessions, which is the
+// week-to-week comparison. With nothing picked it walks *every* session in
+// the log and selects whichever day type it lands on — "show me the last
+// thing I did", which previously needed you to guess the day type first.
 function hop(dir) {
+  if (!S.day) return hopAny(dir);
   if (!S.dates.length) return;
   var i = S.dates.indexOf(S.date);
   var j = (i === -1 ? nearest(dir) : i + dir);
@@ -550,6 +566,31 @@ function hop(dir) {
 // The current date has no session, so step to the closest one in that
 // direction. S.dates is newest first, so going back is the first older entry
 // and going forward is the *last* newer one.
+// Every date that has any session, newest first — the same order as S.dates,
+// built from what getBootstrap already shipped.
+function allDates() {
+  return Object.keys(S.sessions || {})
+    .filter(function (d) { return (S.sessions[d] || []).length; })
+    .sort()
+    .reverse();
+}
+
+function hopAny(dir) {
+  var dates = allDates();
+  var to = null;
+  // dir > 0 is "previous session": the newest date older than the one shown.
+  dates.forEach(function (d) {
+    if (dir > 0 ? (d < S.date && !to) : (d > S.date)) to = d;
+  });
+  if (!to) return;
+
+  S.date = to;
+  document.getElementById('date').value = to;
+  var day = (S.sessions[to] || [])[0];
+  if (day) { S.day = day; markDay(); load(false); return; }
+  markDay();
+}
+
 function nearest(dir) {
   var found = -1;
   for (var i = 0; i < S.dates.length; i++) {
@@ -564,7 +605,11 @@ function nearest(dir) {
 
 function markSessNav() {
   var back = false, fwd = false;
-  if (S.dates.length) {
+  if (!S.day) {
+    var dates = allDates();
+    back = dates.some(function (d) { return d < S.date; });
+    fwd = dates.some(function (d) { return d > S.date; });
+  } else if (S.dates.length) {
     var i = S.dates.indexOf(S.date);
     back = i === -1 ? nearest(1) !== -1 : i + 1 < S.dates.length;
     fwd = i === -1 ? nearest(-1) !== -1 : i - 1 >= 0;
