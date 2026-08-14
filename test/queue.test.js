@@ -960,6 +960,11 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
   assert.match(html, /66,948/, 'volume is grouped in thousands');
   assert.match(html, /class="wkbar now"/, 'the newest week is picked out');
+  // Per cent, so the chart survives being shrunk for print. Pixels overflowed
+  // the box upwards and landed on the card's heading.
+  assert.match(html, /style="height:\d+%"/, 'bar heights are relative');
+  assert.doesNotMatch(html, /style="height:\d+px"/, 'no bar is sized in pixels');
+  assert.match(html, /class="daygrid"/, 'day cards share a wrapper to lay out');
   // `.bar` is the fixed status bar: a chart bar named that inherits
   // position:fixed, takes the page width and is hidden by the print rule.
   assert.doesNotMatch(html, /class="bars?["' ]/, 'no chart element claims .bar');

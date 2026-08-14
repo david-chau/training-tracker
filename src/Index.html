@@ -299,25 +299,31 @@
     .repmodal { position:static; inset:auto; background:none; padding:0;
                 overflow:visible; }
     .repsheet { max-width:none; margin:0; padding:0; border-radius:0; }
-    .rep, .card, .daycard, .dayhead, .bar, .chip, .tile, .exrow {
+    .rep, .card, .daycard, .dayhead, .wkbar, .chip, .tile, .exrow {
       -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
-    /* Tighter, so a period like this one lands on a single page. */
-    .rep h2 { font-size:16px; }
+    /* Sized to fill one page rather than to survive it: two columns of day
+       cards bought back the room the single column was spilling. */
+    .rep h2 { font-size:18px; }
     .rep .sub { font-size:11px; margin-bottom:8px; }
     .card, .daycard { break-inside:avoid; margin-bottom:8px; }
-    .card { padding:10px; }
-    .card > h3 { font-size:10px; margin-bottom:6px; }
-    .tile { padding:6px 4px; }
-    .tile b { font-size:17px; }
-    .tile span { font-size:9px; }
-    .wkbars { height:76px; }
-    .dayhead { padding:6px 10px; }
-    .dayhead b { font-size:13px; }
+    .card { padding:11px; }
+    .card > h3 { font-size:11px; margin-bottom:7px; }
+    .tile { padding:8px 5px; }
+    .tile b { font-size:20px; }
+    .tile span { font-size:10px; }
+    .wkbars { height:92px; }
+    .dayhead { padding:7px 11px; }
+    .dayhead b { font-size:14px; }
     .dayhead .totals { font-size:10px; }
-    .exrow { padding:4px 10px; font-size:11px; }
-    .exrow .mv { font-size:10px; }
-    .chip { font-size:10px; padding:1px 6px; }
+    .exrow { padding:5px 11px; font-size:12px; }
+    .exrow .mv { font-size:11px; }
+    .chip { font-size:11px; padding:1px 6px; }
+    /* Paper is wider than a phone. One column of day cards spilled a nearly
+       empty second page; two columns put the same content back on one. */
+    .daygrid { display:grid; grid-template-columns:1fr 1fr; gap:8px;
+               align-items:start; }
+    .daygrid .daycard { margin-bottom:0; }
   }
   .report h2 { font-size:16px; margin:0 0 8px; }
   .report .row { display:flex; gap:8px; margin-top:10px; }
@@ -797,9 +803,11 @@ function reportView(res) {
   html += '<div class="card"><h3>' + plural(res.sessions, 'session') +
           '</h3><div class="wkbars">';
   weeks.forEach(function (w, i) {
-    var h = Math.max(3, Math.round(w.volume / peak * 110));
+    // Per cent, not pixels: print shrinks the chart, and absolute heights
+    // overflowed it upwards and sat on top of the card's own heading.
+    var h = Math.max(3, Math.round(w.volume / peak * 100));
     html += '<div class="wkbar' + (i === weeks.length - 1 ? ' now' : '') +
-            '" style="height:' + h + 'px" title="' + esc(w.week) + ': ' +
+            '" style="height:' + h + '%" title="' + esc(w.week) + ': ' +
             commas(w.volume) + ' lb"></div>';
   });
   html += '</div><div class="wklabels">';
@@ -827,6 +835,7 @@ function reportView(res) {
     byDay[ex.day].push(ex);
   });
 
+  html += '<div class="daygrid">';
   order.forEach(function (day) {
     var list = byDay[day];
     var sets = 0, volume = 0, sessions = 0;
@@ -849,6 +858,7 @@ function reportView(res) {
     });
     html += '</div>';
   });
+  html += '</div>';
 
   el.innerHTML = html;      // sheet-derived values all went through esc()
   return el;
