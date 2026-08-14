@@ -701,40 +701,32 @@ function buildReport(k, from) {
               'covers the whole log. ★ marks a best ever, set in this period.',
               '', '', '', '']);
   }
-  out.push(['', '', '', '', '']);
+  out.push(['']);
 
+  // 1. The summary.
   const weekAt = out.length + 1;
-  out.push(['Week beginning', 'Sessions', 'Sets', 'Volume (lb)', '']);
+  out.push(['Week beginning', 'Sessions', 'Sets', 'Volume (lb)', 'Trend']);
+  const weekTrends = [];
   data.weeks.forEach(function (w) {
-    out.push([w.week, w.sessions, w.sets, w.volume, '']);
+    if (w.change !== null) weekTrends.push([out.length + 1, w.change]);
+    out.push([w.week, w.sessions, w.sets, w.volume, trend(w.change)]);
   });
   const weekRows = data.weeks.length;
-  out.push(['', '', '', '', '']);
+  out.push(['']);
 
-  // One column per exercise, one row per date: the shape a line chart wants.
-  const top = data.exercises.filter(function (e) {
-    return !e.timed && e.sessions.some(function (d) { return d.est1rm > 0; });
-  }).slice(0, 5);
-  const dates = dedupe([].concat.apply([], top.map(function (e) {
-    return e.sessions.map(function (d) { return d.date; });
-  }))).sort();
+  // 2. The charts, which float over the grid rather than occupying it — so
+  //    the rows they cover are left blank on purpose.
+  const CHART_ROWS = 15;
+  const chart1At = out.length + 1;
+  for (var i = 0; i < CHART_ROWS; i++) out.push(['']);
+  const chart2At = out.length + 1;
+  for (var j = 0; j < CHART_ROWS; j++) out.push(['']);
+  out.push(['']);
 
-  const chartAt = out.length + 1;
-  out.push(['Estimated 1RM'].concat(top.map(function (e) { return e.name; })));
-  dates.forEach(function (date) {
-    out.push([date].concat(top.map(function (e) {
-      const hit = e.sessions.filter(function (d) { return d.date === date; })[0];
-      return hit && hit.est1rm ? hit.est1rm : '';
-    })));
-  });
-  const chartRows = dates.length;
-  out.push(['', '', '', '', '']);
-
-  // One block per day type, so a Push week reads as a Push week. Lowest and
-  // highest first: they are the two numbers that answer "am I doing better".
+  // 3. The detail, per day type.
   const headings = [];
   const countCells = [];
-  const trendCells = [];          // [row, direction] for colouring afterwards
+  const trendCells = [];
   let currentDay = null;
   data.exercises.forEach(function (ex) {
     if (ex.day !== currentDay) {
@@ -764,8 +756,26 @@ function buildReport(k, from) {
         : []));
   });
 
-  // Five exercises in the 1RM block makes a six-column row, so the range is as
-  // wide as the widest row rather than as wide as the tables.
+  // 4. What the 1RM chart is drawn from. Last, because it is data for a
+  //    picture the reader has already seen.
+  const top = data.exercises.filter(function (e) {
+    return !e.timed && e.sessions.some(function (d) { return d.est1rm > 0; });
+  }).slice(0, 5);
+  const dates = dedupe([].concat.apply([], top.map(function (e) {
+    return e.sessions.map(function (d) { return d.date; });
+  }))).sort();
+
+  out.push(['']);
+  const chartAt = out.length + 1;
+  out.push(['Estimated 1RM'].concat(top.map(function (e) { return e.name; })));
+  dates.forEach(function (date) {
+    out.push([date].concat(top.map(function (e) {
+      const hit = e.sessions.filter(function (d) { return d.date === date; })[0];
+      return hit && hit.est1rm ? hit.est1rm : '';
+    })));
+  });
+  const chartRows = dates.length;
+
   const width = out.reduce(function (w, r) { return Math.max(w, r.length); }, 5);
   out.forEach(function (r) { while (r.length < width) r.push(''); });
   sheet.getRange(1, 1, out.length, width).setValues(out);
@@ -783,10 +793,12 @@ function buildReport(k, from) {
 
   // Up is green, down is red, flat is neither. The arrow already says which
   // way; colour is what makes a page of them readable without reading.
-  trendCells.forEach(function (hit) {
-    sheet.getRange(hit[0], 6)
-      .setFontColor(hit[1] > 0 ? '#1d7a4f' : hit[1] < 0 ? '#a33' : '#6b6b66');
-  });
+  const paint = function (row, col, pct) {
+    sheet.getRange(row, col)
+      .setFontColor(pct > 0 ? '#1d7a4f' : pct < 0 ? '#a33' : '#6b6b66');
+  };
+  trendCells.forEach(function (hit) { paint(hit[0], 6, hit[1]); });
+  weekTrends.forEach(function (hit) { paint(hit[0], 5, hit[1]); });
 
   sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
   [weekAt, chartAt].concat(headings).forEach(function (row) {
@@ -800,7 +812,6 @@ function buildReport(k, from) {
   // the columns the report grew, and were squeezed into the margin at about a
   // quarter of the width they needed.
   const CHART_W = 940, CHART_H = 300;
-  let chartRow = out.length + 2;
 
   if (weekRows) {
     sheet.insertChart(sheet.newChart().asColumnChart()
@@ -811,9 +822,8 @@ function buildReport(k, from) {
       .setOption('legend', { position: 'none' })
       .setOption('width', CHART_W)
       .setOption('height', CHART_H)
-      .setPosition(chartRow, 1, 0, 0)
+      .setPosition(chart1At, 1, 0, 0)
       .build());
-    chartRow += 16;                 // roughly the height of one chart in rows
   }
   if (chartRows && top.length) {
     sheet.insertChart(sheet.newChart().asLineChart()
@@ -823,7 +833,7 @@ function buildReport(k, from) {
       .setOption('legend', { position: 'bottom' })
       .setOption('width', CHART_W)
       .setOption('height', CHART_H)
-      .setPosition(chartRow, 1, 0, 0)
+      .setPosition(chart2At, 1, 0, 0)
       .build());
   }
 
@@ -935,6 +945,14 @@ function reportData(rows, timed, from) {
     const w = byWeek[k];
     return { week: w.week, sessions: Object.keys(w.days).length, sets: w.sets,
              volume: Math.round(w.volume) };
+  });
+  // Week on week, so the summary answers "was that a bigger week" without
+  // the reader doing arithmetic across four rows.
+  weeks.forEach(function (w, i) {
+    const prev = weeks[i - 1];
+    w.change = (prev && prev.volume > 0)
+      ? Math.round((w.volume / prev.volume - 1) * 1000) / 10
+      : null;
   });
 
   const exercises = Object.keys(byExercise).map(function (k) {

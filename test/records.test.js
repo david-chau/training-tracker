@@ -461,6 +461,19 @@ test('each exercise gets its sessions in order, with its top set', () => {
   assert.strictEqual(bench.sessions[1].volume, 5 * 110 + 8 * 105);
 });
 
+test('the weekly summary carries its own week-on-week trend', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Bench', 1, 8, 100),   // 800 in week one
+    row('2026-07-27', 'Push', 'Bench', 1, 8, 150),   // 1200 in week two
+    row('2026-08-03', 'Push', 'Bench', 1, 8, 75)     // 600 in week three
+  ];
+  const weeks = reportData(rows, {}, '').weeks;
+
+  assert.strictEqual(weeks[0].change, null, 'nothing before the first week');
+  assert.strictEqual(weeks[1].change, 50, '800 to 1200');
+  assert.strictEqual(weeks[2].change, -50, '1200 to 600');
+});
+
 test('each exercise is summarised: first, latest, best and how far it moved', () => {
   const rows = [
     row('2026-07-20', 'Push', 'Bench', 1, 8, 95),
