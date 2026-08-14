@@ -249,23 +249,24 @@
   .chart svg { position:absolute; inset:0; width:100%; height:100%; }
   .chart .ln { fill:none; stroke:var(--ok); stroke-width:2;
                stroke-linejoin:round; stroke-linecap:round; }
-  /* Sessions: dashed and quieter, because volume is the headline and this is
-     the context for it. */
-  .chart .ln2 { fill:none; stroke:var(--muted); stroke-width:1.5;
-                stroke-dasharray:4 3; stroke-linejoin:round; }
+  /* Sessions in the palette's blue, not grey: grey read as a gridline rather
+     than as data. Still thinner than volume, which is the headline. Dashed as
+     well as coloured, so the two are told apart in a greyscale print. */
+  .chart .ln2 { fill:none; stroke:var(--link); stroke-width:1.6;
+                stroke-dasharray:5 3; stroke-linejoin:round; }
   .pt { position:absolute; transform:translate(-50%, 50%); }
   .pt i { display:block; width:9px; height:9px; border-radius:50%;
           background:#fff; border:2px solid var(--ok); }
   .pt.now i { background:var(--ok); box-shadow:0 0 0 3px rgba(29,122,79,0.15); }
   /* freq, not sess: `.sess` is the previous/next session button, and a point
      wearing that name picked up its border, padding and white background. */
-  .pt.freq i { width:6px; height:6px; background:var(--muted);
-               border-color:var(--muted); }
-  .pt.freq .pv { bottom:11px; font-size:9px; }
+  .pt.freq i { width:7px; height:7px; background:var(--link);
+               border-color:var(--link); }
+  .pt.freq .pv { bottom:11px; font-size:10px; color:var(--link); }
   .ky { display:inline-block; width:14px; height:0; vertical-align:3px;
         margin:0 4px 0 7px; }
   .ky.vol { border-top:2px solid var(--ok); }
-  .ky.ses { border-top:2px dashed var(--muted); }
+  .ky.ses { border-top:2px dashed var(--link); }
   .pv { position:absolute; bottom:15px; left:50%; transform:translateX(-50%);
         font-size:10px; color:var(--muted); white-space:nowrap;
         font-variant-numeric:tabular-nums; }
