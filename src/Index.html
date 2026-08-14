@@ -9,10 +9,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root { --line:#e3e3e0; --muted:#6b6b66; --ink:#1c1c1a; --ok:#1d7a4f; --warn:#a33;
-          --link:#1b5aa0; }
+          --link:#1b5aa0; --bg:#faf9f7; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { font-family:system-ui,-apple-system,sans-serif; margin:0; padding:16px 16px 64px;
-         color:var(--ink); background:#faf9f7; font-size:17px; }
+         color:var(--ink); background:var(--bg); font-size:17px; }
   /* Sticky so the log you are in stays visible however far you scroll —
      with one sheet per person, that is the thing worth never losing. The
      negative margins bleed it past the body padding so nothing shows
@@ -243,14 +243,16 @@
             font-variant-numeric:tabular-nums; }
   .tile span { font-size:11px; color:var(--muted); text-transform:uppercase;
                letter-spacing:0.05em; }
-  .bars { display:flex; align-items:flex-end; gap:6px; height:120px;
-          margin-bottom:6px; }
-  .bar { flex:1; background:#d8d8d4; border:1px solid #c3c3bf;
-         border-radius:5px 5px 0 0; min-height:3px; }
-  .bar.now { background:var(--ink); border-color:var(--ink); }
-  .barlabels { display:flex; gap:6px; }
-  .barlabels span { flex:1; text-align:center; font-size:10px;
-                    color:var(--muted); }
+  /* wk-, not bar-: `.bar` is the fixed status bar at the foot of the page, and
+     a chart bar sharing the name inherited `position:fixed` and its colour. */
+  .wkbars { display:flex; align-items:flex-end; gap:6px; height:120px;
+            margin-bottom:6px; }
+  .wkbar { flex:1; background:#d8d8d4; border:1px solid #c3c3bf;
+           border-radius:5px 5px 0 0; min-height:3px; }
+  .wkbar.now { background:var(--ink); border-color:var(--ink); }
+  .wklabels { display:flex; gap:6px; }
+  .wklabels span { flex:1; text-align:center; font-size:10px;
+                   color:var(--muted); }
 
   /* Day-type cards, each with its own icon and totals. */
   .daycard { border:1px solid var(--line); border-radius:14px; margin-bottom:12px;
@@ -309,7 +311,7 @@
     .tile { padding:6px 4px; }
     .tile b { font-size:17px; }
     .tile span { font-size:9px; }
-    .bars { height:76px; }
+    .wkbars { height:76px; }
     .dayhead { padding:6px 10px; }
     .dayhead b { font-size:13px; }
     .dayhead .totals { font-size:10px; }
@@ -793,14 +795,14 @@ function reportView(res) {
     (res.period ? '' : ' · everything logged') + '</div>';
 
   html += '<div class="card"><h3>' + plural(res.sessions, 'session') +
-          '</h3><div class="bars">';
+          '</h3><div class="wkbars">';
   weeks.forEach(function (w, i) {
     var h = Math.max(3, Math.round(w.volume / peak * 110));
-    html += '<div class="bar' + (i === weeks.length - 1 ? ' now' : '') +
+    html += '<div class="wkbar' + (i === weeks.length - 1 ? ' now' : '') +
             '" style="height:' + h + 'px" title="' + esc(w.week) + ': ' +
             commas(w.volume) + ' lb"></div>';
   });
-  html += '</div><div class="barlabels">';
+  html += '</div><div class="wklabels">';
   weeks.forEach(function (w) {
     html += '<span>' + esc(w.week.slice(5)) + '</span>';
   });

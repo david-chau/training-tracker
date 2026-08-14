@@ -959,7 +959,10 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /chip up/, 'a rise is a green chip');
   assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
   assert.match(html, /66,948/, 'volume is grouped in thousands');
-  assert.match(html, /class="bar now"|bar now/, 'the newest week is picked out');
+  assert.match(html, /class="wkbar now"/, 'the newest week is picked out');
+  // `.bar` is the fixed status bar: a chart bar named that inherits
+  // position:fixed, takes the page width and is hidden by the print rule.
+  assert.doesNotMatch(html, /class="bars?["' ]/, 'no chart element claims .bar');
 });
 
 test('a sheet name cannot inject markup into the report', () => {
