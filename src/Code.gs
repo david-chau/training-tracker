@@ -695,7 +695,7 @@ function buildReport(k, from) {
   out.push(['Training report — ' + logName(), '', '', '', '']);
   out.push([data.from + ' to ' + data.to, '', '', '', '']);
   out.push([data.sessions + ' sessions', data.sets + ' sets',
-            data.volume + ' lb volume', '', '']);
+            data.volume + ' lb volume · weights in lb', '', '']);
   if (data.period) {
     out.push(['Lowest, highest, latest and trend cover this period; all-time ' +
               'covers the whole log. ★ marks a best ever, set in this period.',
@@ -704,8 +704,10 @@ function buildReport(k, from) {
   out.push(['']);
 
   // 1. The summary.
+  const summaryAt = out.length + 1;
+  out.push(['SUMMARY — how the weeks went', '', '', '', '']);
   const weekAt = out.length + 1;
-  out.push(['Week beginning', 'Sessions', 'Sets', 'Volume (lb)', 'Trend']);
+  out.push(['Week', 'Sess', 'Sets', 'Volume', 'Trend']);
   const weekTrends = [];
   data.weeks.forEach(function (w) {
     if (w.change !== null) weekTrends.push([out.length + 1, w.change]);
@@ -716,26 +718,44 @@ function buildReport(k, from) {
 
   // 2. The charts, which float over the grid rather than occupying it — so
   //    the rows they cover are left blank on purpose.
-  const CHART_ROWS = 15;
+  const CHART_ROWS = 11;
   const chart1At = out.length + 1;
   for (var i = 0; i < CHART_ROWS; i++) out.push(['']);
   const chart2At = out.length + 1;
   for (var j = 0; j < CHART_ROWS; j++) out.push(['']);
   out.push(['']);
 
-  // 3. The detail, per day type.
+  // 3. The detail, per day type, each group opening with its own totals.
+  const byDay = {};
+  data.exercises.forEach(function (ex) {
+    const g = byDay[ex.day] || (byDay[ex.day] = { sets: 0, volume: 0, dates: {} });
+    g.sets += ex.total.sets;
+    g.volume += ex.total.volume;
+    ex.sessions.forEach(function (d) { g.dates[d.date] = true; });
+  });
+
+  out.push(['BY EXERCISE — best and worst of the period, against all time', '',
+            '', '', '']);
+  const detailAt = out.length;
+  const dayLabels = [];
   const headings = [];
   const countCells = [];
   const trendCells = [];
+  const starRows = [];
   let currentDay = null;
   data.exercises.forEach(function (ex) {
     if (ex.day !== currentDay) {
       currentDay = ex.day;
       if (out.length && out[out.length - 1][0] !== '') out.push(['']);
+      const g = byDay[ex.day];
+      dayLabels.push(out.length + 1);
+      out.push([ex.day.toUpperCase() + '  ·  ' +
+                Object.keys(g.dates).length + ' sessions  ·  ' +
+                g.sets + ' sets  ·  ' + thousands(g.volume) + ' lb',
+                '', '', '', '']);
       headings.push(out.length + 1);
-      out.push([ex.day.toUpperCase(), 'Sessions', 'Lowest', 'Highest', 'Latest',
-                'Trend']
-        .concat(data.period ? ['All-time low', 'All-time high'] : []));
+      out.push(['Exercise', 'Sess', 'Lowest', 'Highest', 'Latest', 'Trend']
+        .concat(data.period ? ['All low', 'All high'] : []));
     }
     countCells.push(out.length + 1);
     if (ex.total.change !== null) {
@@ -748,6 +768,7 @@ function buildReport(k, from) {
     const best = ex.lifetime && ex.lifetime.high &&
                  ex.lifetime.sessions > t.sessions &&
                  topSet(ex, t.high) === topSet(ex, ex.lifetime.high);
+    if (best) starRows.push(out.length + 1);
     out.push([(best ? '★ ' : '') + ex.name,
               t.sessions, topSet(ex, t.low), topSet(ex, t.high),
               topSet(ex, t.last), trend(t.change)]
@@ -800,18 +821,68 @@ function buildReport(k, from) {
   trendCells.forEach(function (hit) { paint(hit[0], 6, hit[1]); });
   weekTrends.forEach(function (hit) { paint(hit[0], 5, hit[1]); });
 
+  // Section labels and a box around each block: on a page this dense, a
+  // border is what tells the eye where one table stops and the next begins.
+  const LINE = SpreadsheetApp.BorderStyle.SOLID;
+  const EDGE = '#c9c7c1';
+
+  [summaryAt, detailAt].forEach(function (row) {
+    sheet.getRange(row, 1, 1, width)
+      .setFontWeight('bold').setFontSize(11).setFontColor('#6b6b66');
+  });
+
+  sheet.getRange(summaryAt + 1, 1, weekRows + 1, width)
+    .setBorder(true, true, true, true, false, false, EDGE, LINE);
+
+  // A dark bar per day type: the eye finds PUSH before it reads anything.
+  dayLabels.forEach(function (row) {
+    sheet.getRange(row, 1, 1, width)
+      .setBackground('#1c1c1a').setFontColor('#ffffff')
+      .setFontWeight('bold').setFontSize(11);
+  });
+
+  // Column labels sit quieter than the bar above them.
+  headings.concat([weekAt]).forEach(function (row) {
+    sheet.getRange(row, 1, 1, width)
+      .setBackground('#f2f2f0').setFontWeight('bold').setFontColor('#6b6b66');
+  });
+
+  // Each day type is one box, from its bar to the row before the next.
+  dayLabels.forEach(function (row, i) {
+    const next = dayLabels[i + 1];
+    const last = (next ? next - 2 : chartAt - 2);
+    if (last >= row) {
+      sheet.getRange(row, 1, last - row + 1, width)
+        .setBorder(true, true, true, true, false, false, EDGE, LINE);
+    }
+  });
+
+  // A best ever is worth seeing from across the room.
+  starRows.forEach(function (row) {
+    sheet.getRange(row, 1, 1, width).setBackground('#f3f9f5');
+  });
+
   sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
   [weekAt, chartAt].concat(headings).forEach(function (row) {
     if (row > 0) sheet.getRange(row, 1, 1, width).setFontWeight('bold');
   });
   sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, width);
-  sheet.setColumnWidth(1, 230);     // room for the longest exercise name
+  sheet.setColumnWidth(1, 185);                 // the longest exercise name
+  for (var c = 2; c <= width; c++) {
+    sheet.setColumnWidth(c, c === 2 ? 48 : 78); // counts are narrow, sets are not
+  }
+
+  // Bodyweight top sets are bare numbers, so Sheets right-aligns them while
+  // "8 × 105" beside them is text and sits left. One alignment for the column.
+  if (out.length > 5) {
+    sheet.getRange(1, 3, out.length, Math.max(1, width - 2))
+      .setHorizontalAlignment('left');
+  }
 
   // Below the tables, full width. Anchored beside them they landed on top of
   // the columns the report grew, and were squeezed into the margin at about a
   // quarter of the width they needed.
-  const CHART_W = 940, CHART_H = 300;
+  const CHART_W = 700, CHART_H = 225;
 
   if (weekRows) {
     sheet.insertChart(sheet.newChart().asColumnChart()
@@ -876,11 +947,17 @@ function trend(pct) {
   return '▬ 0%';
 }
 
+// 28400 reads as 28,400. Apps Script has toLocaleString, but a report should
+// not depend on which locale the script happens to run under.
+function thousands(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 // "8 x 105 lb", "45s", "20" — whichever the exercise actually is.
 function topSet(ex, day) {
   if (!day) return '';
   return day.topReps + (ex.timed ? 's' : '') +
-         (day.topWeight ? ' x ' + day.topWeight + ' lb' : '');
+         (day.topWeight ? ' × ' + day.topWeight : '');
 }
 
 
