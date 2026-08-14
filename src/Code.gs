@@ -13,6 +13,7 @@ const CFG = {
   templateSheet: 'Templates',
   settingsSheet: 'Settings',
   recordsSheet: 'Records',
+  reportSheet: 'Report',
   weightStep: 5,
   repStep: 2,
   timeStep: 5,        // seconds, for exercises measured in time
@@ -182,6 +183,7 @@ function onOpen() {
     .addItem('Show shareable links', 'showLinks')
     .addItem('Set web app link…', 'setWebAppLink')
     .addItem('Rebuild records', 'showRecords')
+    .addItem('Training report…', 'showReport')
     .addItem('Archive old sessions…', 'archiveSessions')
     .addItem('Refresh exercise dropdown', 'setupExerciseValidation')
     .addToUi();
@@ -629,6 +631,249 @@ function better(hit, best) {
 function epley(reps, weight) {
   return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }
+
+// Menu: build the report, then offer it as a PDF.
+//
+// The PDF is Sheets' own export URL rather than anything generated here. That
+// keeps the app inside the one authorisation it already has — no UrlFetch, no
+// Drive scope, nothing for a user to consent to beyond the spreadsheet the
+// script is already bound to — and the browser does the downloading.
+function showReport() {
+  const ui = SpreadsheetApp.getUi();
+  const answer = ui.prompt(
+    'Training report',
+    'How many weeks back? Leave blank for everything.\n\n' +
+    'A Report tab is written with a weekly summary, an estimated-1RM chart, ' +
+    'and every session per exercise. It is then offered as a PDF.',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (answer.getSelectedButton() !== ui.Button.OK) return;
+
+  const weeks = Math.round(num(answer.getResponseText()));
+  let from = '';
+  if (weeks > 0) {
+    const d = new Date();
+    d.setDate(d.getDate() - weeks * 7);
+    from = dateKey(d);
+  }
+
+  const built = buildReport(from);
+  if (!built) {
+    ui.alert('Nothing to report', 'No sessions in that period.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const html = HtmlService.createHtmlOutput(
+    '<p style="font:14px/1.5 system-ui,sans-serif">' +
+    built.sessions + ' sessions · ' + built.sets + ' sets · ' +
+    Math.round(built.volume).toLocaleString() + ' lb of volume<br>' +
+    '<span style="color:#666">' + built.from + ' to ' + built.to + '</span></p>' +
+    '<p style="font:14px/1.5 system-ui,sans-serif">' +
+    '<a href="' + built.pdf + '" target="_blank" rel="noopener" ' +
+    'style="display:inline-block;padding:10px 16px;background:#1b5aa0;color:#fff;' +
+    'border-radius:8px;text-decoration:none">Download PDF</a></p>' +
+    '<p style="font:13px/1.5 system-ui,sans-serif;color:#666">' +
+    'The Report tab has the same thing, with the charts live.</p>')
+    .setWidth(360).setHeight(220);
+  ui.showModalDialog(html, 'Report ready');
+}
+
+// Writes the Report tab and returns the totals plus a PDF link for it.
+// Rewritten wholesale, like Records: it is output, never a source.
+function buildReport(from) {
+  const ss = SpreadsheetApp.getActive();
+  const data = reportData(allRows(), timedLookup(), from);
+  if (!data.sessions) return null;
+
+  let sheet = ss.getSheetByName(CFG.reportSheet);
+  if (!sheet) sheet = ss.insertSheet(CFG.reportSheet);
+  sheet.clear();
+  sheet.getCharts().forEach(function (c) { sheet.removeChart(c); });
+
+  const out = [];
+  out.push(['Training report — ' + logName(), '', '', '', '']);
+  out.push([data.from + ' to ' + data.to, '', '', '', '']);
+  out.push([data.sessions + ' sessions', data.sets + ' sets',
+            data.volume + ' lb volume', '', '']);
+  out.push(['', '', '', '', '']);
+
+  const weekAt = out.length + 1;
+  out.push(['Week beginning', 'Sessions', 'Sets', 'Volume (lb)', '']);
+  data.weeks.forEach(function (w) {
+    out.push([w.week, w.sessions, w.sets, w.volume, '']);
+  });
+  const weekRows = data.weeks.length;
+  out.push(['', '', '', '', '']);
+
+  // One column per exercise, one row per date: the shape a line chart wants.
+  const top = data.exercises.filter(function (e) {
+    return !e.timed && e.sessions.some(function (d) { return d.est1rm > 0; });
+  }).slice(0, 5);
+  const dates = dedupe([].concat.apply([], top.map(function (e) {
+    return e.sessions.map(function (d) { return d.date; });
+  }))).sort();
+
+  const chartAt = out.length + 1;
+  out.push(['Estimated 1RM'].concat(top.map(function (e) { return e.name; }))
+    .concat(new Array(Math.max(0, 4 - top.length)).fill('')));
+  dates.forEach(function (date) {
+    out.push([date].concat(top.map(function (e) {
+      const hit = e.sessions.filter(function (d) { return d.date === date; })[0];
+      return hit && hit.est1rm ? hit.est1rm : '';
+    })).concat(new Array(Math.max(0, 4 - top.length)).fill('')));
+  });
+  const chartRows = dates.length;
+  out.push(['', '', '', '', '']);
+
+  out.push(['Exercise', 'Date', 'Sets', 'Top set', 'Volume (lb)']);
+  data.exercises.forEach(function (ex) {
+    ex.sessions.forEach(function (d) {
+      out.push([ex.name, d.date, d.sets,
+                d.topReps + (ex.timed ? 's' : '') +
+                  (d.topWeight ? ' x ' + d.topWeight + ' lb' : ''),
+                d.volume || '']);
+    });
+  });
+
+  const width = 5;
+  out.forEach(function (r) { while (r.length < width) r.push(''); });
+  sheet.getRange(1, 1, out.length, width).setValues(out);
+
+  sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
+  [weekAt, chartAt, out.length - totalDetail(data)].forEach(function (row) {
+    if (row > 0) sheet.getRange(row, 1, 1, width).setFontWeight('bold');
+  });
+  sheet.setFrozenRows(3);
+  sheet.autoResizeColumns(1, width);
+
+  if (weekRows) {
+    sheet.insertChart(sheet.newChart().asColumnChart()
+      .addRange(sheet.getRange(weekAt, 1, weekRows + 1, 1))
+      .addRange(sheet.getRange(weekAt, 4, weekRows + 1, 1))
+      .setNumHeaders(1)
+      .setOption('title', 'Volume per week (lb)')
+      .setOption('legend', { position: 'none' })
+      .setPosition(weekAt, 6, 0, 0)
+      .build());
+  }
+  if (chartRows && top.length) {
+    sheet.insertChart(sheet.newChart().asLineChart()
+      .addRange(sheet.getRange(chartAt, 1, chartRows + 1, top.length + 1))
+      .setNumHeaders(1)
+      .setOption('title', 'Estimated 1RM')
+      .setPosition(chartAt, 6, 0, 0)
+      .build());
+  }
+
+  SpreadsheetApp.flush();
+  ss.setActiveSheet(sheet);
+
+  return {
+    sessions: data.sessions, sets: data.sets, volume: data.volume,
+    from: data.from, to: data.to,
+    pdf: ss.getUrl().replace(/\/edit.*$/, '') +
+         '/export?format=pdf&gid=' + sheet.getSheetId() +
+         '&portrait=false&fitw=true&gridlines=false&printtitle=false' +
+         '&sheetnames=false&pagenum=false&size=letter'
+  };
+}
+
+// How many rows the per-exercise detail takes, so its heading can be found.
+function totalDetail(data) {
+  return data.exercises.reduce(function (n, e) { return n + e.sessions.length; }, 0);
+}
+
+
+// ---------- the report ----------
+//
+// A summary of what is in the Log: what was done, how it moved, and how much
+// of it there was. Pure, like computeRecords, so it can be tested outside
+// Apps Script — buildReport() below does the spreadsheet half.
+//
+// Volume is reps x weight, so it is 0 for bodyweight work and meaningless for
+// a timed hold. Both are still counted as sets, which is what makes the
+// session and set totals honest.
+function reportData(rows, timed, from) {
+  const byExercise = {};
+  const byWeek = {};
+  const days = {};
+  let sets = 0, volume = 0, first = null, last = null;
+
+  rows.forEach(function (r) {
+    const name = String(r[COL.exercise]).trim();
+    const date = dateKey(r[COL.date]);
+    if (!name || !date) return;
+    if (from && date < from) return;
+
+    const reps = num(r[COL.reps]);
+    const weight = num(r[COL.weight]);
+    const isTimed = !!(timed && timed[name.toLowerCase()]);
+    const vol = isTimed ? 0 : reps * weight;
+
+    sets++;
+    volume += vol;
+    days[date + '|' + String(r[COL.day]).trim()] = true;
+    if (!first || date < first) first = date;
+    if (!last || date > last) last = date;
+
+    const ex = byExercise[name] || (byExercise[name] = { name: name, timed: isTimed, days: {} });
+    const day = ex.days[date] || (ex.days[date] = {
+      date: date, sets: 0, volume: 0, topReps: 0, topWeight: 0, est1rm: 0
+    });
+    day.sets++;
+    day.volume += vol;
+    // The top set is the heaviest, and the longest hold when there is no load.
+    if (weight > day.topWeight || (weight === day.topWeight && reps > day.topReps)) {
+      day.topReps = reps;
+      day.topWeight = weight;
+    }
+    if (!isTimed && weight > 0 && reps > 0) {
+      day.est1rm = Math.max(day.est1rm, epley(reps, weight));
+    }
+
+    const week = weekStart(date);
+    const w = byWeek[week] || (byWeek[week] = { week: week, sets: 0, volume: 0, days: {} });
+    w.sets++;
+    w.volume += vol;
+    w.days[date + '|' + String(r[COL.day]).trim()] = true;
+  });
+
+  const weeks = Object.keys(byWeek).sort().map(function (k) {
+    const w = byWeek[k];
+    return { week: w.week, sessions: Object.keys(w.days).length, sets: w.sets,
+             volume: Math.round(w.volume) };
+  });
+
+  const exercises = Object.keys(byExercise).map(function (k) {
+    const ex = byExercise[k];
+    const list = Object.keys(ex.days).sort().map(function (d) { return ex.days[d]; });
+    list.forEach(function (d) { d.volume = Math.round(d.volume); });
+    return { name: ex.name, timed: ex.timed, sessions: list };
+  }).sort(function (a, b) {
+    return b.sessions.length - a.sessions.length || (a.name < b.name ? -1 : 1);
+  });
+
+  return {
+    from: first, to: last,
+    sessions: Object.keys(days).length,
+    sets: sets,
+    volume: Math.round(volume),
+    weeks: weeks,
+    exercises: exercises
+  };
+}
+
+// The Monday of that date's week. Built from the parts rather than from a
+// Date, so a spreadsheet time zone cannot shift a session into the week
+// before it.
+function weekStart(dateKeyStr) {
+  const p = String(dateKeyStr).split('-');
+  const d = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])));
+  const back = (d.getUTCDay() + 6) % 7;          // Monday = 0
+  d.setUTCDate(d.getUTCDate() - back);
+  return d.toISOString().slice(0, 10);
+}
+
 
 const RECORD_LABELS = {
   est1rm: 'Est. 1RM',

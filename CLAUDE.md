@@ -299,6 +299,21 @@ free of SpreadsheetApp so it stays testable — keep it that way.
   their logged set.
 - `Records` tab is output. Anything typed there dies on the next rebuild.
 
+## The report
+
+`reportData(rows, timed, from)` is pure and testable, like `computeRecords`;
+`buildReport()` does the spreadsheet half and `showReport()` the menu. It is
+output — the `Report` tab is rewritten wholesale and created on demand, so it
+is not in the shipped template.
+
+The PDF is Sheets' own export URL (`/export?format=pdf&gid=…`) opened by the
+browser, NOT a fetch. Generating one server-side would mean `UrlFetchApp` plus
+a Drive scope, and setup is meant to stay inside the one authorisation the
+bound script already has. Don't "improve" this into a fetch.
+
+Volume is reps × weight and deliberately 0 for timed work; bodyweight sets
+count as sets with no volume. Both still count as sessions.
+
 ## Known gaps
 
 - Removing an exercise is `setSetCount(..., 0)` — same path as shrinking,

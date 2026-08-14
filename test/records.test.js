@@ -414,4 +414,74 @@ test('only the exercises asked for are looked up', () => {
   assert.deepStrictEqual(Object.keys(hist), ['bench']);
 });
 
+// ---------- the report ----------
+//
+// Pure, like computeRecords: the spreadsheet half is buildReport().
+
+const { reportData, weekStart } = sandbox;
+
+test('a week runs Monday to Sunday, whatever day the session was', () => {
+  assert.strictEqual(weekStart('2026-08-10'), '2026-08-10', 'a Monday is its own');
+  assert.strictEqual(weekStart('2026-08-13'), '2026-08-10', 'Thursday');
+  assert.strictEqual(weekStart('2026-08-16'), '2026-08-10', 'Sunday closes it');
+  assert.strictEqual(weekStart('2026-08-17'), '2026-08-17', 'Monday opens the next');
+});
+
+test('the report totals sessions, sets and volume', () => {
+  const rows = [
+    row('2026-08-10', 'Push', 'Bench', 1, 8, 100),
+    row('2026-08-10', 'Push', 'Bench', 2, 8, 100),
+    row('2026-08-10', 'Push', 'Lateral Raise', 1, 15, 10),
+    row('2026-08-13', 'Legs', 'Squat', 1, 5, 200)
+  ];
+  const out = reportData(rows, {}, '');
+
+  assert.strictEqual(out.sessions, 2, 'two days, two sessions');
+  assert.strictEqual(out.sets, 4);
+  assert.strictEqual(out.volume, 8 * 100 * 2 + 15 * 10 + 5 * 200);
+  assert.strictEqual(out.from, '2026-08-10');
+  assert.strictEqual(out.to, '2026-08-13');
+  assert.strictEqual(out.weeks.length, 1, 'both fall in the same week');
+  assert.strictEqual(out.weeks[0].sessions, 2);
+});
+
+test('each exercise gets its sessions in order, with its top set', () => {
+  const rows = [
+    row('2026-08-03', 'Push', 'Bench', 1, 8, 100),
+    row('2026-08-10', 'Push', 'Bench', 1, 5, 110),
+    row('2026-08-10', 'Push', 'Bench', 2, 8, 105)
+  ];
+  const bench = reportData(rows, {}, '').exercises[0];
+
+  assert.strictEqual(bench.name, 'Bench');
+  assert.deepStrictEqual(plain(bench.sessions.map(d => d.date)),
+    ['2026-08-03', '2026-08-10']);
+  assert.strictEqual(bench.sessions[1].topWeight, 110, 'heaviest, not last');
+  assert.strictEqual(bench.sessions[1].sets, 2);
+  assert.strictEqual(bench.sessions[1].volume, 5 * 110 + 8 * 105);
+});
+
+test('a timed exercise contributes sets but no volume or 1RM', () => {
+  const rows = [
+    row('2026-08-10', 'Custom', 'Plank', 1, 45, 0),
+    row('2026-08-10', 'Custom', 'Farmer Carry', 1, 40, 50)
+  ];
+  const out = reportData(rows, { plank: true, 'farmer carry': true }, '');
+
+  assert.strictEqual(out.sets, 2);
+  assert.strictEqual(out.volume, 0, 'seconds x pounds is not volume');
+  out.exercises.forEach(e => assert.strictEqual(e.sessions[0].est1rm, 0));
+});
+
+test('the report can start from a date', () => {
+  const rows = [
+    row('2026-07-01', 'Push', 'Bench', 1, 8, 95),
+    row('2026-08-10', 'Push', 'Bench', 1, 8, 100)
+  ];
+  const out = reportData(rows, {}, '2026-08-01');
+
+  assert.strictEqual(out.sessions, 1);
+  assert.strictEqual(out.from, '2026-08-10', 'the earlier session is excluded');
+});
+
 console.log('\n' + passed + ' passed');

@@ -556,6 +556,31 @@ weights at 0 on purpose.
 
 ## Housekeeping
 
+### A report you can send
+
+**Training → Training report…** asks how many weeks back, writes a `Report`
+tab, and offers it as a PDF:
+
+| | |
+|---|---|
+| Header | The period, and totals: sessions, sets, volume |
+| Weekly summary | One row per week — sessions, sets, volume — with a column chart |
+| Estimated 1RM | One column per exercise, one row per session date, as a line chart |
+| Per exercise | Every session: date, sets, top set, volume |
+
+**Download PDF** in the dialog is Sheets' own export of that tab, so it needs
+no extra permission and lands in your downloads like any other file. The tab
+stays behind with the charts live if you would rather sort or chart it
+yourself.
+
+Volume is reps × weight, so bodyweight work counts as sets but adds no volume,
+and a timed exercise contributes neither volume nor an estimated 1RM — seconds
+× pounds is not a number worth totalling. All three still count as sessions.
+
+{: .note }
+It is output, rewritten each time you run it, exactly like `Records`. Nothing
+you type into that tab survives.
+
 ### Archiving old sessions
 
 **Training → Archive old sessions…** lifts a closed period out into its own

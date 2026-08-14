@@ -87,6 +87,9 @@ genuinely cannot write.
   a **▶ How to** link — a video search for that movement — and you can add a
   picture or GIF of your own beside any of them. An exercise you type in
   yourself has neither until you fill them in.
+- **Summarises itself on demand.** A menu item builds a report of any period —
+  weekly volume, estimated 1RM per exercise, every session — with charts, and
+  hands you a PDF.
 - **Survives bad wifi.** Changes queue on the device and save themselves when
   the connection comes back.
 - **Scales by copying.** A trainer with twenty-five people runs twenty-five
