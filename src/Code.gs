@@ -403,7 +403,7 @@ function loadSession(dayType, dayKey, create, k, source) {
   });
 
   if (!mine.length && create) {
-    generateInto(dayType, dayKey, rows, from);
+    generateInto(k, dayType, dayKey, rows, from);
     rows = allRows();
     mine = rows.filter(function (r) {
       return dateKey(r[COL.date]) === dayKey && sameDay(r[COL.day], dayType);
@@ -657,7 +657,7 @@ function showReport() {
     from = dateKey(d);
   }
 
-  const built = buildReport(from);
+  const built = buildReport(editKey(), from);
   if (!built) {
     ui.alert('Nothing to report', 'No sessions in that period.', ui.ButtonSet.OK);
     return;
@@ -680,7 +680,8 @@ function showReport() {
 
 // Writes the Report tab and returns the totals plus a PDF link for it.
 // Rewritten wholesale, like Records: it is output, never a source.
-function buildReport(from) {
+function buildReport(k, from) {
+  assertEdit(k);
   const ss = SpreadsheetApp.getActive();
   const data = reportData(allRows(), timedLookup(), from);
   if (!data.sessions) return null;
@@ -714,13 +715,12 @@ function buildReport(from) {
   }))).sort();
 
   const chartAt = out.length + 1;
-  out.push(['Estimated 1RM'].concat(top.map(function (e) { return e.name; }))
-    .concat(new Array(Math.max(0, 4 - top.length)).fill('')));
+  out.push(['Estimated 1RM'].concat(top.map(function (e) { return e.name; })));
   dates.forEach(function (date) {
     out.push([date].concat(top.map(function (e) {
       const hit = e.sessions.filter(function (d) { return d.date === date; })[0];
       return hit && hit.est1rm ? hit.est1rm : '';
-    })).concat(new Array(Math.max(0, 4 - top.length)).fill('')));
+    })));
   });
   const chartRows = dates.length;
   out.push(['', '', '', '', '']);
@@ -735,7 +735,9 @@ function buildReport(from) {
     });
   });
 
-  const width = 5;
+  // Five exercises in the 1RM block makes a six-column row, so the range is as
+  // wide as the widest row rather than as wide as the tables.
+  const width = out.reduce(function (w, r) { return Math.max(w, r.length); }, 5);
   out.forEach(function (r) { while (r.length < width) r.push(''); });
   sheet.getRange(1, 1, out.length, width).setValues(out);
 
@@ -930,7 +932,8 @@ function recordRows(records, cfg, timed) {
 // Rewrites the Records tab from the Log. Cheap enough to run by hand, so it
 // is not on the save path — a session's saves stay fast, and the app's own
 // display is computed live regardless of when this last ran.
-function rebuildRecords() {
+function rebuildRecords(k) {
+  assertEdit(k);
   const ss = SpreadsheetApp.getActive();
   const sheet = ss.getSheetByName(CFG.recordsSheet) || ss.insertSheet(CFG.recordsSheet);
   const cfg = prConfig();
@@ -945,7 +948,7 @@ function rebuildRecords() {
 }
 
 function showRecords() {
-  const n = rebuildRecords();
+  const n = rebuildRecords(editKey());
   SpreadsheetApp.getUi().alert('Records rebuilt — ' + n +
     ' on the "' + CFG.recordsSheet + '" tab.');
 }
@@ -1005,7 +1008,7 @@ function archiveSessions() {
   );
   if (go !== ui.Button.YES) return;
 
-  writeArchive(name, doomed);
+  writeArchive(editKey(), name, doomed);
 
   const keep = raw.filter(function (r) { return !isOld(r); });
   sheet.getRange(2, 1, last - 1, WIDTH).clearContent();
@@ -1031,7 +1034,8 @@ function nextDate(rows) {
 
 // The archive is a standalone spreadsheet: the rows, plus the records for
 // that period so they survive being taken out of the live log.
-function writeArchive(name, rows) {
+function writeArchive(k, name, rows) {
+  assertEdit(k);
   const book = SpreadsheetApp.create(name);
 
   const log = book.getSheets()[0].setName(CFG.logSheet);
@@ -1066,7 +1070,7 @@ function writeArchive(name, rows) {
 // itself can lag, and it is a rendering, not a source.
 function refreshRecords() {
   try {
-    rebuildRecords();
+    rebuildRecords(editKey());
   } catch (err) {
     console.error('Records refresh failed: ' + err);
   }
@@ -1317,7 +1321,7 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed, noWeig
   sheet.getRange(sheet.getLastRow() - out.length + 1, 1, out.length, 1)
     .setNumberFormat('yyyy-mm-dd');
 
-  rememberExercise(name, timed, noWeight);
+  rememberExercise(k, name, timed, noWeight);
   SpreadsheetApp.flush();
   return loadSession(dayType, dayKey, false, k);
 }
@@ -1359,7 +1363,7 @@ function renameExercise(k, dayType, dayKey, from, to) {
     sheet.getRange(r.sheetRow, COL.exercise + 1).setValue(to);
   });
 
-  rememberExercise(to);
+  rememberExercise(k, to);
   SpreadsheetApp.flush();
   return loadSession(dayType, dayKey, false, k);
 }
@@ -1368,7 +1372,8 @@ function renameExercise(k, dayType, dayKey, from, to) {
 // A name typed into the app joins the Exercises tab so it autocompletes next
 // time. `timed` and `noWeight` are only honoured for a genuinely new row — an
 // existing exercise keeps whatever the sheet already says about it.
-function rememberExercise(name, timed, noWeight) {
+function rememberExercise(k, name, timed, noWeight) {
+  assertEdit(k);
   const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
   if (!sheet) return;
   const known = exerciseList().map(function (n) { return n.toLowerCase(); });
@@ -1402,7 +1407,8 @@ function templateCount(dayType) {
     .map(function (r) { return String(r[1]).trim(); })).length;
 }
 
-function generateInto(dayType, dayKey, rows, from) {
+function generateInto(k, dayType, dayKey, rows, from) {
+  assertEdit(k);
   if (from === 'empty') return;
 
   const prior = rows.filter(function (r) {

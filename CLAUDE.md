@@ -177,6 +177,14 @@ via `noWeightLookup()` / `timedLookup()`.
 
 `doGet` compares `?key=` against `EDIT_KEY` in script properties. Writes
 call `assertEdit(k)` server-side — hiding buttons is not the mechanism.
+
+**`google.script.run` can call any global in the project**, not just the ones
+the page happens to use. So every function that writes takes the key and calls
+`assertEdit` itself, including the ones only a menu item invokes — menu code
+runs as the owner and passes `editKey()`. A new writer that takes only plain
+arguments is reachable by anyone holding the viewer link. The exceptions are
+functions whose first argument is a live `Sheet` (unreachable across the
+bridge) and `archiveSessions`, which throws outside a container UI.
 Admin gets `…/exec?key=…`, viewers get bare `…/exec`.
 
 ### One card at a time

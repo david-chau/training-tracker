@@ -484,4 +484,27 @@ test('the report can start from a date', () => {
   assert.strictEqual(out.from, '2026-08-10', 'the earlier session is excluded');
 });
 
+// ---------- the write surface ----------
+//
+// google.script.run can call ANY global in the project, so every function
+// that writes has to check the key itself — a viewer holds the same page and
+// the same bridge, just without the key.
+
+test('writing functions refuse a wrong key', () => {
+  const guarded = {
+    buildReport: k => sandbox.buildReport(k, ''),
+    rebuildRecords: k => sandbox.rebuildRecords(k),
+    writeArchive: k => sandbox.writeArchive(k, 'x', []),
+    generateInto: k => sandbox.generateInto(k, 'Push', '2026-08-01', [], 'auto'),
+    rememberExercise: k => sandbox.rememberExercise(k, 'Bench', false, false)
+  };
+
+  Object.keys(guarded).forEach(name => {
+    assert.throws(() => guarded[name]('not-the-key'), /Read-only/,
+      name + ' let a wrong key through');
+    assert.throws(() => guarded[name](''), /Read-only/,
+      name + ' let an empty key through');
+  });
+});
+
 console.log('\n' + passed + ' passed');

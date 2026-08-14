@@ -592,9 +592,17 @@ exactly that.
 ```
 
 Hiding buttons is presentation. The guarantee is `assertEdit(k)` at the top of
-`saveSet`, `setSetCount`, `saveNote`, `addExercise`, `deleteSession`, and
-`loadSession` when `create` is true. A viewer who opens the console and calls
-the function directly gets `Read-only view — changes are not saved.`
+every function that writes — `saveBatch`, `setSetCount`, `addExercise`,
+`renameExercise`, `setGroup`, `deleteSession`, and `loadSession` when `create`
+is true. A viewer who opens the console and calls one directly gets
+`Read-only view — changes are not saved.`
+
+{: .warning }
+`google.script.run` reaches **any global in the project**, not only the ones
+the page calls. So the report builder, the records rebuild and the archive
+writer take the key as well, even though only a menu item invokes them — menu
+code runs as the owner and passes `editKey()`. A writer that takes only plain
+arguments and checks nothing is callable by anyone holding the viewer link.
 
 `EDIT_KEY` is a 16-character UUID fragment generated on first use and kept in
 script properties. Deleting the property rotates the key; the viewer URL is
