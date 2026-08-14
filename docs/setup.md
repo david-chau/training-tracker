@@ -10,10 +10,14 @@ minutes the first time.
 
 You need a Google account. Anyone you send a viewer link to does not.
 
-1. **Import the template** into a new Google Sheet
-2. **Paste in the code** — two files, into the Apps Script editor
-3. **Publish the web app**
-4. **Send out the links** — one that edits, one that only reads
+1. [**Import the template**](#1-import-the-spreadsheet) into a new Google Sheet
+2. [**Paste in the code**](#2-paste-in-the-code) — two files, into the Apps
+   Script editor
+3. [**Publish the web app**](#3-publish-the-web-app)
+4. [**Send out the links**](#4-the-two-links) — one that edits, one that only
+   reads
+
+Then [check it works](#check-it-works).
 
 ---
 
@@ -138,14 +142,13 @@ It must be the link ending in **`/exec`**. The `/dev` one is the editor's test
 link and only ever works for you. Made a *new* deployment later? That mints a
 new URL — run **Training → Set web app link**.
 
-```
-        …/exec?key=a1b2c3d4e5f6         …/exec
-        ADMIN                           VIEWER
-        start sessions                  view any session
-        change reps / weight / RPE      read notes
-        add + remove exercises          ✗ cannot change anything
-        write notes, delete a day
-```
+| | **Admin** — `…/exec?key=a1b2c3…` | **Viewer** — `…/exec` |
+|---|---|---|
+| Sessions | Starts them | Reads any of them |
+| Reps, weight, RPE | Changes them | Reads them |
+| Sets and exercises | Adds and removes | — |
+| Notes | Writes them | Reads them |
+| A whole session | Deletes it | — |
 
 Keep the admin link if you log your own training; give it to your trainer if
 they record your sessions. The viewer link is optional either way.

@@ -31,16 +31,13 @@ Both links are read-only and use the same sample training log.
 
 Every log has an **admin link** and a **viewer link**.
 
-```
-    ADMIN                              VIEWER
-    …/exec?key=a1b2c3…                 …/exec
-
-    starts sessions                    reads any session
-    changes reps / weight / RPE        reads the notes
-    adds and removes sets              ✗ cannot change anything
-    writes notes
-    deletes a session
-```
+| | **Admin** — `…/exec?key=a1b2c3…` | **Viewer** — `…/exec` |
+|---|---|---|
+| Sessions | Starts them | Reads any of them |
+| Reps, weight, RPE | Changes them | Reads them |
+| Sets and exercises | Adds and removes | — |
+| Notes | Writes them | Reads them |
+| A whole session | Deletes it | — |
 
 Who holds the admin link is up to you:
 

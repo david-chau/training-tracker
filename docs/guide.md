@@ -9,16 +9,13 @@ has_children: true
 Two people can be looking at a training log, and they get different links.
 Which one you were sent decides which guide you want.
 
-```
-    ADMIN                              VIEWER
-    …/exec?key=a1b2c3…                 …/exec
-
-    starts sessions                    reads any session
-    changes reps / weight / RPE        reads the notes
-    adds and removes sets              ✗ cannot change anything
-    writes notes
-    deletes a day
-```
+| | **Admin** — `…/exec?key=a1b2c3…` | **Viewer** — `…/exec` |
+|---|---|---|
+| Sessions | Starts them | Reads any of them |
+| Reps, weight, RPE | Changes them | Reads them |
+| Sets and exercises | Adds and removes | — |
+| Notes | Writes them | Reads them |
+| A whole session | Deletes it | — |
 
 - **[Admin](admin.html)** — you are the one recording sets, whether that is
   your own training or someone else's. Running a session, changing the
