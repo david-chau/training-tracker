@@ -286,6 +286,8 @@
                white-space:nowrap; }
   .exrow .mv { font-variant-numeric:tabular-nums; color:var(--muted);
                font-size:13px; white-space:nowrap; text-align:right; }
+  .allrow { margin-top:10px; padding-top:8px; border-top:1px solid var(--line);
+            font-size:11px; color:var(--muted); text-align:center; }
   .exrow .all { display:block; font-style:normal; font-size:11px;
                 opacity:0.75; }
   .exrow .all::before { content:'all '; }
@@ -343,6 +345,13 @@
        Columns rather than a grid: a grid row cannot be broken, so a row too
        tall for what is left of the page moved whole and left half a page
        blank. Multicol just keeps filling. */
+    /* Totals and averages side by side: the all-time rows under each cost a
+       page otherwise. One grid row at the top of the page, so nothing has to
+       break across one. */
+    .sumgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px;
+               align-items:start; }
+    .sumgrid .card { margin-bottom:8px; }
+    .allrow { margin-top:7px; padding-top:6px; }
     .daygrid { column-count:2; column-gap:8px; }
     .daygrid .daycard { break-inside:avoid; margin:0 0 8px; }
   }
@@ -857,17 +866,33 @@ function reportView(res) {
     '<span class="sw s2"></span>2 <span class="sw s3"></span>3+ sessions. ' +
     'The last week is outlined.</div></div>';
 
-  html += '<div class="card"><h3>Totals</h3><div class="tiles">' +
+  // Asking for four weeks should not hide the fact that there are eighteen
+  // behind them. The period is the headline; everything ever logged sits
+  // under it, and is left off entirely when the period already is everything.
+  var life = res.lifetime;
+  html += '<div class="sumgrid"><div class="card"><h3>Totals</h3><div class="tiles">' +
     tile(res.sessions, word(res.sessions, 'session')) +
     tile(res.sets, word(res.sets, 'set')) +
     tile(commas(res.volume), 'lb volume') +
-    '</div></div>';
+    '</div>' + (life
+      ? '<div class="allrow">All time · ' + plural(life.sessions, 'session') +
+        ' · ' + plural(life.sets, 'set') +
+        (life.volume ? ' · ' + commas(life.volume) + ' lb' : '') +
+        ' · since ' + esc(life.from) + '</div>'
+      : '') + '</div>';
 
   html += '<div class="card"><h3>Averages</h3><div class="tiles">' +
     tile(perSession.toFixed(1), 'sets / session') +
     tile(perWeek.toFixed(1), 'sets / week') +
     tile(commas(weeks.length ? res.volume / weeks.length : 0), 'lb / week') +
-    '</div></div>';
+    '</div>' + (life
+      ? '<div class="allrow">All time · ' +
+        (life.sessions ? (life.sets / life.sessions).toFixed(1) : '0.0') +
+        ' sets / session · ' +
+        (life.weeks ? (life.sets / life.weeks).toFixed(1) : '0.0') +
+        ' sets / week · ' +
+        commas(life.weeks ? life.volume / life.weeks : 0) + ' lb / week</div>'
+      : '') + '</div></div>';
 
   // One card per day type, in the order the summary already sorted them.
   var byDay = {}, order = [];

@@ -563,7 +563,9 @@ it blank for everything, and the report is drawn in the app:
 
 - **a bar per week** — how tall it is, is how much volume; how green it is, is
   how often you trained that week; the last week is outlined
-- **totals and averages** as tiles — sets per session, sets per week, volume
+- **totals and averages** as tiles — sets per session, sets per week, volume —
+  each with the same numbers over your whole log underneath, so four weeks is
+  read against everything rather than on its own
 - **a card per day type**, with an icon, its own totals, and one row per
   exercise: the period's range, your all-time range, and a trend pill
 - **★** on a period holding a best ever set

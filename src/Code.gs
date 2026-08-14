@@ -643,7 +643,7 @@ function reportSummary(k, from) {
     name: logName(),
     from: data.from, to: data.to, period: data.period,
     sessions: data.sessions, sets: data.sets, volume: data.volume,
-    weeks: data.weeks,
+    weeks: data.weeks, lifetime: data.lifetime,
     exercises: data.exercises.map(function (e) {
       return {
         name: e.name, day: e.day, timed: e.timed,
@@ -804,8 +804,9 @@ function reportData(rows, timed, from) {
   // What the period looks like against everything ever logged. A good month
   // means more when you can see it next to the best you have ever done — the
   // same reason a body-composition printout shows recent beside total.
+  let ever = null;
   if (from) {
-    const ever = reportData(rows, timed, '');
+    ever = reportData(rows, timed, '');
     const byKey = {};
     ever.exercises.forEach(function (e) { byKey[e.day + '|' + e.name] = e; });
     exercises.forEach(function (e) {
@@ -836,7 +837,14 @@ function reportData(rows, timed, from) {
     sets: sets,
     volume: Math.round(volume),
     weeks: weeks,
-    exercises: exercises
+    exercises: exercises,
+    // The same totals over everything ever logged. A period on its own says
+    // nothing about whether it was a big one. Null when no period was asked
+    // for, because then it would be the same numbers twice.
+    lifetime: ever ? {
+      sessions: ever.sessions, sets: ever.sets, volume: ever.volume,
+      weeks: ever.weeks.length, from: ever.from, to: ever.to
+    } : null
   };
 }
 

@@ -613,6 +613,17 @@ test('the report can start from a date', () => {
 
   assert.strictEqual(out.sessions, 1);
   assert.strictEqual(out.from, '2026-08-10', 'the earlier session is excluded');
+
+  // Excluded from the period, still counted in what the period is a slice of.
+  assert.strictEqual(out.lifetime.sessions, 2, 'both sessions are all-time');
+  assert.strictEqual(out.lifetime.volume, 8 * 95 + 8 * 100, 'and all the volume');
+  assert.strictEqual(out.lifetime.from, '2026-07-01', 'back to the first row');
+  assert.ok(out.lifetime.weeks >= 2, 'over the weeks it actually spans');
+});
+
+test('with no period there are no all-time totals to show either', () => {
+  const out = reportData([row('2026-08-03', 'Push', 'Bench', 1, 8, 100)], {}, '');
+  assert.strictEqual(out.lifetime, null, 'they would be the same numbers twice');
 });
 
 // ---------- the write surface ----------

@@ -1010,6 +1010,30 @@ test('one of something is not "1 sessions"', () => {
   assert.ok(!/0 lb/.test(el.innerHTML), 'no zero volume');
 });
 
+test('a period is shown against everything ever logged', () => {
+  const el = G.reportView({
+    name: 'Log', from: '2026-08-01', to: '2026-08-11', period: '2026-08-01',
+    sessions: 4, sets: 57, volume: 32713, weeks: [],
+    lifetime: { sessions: 9, sets: 138, volume: 81453, weeks: 4,
+                from: '2026-07-20', to: '2026-08-11' },
+    exercises: []
+  });
+  const html = el.innerHTML;
+  assert.match(html, /All time · 9 sessions · 138 sets · 81,453 lb · since 2026-07-20/,
+    'the totals card says what the period is a slice of');
+  // 138 sets over 9 sessions, not over the 4 in the period.
+  assert.match(html, /All time · 15\.3 sets \/ session/, 'and the averages too');
+});
+
+test('no period asked for means no all-time line to compare against', () => {
+  const el = G.reportView({
+    name: 'Log', from: '2026-07-20', to: '2026-08-11', period: '',
+    sessions: 9, sets: 138, volume: 81453, weeks: [], lifetime: null,
+    exercises: []
+  });
+  assert.ok(!/All time/.test(el.innerHTML), 'it would be the same numbers twice');
+});
+
 test('an all-time range identical to the period is not printed twice', () => {
   const el = G.reportView({
     name: 'Log', from: '2026-08-01', to: '2026-08-11', period: '',

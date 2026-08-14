@@ -335,6 +335,12 @@ to produce. Don't rebuild it. What that means for the print rules:
   which is what `page.pdf()` does, so a Playwright capture is not evidence
   about the real thing unless it renders the frame standalone.
 
+Asking for a period never means losing sight of the whole log: the totals and
+averages cards each carry an all-time line, and `reportData` returns
+`lifetime` for it — the same aggregation re-run over every row, which it was
+already doing for the per-exercise lifetimes. Both are null with no period,
+because they would be the same numbers twice.
+
 Each exercise row carries the period's range and, where it is wider, the
 all-time one. Two numbers because one invites reading a good month as a
 personal best. The chart carries two variables as well: height is volume,
