@@ -356,7 +356,12 @@ only SVG (`preserveAspectRatio="none"` plus `vector-effect="non-scaling-stroke"`
 so they stretch without the strokes stretching). Volume and sessions each get
 their own band — top half and bottom quarter — because on a good week both sit
 near their own maximum and a shared height put a session marker through a
-volume label. Long periods label only some weeks; every week is still plotted.
+volume label. Long periods label only some weeks, and past 14 weeks only the labelled ones
+keep a marker (`.chart.dense`) — at 50 weeks the dots merge into a bead chain
+with the line buried under it. A label is never placed within `every` of the
+last week, which is what stopped the final date printing over its neighbour.
+Every week is still plotted either way. Checked at 12, 26, 50 and 104 weeks
+with `generated/weeks.js`.
 
 **The report shares one stylesheet with the app, and has taken an app class
 name twice.** `.bar` (the fixed status bar) made chart bars `position:fixed`

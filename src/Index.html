@@ -257,6 +257,9 @@
   .pt { position:absolute; transform:translate(-50%, 50%); }
   .pt i { display:block; width:9px; height:9px; border-radius:50%;
           background:#fff; border:2px solid var(--ok); }
+  /* Past a dozen or so weeks the markers touch and the line disappears under
+     them, so only the labelled weeks keep one. */
+  .chart.dense .pt:not(.on) i { display:none; }
   .pt.now i { background:var(--ok); box-shadow:0 0 0 3px rgba(29,122,79,0.15); }
   /* freq, not sess: `.sess` is the previous/next session button, and a point
      wearing that name picked up its border, padding and white background. */
@@ -885,18 +888,29 @@ function reportView(res) {
     };
     var pts = line(y, 'volume');
 
-    // Half a year is 26 points. Every one gets drawn; only some can be
-    // labelled without the labels landing on each other. The last week is
-    // always labelled — it is the one being read.
+    // Half a year is 26 points and a year is 52. Every one is drawn; only some
+    // can be labelled without the labels landing on each other, and past a
+    // point the markers themselves have to go — at 50 weeks they merge into a
+    // string of beads with the line hidden underneath.
+    var last = weeks.length - 1;
     var every = Math.ceil(weeks.length / 7);
     var peakAt = weeks.reduce(function (best, w, i) {
       return w.volume > weeks[best].volume ? i : best;
     }, 0);
-    var labelled = function (i) {
-      return i === weeks.length - 1 || i === peakAt || i % every === 0;
-    };
 
-    html += '<div class="chart">' +
+    var keep = {};
+    keep[last] = true;                       // the week being read
+    for (var n = 0; n < last; n += every) {
+      if (last - n >= every) keep[n] = true;  // never crowd the last one
+    }
+    var clear = Math.ceil(every / 2);
+    if (Object.keys(keep).every(function (n) {
+      return Math.abs(peakAt - Number(n)) >= clear;
+    })) keep[peakAt] = true;
+    var labelled = function (i) { return !!keep[i]; };
+    var dense = weeks.length > 14;
+
+    html += '<div class="chart' + (dense ? ' dense' : '') + '">' +
       '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
       (weeks.length > 1
         ? '<polyline class="ln" points="' + pts + '" ' +
@@ -906,13 +920,15 @@ function reportView(res) {
         : '') +
       '</svg>';
     weeks.forEach(function (w, i) {
-      html += '<div class="pt' + (i === weeks.length - 1 ? ' now' : '') +
+      html += '<div class="pt' + (i === last ? ' now' : '') +
+        (labelled(i) ? ' on' : '') +
         '" style="left:' + x(i).toFixed(1) + '%;bottom:' +
         y(w.volume).toFixed(1) + '%" title="' + esc(w.week) + ': ' +
         commas(w.volume) + ' lb over ' + plural(w.sessions, 'session') + '">' +
         (labelled(i) ? '<span class="pv">' + short(w.volume) + '</span>' : '') +
         '<i></i></div>';
-      html += '<div class="pt freq" style="left:' + x(i).toFixed(1) +
+      html += '<div class="pt freq' + (labelled(i) ? ' on' : '') +
+        '" style="left:' + x(i).toFixed(1) +
         '%;bottom:' + ys(w.sessions).toFixed(1) + '%" title="' +
         plural(w.sessions, 'session') + '">' +
         (labelled(i) ? '<span class="pv">' + w.sessions + '</span>' : '') +
@@ -921,7 +937,7 @@ function reportView(res) {
     html += '</div><div class="xaxis">';
     weeks.forEach(function (w, i) {
       if (!labelled(i)) return;
-      html += '<div class="xl' + (i === weeks.length - 1 ? ' now' : '') +
+      html += '<div class="xl' + (i === last ? ' now' : '') +
         '" style="left:' + x(i).toFixed(1) + '%">' + esc(w.week.slice(5)) +
         '</div>';
     });

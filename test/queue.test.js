@@ -959,11 +959,11 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /chip up/, 'a rise is a green chip');
   assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
   assert.match(html, /66,948/, 'volume is grouped in thousands');
-  assert.match(html, /class="pt now"/, 'the newest week is picked out');
+  assert.match(html, /class="pt now on"/, 'the newest week is picked out');
   assert.match(html, /<polyline class="ln"/, 'the weeks are joined into a line');
   assert.match(html, /class="pv">34k</, 'every point says what it is worth');
   assert.match(html, /<polyline class="ln2"/, 'sessions are a second line');
-  assert.match(html, /class="pt freq"/, 'with their own marked points');
+  assert.match(html, /class="pt freq/, 'with their own marked points');
   assert.match(html, /class="legend"/, 'with a line saying what is plotted');
   // Per cent, so the chart survives being shrunk for print. Absolute values
   // overflowed the box and landed on the card's heading.
@@ -1056,7 +1056,7 @@ test('a long period labels some of its weeks, and draws all of them', () => {
     exercises: []
   });
   const html = el.innerHTML;
-  const points = (html.match(/class="pt"|class="pt now"/g) || []).length;
+  const points = (html.match(/class="pt(?! freq)[^"]*"/g) || []).length;
   const labels = (html.match(/class="xl/g) || []).length;
   assert.strictEqual(points, 26, 'every week is a point on the line');
   assert.ok(labels < 10, 'but 26 date labels would land on each other');
@@ -1064,6 +1064,29 @@ test('a long period labels some of its weeks, and draws all of them', () => {
   // point anyone looks for.
   assert.match(html, /class="xl now"/, 'the last week keeps its label');
   assert.match(html, /class="pv">23k</, 'and the peak keeps its value');
+  // At 26 points the markers touch each other and bury the line.
+  assert.match(html, /class="chart dense"/, 'so only labelled weeks keep one');
+});
+
+test('a year of weeks does not crowd its last label off the axis', () => {
+  const weeks = [];
+  for (let i = 0; i < 50; i++) {
+    weeks.push({ week: '2026-01-01', sessions: 2, sets: 30,
+                 volume: 20000 + i, change: 1 });
+  }
+  const el = G.reportView({
+    name: 'Log', from: '2025-09-01', to: '2026-08-11', period: '2025-09-01',
+    sessions: 100, sets: 1500, volume: 1000000, weeks: weeks, lifetime: null,
+    exercises: []
+  });
+  const at = [...el.innerHTML.matchAll(/class="xl[^"]*" style="left:([\d.]+)%/g)]
+    .map(m => Number(m[1]));
+  assert.ok(at.length >= 5, 'the axis is still labelled');
+  const gaps = at.slice(1).map((v, i) => v - at[i]);
+  // 88% of the width over 50 weeks is 1.8% per week: two labels a week apart
+  // print on top of each other, which is what the last pair used to do.
+  assert.ok(Math.min.apply(null, gaps) > 8,
+    'no two date labels land on top of each other');
 });
 
 test('a period is shown against everything ever logged', () => {
