@@ -561,11 +561,12 @@ weights at 0 on purpose.
 **Report…** next to *Delete this session*. Ask for a number of weeks, or leave
 it blank for everything, and the report is drawn in the app:
 
-- **a bar per week**, the newest picked out, over the session count
+- **a bar per week** — how tall it is, is how much volume; how green it is, is
+  how often you trained that week; the last week is outlined
 - **totals and averages** as tiles — sets per session, sets per week, volume
 - **a card per day type**, with an icon, its own totals, and one row per
-  exercise: lowest → highest, and a green, red or grey trend chip
-- **★** on a best ever set inside the period
+  exercise: the period's range, your all-time range, and a trend pill
+- **★** on a period holding a best ever set
 
 It opens over the session; **Close**, the backdrop, or Escape dismiss it.
 
@@ -579,55 +580,30 @@ Your browser's own print settings add the date, the page URL and page numbers
 along the top and bottom. Turn off *Headers and footers* in the print dialog
 if you would rather they were not there.
 
-**Build the sheet version** writes the `Report` tab as well, for the live
-charts and a one-click PDF of them. **Training → Training report…** in the
-spreadsheet does the same thing:
-
-| | |
-|---|---|
-| Header | The period, and totals: sessions, sets, volume |
-| Weekly summary | One row per week — sessions, sets, volume — with a column chart |
-| Estimated 1RM | One column per exercise, one row per session date, as a line chart |
-| Per day type | One line per exercise: sessions, lowest, highest, latest, trend, and the all-time low and high |
+Each exercise row carries two ranges. The first is the **lightest and
+heaviest set of the period** — the worst and the best, not the first and the
+last, so a bad week in the middle shows up. Under it, where it is wider, is
+your **all-time range** over the whole log, which is what stops a good month
+reading as a personal best.
 
 ```
-   PUSH                      Sess  Lowest     Highest   Latest    Trend     All-time
- ★ Barbell Bench Press       2     8 x 100    8 x 105   8 x 105   ▲ +5%     95 → 105
- ★ Seated DB Shoulder Press  2     10 x 20    12 x 20   12 x 20   ▲ +20%    20 → 20
-   Pull-Up                   1     8          8         8         —         8 → 8
+ ★ Barbell Bench Press        8 x 95 – 8 x 105   ▲ +5%
+                          all 8 x 65 – 8 x 105
+   Pull-Up                          8 – 8         —
 ```
 
-- **Lowest and highest** are the worst and best of the period, not its first
-  and last, so a bad week in the middle shows up.
-- **All-time** is the same pair over the whole log, so a good month can be
-  read against the best you have ever done.
-- **Trend** compares the latest session with the first one in the period — or,
+- **The pill** compares the last session of the period with the first — or,
   when the period holds only one, with the last time before it. By weight when
   the weight moved, by reps when it did not: more reps at the same load is
-  progress and read as 0% until it was fixed.
-- **★** marks a best ever set inside the period. It needs history to beat, so
-  a first-ever session does not star itself.
-
-Ask for a number of weeks and you get both halves. Leave it blank and the
-period *is* the whole log, so the all-time columns are dropped rather than
-repeated.
-
-**Download PDF** is Sheets' own export of that tab, so the app needs no extra
-permission for it. It opens in a new tab and is fetched by your browser, not
-by the app — so it needs access to the spreadsheet. If you hold the admin link
-but the sheet is not shared with you, the totals still show in the app; ask
-whoever owns the log for the PDF.
-
-The tab stays behind with the charts live if you would rather sort or chart it
-yourself.
+  progress, and reading that as 0% was a bug.
+- **★** marks a period holding a best ever set. It needs history to beat, so a
+  first-ever session does not star itself.
+- The all-time line is left off when it matches the period — with no weeks
+  asked for, the period *is* the whole log, so it never appears.
 
 Volume is reps × weight, so bodyweight work counts as sets but adds no volume,
-and a timed exercise contributes neither volume nor an estimated 1RM — seconds
-× pounds is not a number worth totalling. All three still count as sessions.
-
-{: .note }
-It is output, rewritten each time you run it, exactly like `Records`. Nothing
-you type into that tab survives.
+and a timed exercise contributes none either — seconds × pounds is not a number
+worth totalling. All three still count as sessions.
 
 ### Archiving old sessions
 

@@ -309,23 +309,33 @@ free of SpreadsheetApp so it stays testable — keep it that way.
 
 ## The report
 
-`reportData(rows, timed, from)` is pure and testable, like `computeRecords`;
-`buildReport()` does the spreadsheet half and `showReport()` the menu. It is
-output — the `Report` tab is rewritten wholesale and created on demand, so it
-is not in the shipped template.
+`reportData(rows, timed, from)` is pure and testable, like `computeRecords`.
+`reportSummary(k, from)` returns the numbers and the browser draws them
+(`reportView`) — that is the one place in the app that builds markup from
+spreadsheet values, so everything sheet-derived goes through `esc()`.
 
-Two surfaces on one aggregation. `reportSummary(k, from)` returns the numbers
-and the app draws them as cards (`reportView`) — that is the one place in the
-app that builds markup from spreadsheet values, so everything sheet-derived
-goes through `esc()`. `buildReport(k, from)` writes the `Report` tab for the
-live charts. The menu item and the app's `Report…` button both exist.
+**The PDF is the app's own page, printed.** There was a second implementation
+that wrote a `Report` tab with live charts and handed back Sheets' own
+`/export?format=pdf` URL; it was deleted in favour of this one, which looks
+the same on paper as it does on screen and needs no access to the spreadsheet
+to produce. Don't rebuild it. What that means for the print rules:
 
-The PDF is Sheets' own export URL (`/export?format=pdf&gid=…`) opened by the
-browser, NOT a fetch. It is therefore fetched as the *visitor*, so an admin
-without access to the spreadsheet gets a permission page rather than a file —
-the totals in the panel come from the app and always work. Generating one server-side would mean `UrlFetchApp` plus
-a Drive scope, and setup is meant to stay inside the one authorisation the
-bound script already has. Don't "improve" this into a fetch.
+- `@media print` in `Index.html` is load-bearing, not decoration. It hides the
+  session, un-modals the report and keeps background colours — browsers drop
+  those by default, which took the bars, the chips and the day headers.
+- Day cards print two across (`.daygrid`). One column spilled a fourth card
+  onto an otherwise blank second page.
+- Chart bar heights are percentages. Pixels were sized against the 120px
+  on-screen chart and overflowed the shorter print one, onto its own heading.
+- `window.print()` inside the sandbox iframe prints *that frame*, so it
+  paginates. Printing the top document instead clips at the iframe's height —
+  which is what `page.pdf()` does, so a Playwright capture is not evidence
+  about the real thing unless it renders the frame standalone.
+
+Each exercise row carries the period's range and, where it is wider, the
+all-time one. Two numbers because one invites reading a good month as a
+personal best. The chart carries two variables as well: height is volume,
+colour is how many sessions that week.
 
 Volume is reps × weight and deliberately 0 for timed work; bodyweight sets
 count as sets with no volume. Both still count as sessions.

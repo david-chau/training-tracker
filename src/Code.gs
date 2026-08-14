@@ -13,7 +13,6 @@ const CFG = {
   templateSheet: 'Templates',
   settingsSheet: 'Settings',
   recordsSheet: 'Records',
-  reportSheet: 'Report',
   weightStep: 5,
   repStep: 2,
   timeStep: 5,        // seconds, for exercises measured in time
@@ -183,7 +182,6 @@ function onOpen() {
     .addItem('Show shareable links', 'showLinks')
     .addItem('Set web app link…', 'setWebAppLink')
     .addItem('Rebuild records', 'showRecords')
-    .addItem('Training report…', 'showReport')
     .addItem('Archive old sessions…', 'archiveSessions')
     .addItem('Refresh exercise dropdown', 'setupExerciseValidation')
     .addToUi();
@@ -632,52 +630,6 @@ function epley(reps, weight) {
   return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }
 
-// Menu: build the report, then offer it as a PDF.
-//
-// The PDF is Sheets' own export URL rather than anything generated here. That
-// keeps the app inside the one authorisation it already has — no UrlFetch, no
-// Drive scope, nothing for a user to consent to beyond the spreadsheet the
-// script is already bound to — and the browser does the downloading.
-function showReport() {
-  const ui = SpreadsheetApp.getUi();
-  const answer = ui.prompt(
-    'Training report',
-    'How many weeks back? Leave blank for everything.\n\n' +
-    'A Report tab is written with a weekly summary, an estimated-1RM chart, ' +
-    'and every session per exercise. It is then offered as a PDF.',
-    ui.ButtonSet.OK_CANCEL
-  );
-  if (answer.getSelectedButton() !== ui.Button.OK) return;
-
-  const weeks = Math.round(num(answer.getResponseText()));
-  let from = '';
-  if (weeks > 0) {
-    const d = new Date();
-    d.setDate(d.getDate() - weeks * 7);
-    from = dateKey(d);
-  }
-
-  const built = buildReport(editKey(), from);
-  if (!built) {
-    ui.alert('Nothing to report', 'No sessions in that period.', ui.ButtonSet.OK);
-    return;
-  }
-
-  const html = HtmlService.createHtmlOutput(
-    '<p style="font:14px/1.5 system-ui,sans-serif">' +
-    plural(built.sessions, 'session') + ' · ' + plural(built.sets, 'set') + ' · ' +
-    Math.round(built.volume).toLocaleString() + ' lb of volume<br>' +
-    '<span style="color:#666">' + built.from + ' to ' + built.to + '</span></p>' +
-    '<p style="font:14px/1.5 system-ui,sans-serif">' +
-    '<a href="' + built.pdf + '" target="_blank" rel="noopener" ' +
-    'style="display:inline-block;padding:10px 16px;background:#1b5aa0;color:#fff;' +
-    'border-radius:8px;text-decoration:none">Download PDF</a></p>' +
-    '<p style="font:13px/1.5 system-ui,sans-serif;color:#666">' +
-    'The Report tab has the same thing, with the charts live.</p>')
-    .setWidth(360).setHeight(220);
-  ui.showModalDialog(html, 'Report ready');
-}
-
 // The report as data, for the app to draw. No writing, so it is quick enough
 // to run while someone waits and safe to re-run as they change the period.
 function reportSummary(k, from) {
@@ -685,8 +637,8 @@ function reportSummary(k, from) {
   const data = reportData(allRows(), timedLookup(), from);
   if (!data.sessions) return null;
 
-  // Only what the page draws: the per-session lists behind each exercise are
-  // for the sheet's chart and would triple the payload.
+  // Only what the page draws: the per-session lists behind each exercise
+  // would triple the payload and nothing renders them.
   return {
     name: logName(),
     from: data.from, to: data.to, period: data.period,
@@ -709,253 +661,6 @@ function reportSummary(k, from) {
 }
 
 
-// Writes the Report tab and returns the totals plus a PDF link for it.
-// Rewritten wholesale, like Records: it is output, never a source.
-function buildReport(k, from) {
-  assertEdit(k);
-  const ss = SpreadsheetApp.getActive();
-  const data = reportData(allRows(), timedLookup(), from);
-  if (!data.sessions) return null;
-
-  let sheet = ss.getSheetByName(CFG.reportSheet);
-  if (!sheet) sheet = ss.insertSheet(CFG.reportSheet);
-  sheet.clear();
-  sheet.getCharts().forEach(function (c) { sheet.removeChart(c); });
-
-  const out = [];
-  out.push(['Training report — ' + logName(), '', '', '', '']);
-  out.push([data.from + ' to ' + data.to, '', '', '', '']);
-  out.push([plural(data.sessions, 'session'), plural(data.sets, 'set'),
-            data.volume + ' lb volume · weights in lb', '', '']);
-  if (data.period) {
-    out.push(['Lowest, highest, latest and trend cover this period; all-time ' +
-              'covers the whole log. ★ marks a best ever, set in this period.',
-              '', '', '', '']);
-  }
-  out.push(['']);
-
-  // 1. The summary.
-  const summaryAt = out.length + 1;
-  out.push(['SUMMARY — how the weeks went', '', '', '', '']);
-  const weekAt = out.length + 1;
-  out.push(['Week', 'Sess', 'Sets', 'Volume', 'Trend']);
-  const weekTrends = [];
-  data.weeks.forEach(function (w) {
-    if (w.change !== null) weekTrends.push([out.length + 1, w.change]);
-    out.push([w.week, w.sessions, w.sets, w.volume, trend(w.change)]);
-  });
-  const weekRows = data.weeks.length;
-  out.push(['']);
-
-  // 2. The charts, which float over the grid rather than occupying it — so
-  //    the rows they cover are left blank on purpose.
-  const CHART_ROWS = 11;
-  const chart1At = out.length + 1;
-  for (var i = 0; i < CHART_ROWS; i++) out.push(['']);
-  const chart2At = out.length + 1;
-  for (var j = 0; j < CHART_ROWS; j++) out.push(['']);
-  out.push(['']);
-
-  // 3. The detail, per day type, each group opening with its own totals.
-  const byDay = {};
-  data.exercises.forEach(function (ex) {
-    const g = byDay[ex.day] || (byDay[ex.day] = { sets: 0, volume: 0, dates: {} });
-    g.sets += ex.total.sets;
-    g.volume += ex.total.volume;
-    ex.sessions.forEach(function (d) { g.dates[d.date] = true; });
-  });
-
-  out.push(['BY EXERCISE — best and worst of the period, against all time', '',
-            '', '', '']);
-  const detailAt = out.length;
-  const dayLabels = [];
-  const headings = [];
-  const countCells = [];
-  const trendCells = [];
-  const starRows = [];
-  let currentDay = null;
-  data.exercises.forEach(function (ex) {
-    if (ex.day !== currentDay) {
-      currentDay = ex.day;
-      if (out.length && out[out.length - 1][0] !== '') out.push(['']);
-      const g = byDay[ex.day];
-      dayLabels.push(out.length + 1);
-      out.push([ex.day.toUpperCase() + '  ·  ' +
-                plural(Object.keys(g.dates).length, 'session') + '  ·  ' +
-                plural(g.sets, 'set') +
-                (g.volume ? '  ·  ' + thousands(g.volume) + ' lb' : ''),
-                '', '', '', '']);
-      headings.push(out.length + 1);
-      out.push(['Exercise', 'Sess', 'Lowest', 'Highest', 'Latest', 'Trend']
-        .concat(data.period ? ['All low', 'All high'] : []));
-    }
-    countCells.push(out.length + 1);
-    if (ex.total.change !== null) {
-      trendCells.push([out.length + 1, ex.total.change]);
-    }
-    const t = ex.total;
-    // A best ever, set in this period — and only worth a star if there was
-    // history to beat. Without that check a first-ever session stars itself
-    // and every line on the page ends up marked, which marks nothing.
-    const best = ex.lifetime && ex.lifetime.high &&
-                 ex.lifetime.sessions > t.sessions &&
-                 topSet(ex, t.high) === topSet(ex, ex.lifetime.high);
-    if (best) starRows.push(out.length + 1);
-    out.push([(best ? '★ ' : '') + ex.name,
-              t.sessions, topSet(ex, t.low), topSet(ex, t.high),
-              topSet(ex, t.last), trend(t.change)]
-      .concat(ex.lifetime
-        ? [topSet(ex, ex.lifetime.low), topSet(ex, ex.lifetime.high)]
-        : []));
-  });
-
-  // 4. What the 1RM chart is drawn from. Last, because it is data for a
-  //    picture the reader has already seen.
-  const top = data.exercises.filter(function (e) {
-    return !e.timed && e.sessions.some(function (d) { return d.est1rm > 0; });
-  }).slice(0, 5);
-  const dates = dedupe([].concat.apply([], top.map(function (e) {
-    return e.sessions.map(function (d) { return d.date; });
-  }))).sort();
-
-  out.push(['']);
-  const chartAt = out.length + 1;
-  out.push(['Estimated 1RM'].concat(top.map(function (e) { return e.name; })));
-  dates.forEach(function (date) {
-    out.push([date].concat(top.map(function (e) {
-      const hit = e.sessions.filter(function (d) { return d.date === date; })[0];
-      return hit && hit.est1rm ? hit.est1rm : '';
-    })));
-  });
-  const chartRows = dates.length;
-
-  const width = out.reduce(function (w, r) { return Math.max(w, r.length); }, 5);
-  out.forEach(function (r) { while (r.length < width) r.push(''); });
-  sheet.getRange(1, 1, out.length, width).setValues(out);
-
-  // A session count is a count. Written into a cell the tab had previously
-  // used for dates, "2" renders as 1900-01-01 — clear() does not always take
-  // a column format with it, so the format is stated rather than inherited.
-  sheet.getRange(weekAt + 1, 2, Math.max(1, weekRows), 3).setNumberFormat('0');
-  countCells.forEach(function (row) {
-    sheet.getRange(row, 2).setNumberFormat('0');
-  });
-  if (chartRows && top.length) {
-    sheet.getRange(chartAt + 1, 2, chartRows, top.length).setNumberFormat('0.#');
-  }
-
-  // Up is green, down is red, flat is neither. The arrow already says which
-  // way; colour is what makes a page of them readable without reading.
-  const paint = function (row, col, pct) {
-    sheet.getRange(row, col)
-      .setFontColor(pct > 0 ? '#1d7a4f' : pct < 0 ? '#a33' : '#6b6b66');
-  };
-  trendCells.forEach(function (hit) { paint(hit[0], 6, hit[1]); });
-  weekTrends.forEach(function (hit) { paint(hit[0], 5, hit[1]); });
-
-  // Section labels and a box around each block: on a page this dense, a
-  // border is what tells the eye where one table stops and the next begins.
-  const LINE = SpreadsheetApp.BorderStyle.SOLID;
-  const EDGE = '#c9c7c1';
-
-  [summaryAt, detailAt].forEach(function (row) {
-    sheet.getRange(row, 1, 1, width)
-      .setFontWeight('bold').setFontSize(11).setFontColor('#6b6b66');
-  });
-
-  sheet.getRange(summaryAt + 1, 1, weekRows + 1, width)
-    .setBorder(true, true, true, true, false, false, EDGE, LINE);
-
-  // A dark bar per day type: the eye finds PUSH before it reads anything.
-  dayLabels.forEach(function (row) {
-    sheet.getRange(row, 1, 1, width)
-      .setBackground('#1c1c1a').setFontColor('#ffffff')
-      .setFontWeight('bold').setFontSize(11);
-  });
-
-  // Column labels sit quieter than the bar above them.
-  headings.concat([weekAt]).forEach(function (row) {
-    sheet.getRange(row, 1, 1, width)
-      .setBackground('#f2f2f0').setFontWeight('bold').setFontColor('#6b6b66');
-  });
-
-  // Each day type is one box, from its bar to the row before the next.
-  dayLabels.forEach(function (row, i) {
-    const next = dayLabels[i + 1];
-    const last = (next ? next - 2 : chartAt - 2);
-    if (last >= row) {
-      sheet.getRange(row, 1, last - row + 1, width)
-        .setBorder(true, true, true, true, false, false, EDGE, LINE);
-    }
-  });
-
-  // A best ever is worth seeing from across the room.
-  starRows.forEach(function (row) {
-    sheet.getRange(row, 1, 1, width).setBackground('#f3f9f5');
-  });
-
-  sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
-  [weekAt, chartAt].concat(headings).forEach(function (row) {
-    if (row > 0) sheet.getRange(row, 1, 1, width).setFontWeight('bold');
-  });
-  sheet.setFrozenRows(3);
-  sheet.setColumnWidth(1, 185);                 // the longest exercise name
-  for (var c = 2; c <= width; c++) {
-    sheet.setColumnWidth(c, c === 2 ? 48 : 78); // counts are narrow, sets are not
-  }
-
-  // Bodyweight top sets are bare numbers, so Sheets right-aligns them while
-  // "8 × 105" beside them is text and sits left. One alignment for the column.
-  if (out.length > 5) {
-    sheet.getRange(1, 3, out.length, Math.max(1, width - 2))
-      .setHorizontalAlignment('left');
-  }
-
-  // Below the tables, full width. Anchored beside them they landed on top of
-  // the columns the report grew, and were squeezed into the margin at about a
-  // quarter of the width they needed.
-  const CHART_W = 700, CHART_H = 225;
-
-  if (weekRows) {
-    sheet.insertChart(sheet.newChart().asColumnChart()
-      .addRange(sheet.getRange(weekAt, 1, weekRows + 1, 1))
-      .addRange(sheet.getRange(weekAt, 4, weekRows + 1, 1))
-      .setNumHeaders(1)
-      .setOption('title', 'Volume per week (lb)')
-      .setOption('legend', { position: 'none' })
-      .setOption('width', CHART_W)
-      .setOption('height', CHART_H)
-      .setPosition(chart1At, 1, 0, 0)
-      .build());
-  }
-  if (chartRows && top.length) {
-    sheet.insertChart(sheet.newChart().asLineChart()
-      .addRange(sheet.getRange(chartAt, 1, chartRows + 1, top.length + 1))
-      .setNumHeaders(1)
-      .setOption('title', 'Estimated 1RM — heaviest working set, per session')
-      .setOption('legend', { position: 'bottom' })
-      .setOption('width', CHART_W)
-      .setOption('height', CHART_H)
-      .setPosition(chart2At, 1, 0, 0)
-      .build());
-  }
-
-  SpreadsheetApp.flush();
-  ss.setActiveSheet(sheet);
-
-  return {
-    sessions: data.sessions, sets: data.sets, volume: data.volume,
-    from: data.from, to: data.to,
-    pdf: ss.getUrl().replace(/\/edit.*$/, '') +
-         '/export?format=pdf&gid=' + sheet.getSheetId() +
-         // Portrait, fit to page. The report is a narrow, tall thing — eight
-         // short columns and two stacked charts — and landscape left it using
-         // the left third of the sheet at a size nobody would read.
-         '&portrait=true&scale=4&gridlines=false&printtitle=false' +
-         '&sheetnames=false&pagenum=false&size=letter'
-  };
-}
-
 // How far one top set moved against another, as a percentage. Whichever
 // number actually moved: more reps at the same weight is progress, and
 // measuring it by load would report 0%, which is the opposite of the point.
@@ -972,21 +677,10 @@ function topSetChange(then, now) {
 
 // The direction, then the size. An arrow is read before a number is, which is
 // the whole job of this column.
-function trend(pct) {
-  if (pct === null) return '—';
-  if (pct > 0) return '▲ +' + pct + '%';
-  if (pct < 0) return '▼ ' + pct + '%';
-  return '▬ 0%';
-}
 
-// "1 sessions" is the kind of thing that makes a report look automated.
-function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
 // 28400 reads as 28,400. Apps Script has toLocaleString, but a report should
 // not depend on which locale the script happens to run under.
-function thousands(n) {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
 
 // "8 x 105 lb", "45s", "20" — whichever the exercise actually is.
 function topSet(ex, day) {
@@ -1000,7 +694,7 @@ function topSet(ex, day) {
 //
 // A summary of what is in the Log: what was done, how it moved, and how much
 // of it there was. Pure, like computeRecords, so it can be tested outside
-// Apps Script — buildReport() below does the spreadsheet half.
+// Apps Script — reportSummary() above hands it to the browser to draw.
 //
 // Volume is reps x weight, so it is 0 for bodyweight work and meaningless for
 // a timed hold. Both are still counted as sets, which is what makes the

@@ -244,15 +244,31 @@
   .tile span { font-size:11px; color:var(--muted); text-transform:uppercase;
                letter-spacing:0.05em; }
   /* wk-, not bar-: `.bar` is the fixed status bar at the foot of the page, and
-     a chart bar sharing the name inherited `position:fixed` and its colour. */
-  .wkbars { display:flex; align-items:flex-end; gap:6px; height:120px;
-            margin-bottom:6px; }
-  .wkbar { flex:1; background:#d8d8d4; border:1px solid #c3c3bf;
-           border-radius:5px 5px 0 0; min-height:3px; }
-  .wkbar.now { background:var(--ink); border-color:var(--ink); }
-  .wklabels { display:flex; gap:6px; }
-  .wklabels span { flex:1; text-align:center; font-size:10px;
-                   color:var(--muted); }
+     a chart bar sharing the name inherited `position:fixed` and its colour.
+     A column per week: its total above, the bar itself in whatever room is
+     left, the week under. The bar is a percentage of .wkplot rather than of
+     the whole column, so the number above it is never overrun. */
+  .wkbars { display:flex; align-items:stretch; justify-content:center;
+            gap:6px; height:128px; margin-bottom:8px; }
+  .wkcol { flex:1; min-width:0; max-width:104px; display:flex;
+           flex-direction:column; gap:3px; }
+  .wkplot { flex:1; display:flex; align-items:flex-end; }
+  .wkval, .wklab { font-size:10px; text-align:center; color:var(--muted);
+                   font-variant-numeric:tabular-nums; }
+  .wkcol.now .wkval, .wkcol.now .wklab { color:var(--ink); font-weight:600; }
+  .wkbar { width:100%; border-radius:5px 5px 0 0; min-height:3px;
+           border:1px solid rgba(0,0,0,0.08); }
+  /* One colour, three strengths: a week reads as light, solid or hard before
+     any number is. */
+  .s0 { background:#eceae5; }
+  .s1 { background:#bcdcc8; }
+  .s2 { background:#67b58b; }
+  .s3 { background:var(--ok); }
+  .wkcol.now .wkbar { border:2px solid var(--ink); }
+  .sw { display:inline-block; width:11px; height:11px; border-radius:3px;
+        border:1px solid rgba(0,0,0,0.08); vertical-align:-1px; }
+  .legend { font-size:11px; color:var(--muted); line-height:1.5; }
+  .rep > .legend { margin:-4px 0 10px; }
 
   /* Day-type cards, each with its own icon and totals. */
   .daycard { border:1px solid var(--line); border-radius:14px; margin-bottom:12px;
@@ -269,7 +285,10 @@
   .exrow .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
                white-space:nowrap; }
   .exrow .mv { font-variant-numeric:tabular-nums; color:var(--muted);
-               font-size:13px; white-space:nowrap; }
+               font-size:13px; white-space:nowrap; text-align:right; }
+  .exrow .all { display:block; font-style:normal; font-size:11px;
+                opacity:0.75; }
+  .exrow .all::before { content:'all '; }
   .chip { font-size:12px; font-weight:600; padding:2px 7px; border-radius:20px;
           white-space:nowrap; }
   .chip.up { background:#e6f4ec; color:var(--ok); }
@@ -713,7 +732,7 @@ function reportPanel() {
         go.disabled = cancel.disabled = false;
         go.textContent = 'Build';
         if (!res) { flash('Nothing logged in that period', false, true); return; }
-        showReportView(p, res, from);
+        showReportView(p, res);
         flash('Report ready', true);
       })
       .withFailureHandler(function (e) {
@@ -744,7 +763,10 @@ var DAY_ICONS = [
   [/upper|arm|shoulder|delt|bicep|tricep/i,
    '<path d="M5 12h4l3-5 3 5h4M9 12v6M15 12v6"/>']
 ];
-var DAY_ICON_FALLBACK = '<path d="M4 10v4M20 10v4M7 8v8M17 8v8M7 12h10"/>';
+// Deliberately not a barbell: the fallback sat next to Push's barbell and the
+// two read as the same icon at 20px.
+var DAY_ICON_FALLBACK = '<circle cx="7" cy="7" r="2"/><circle cx="17" cy="7" r="2"/>' +
+  '<circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>';
 
 function dayIcon(name) {
   var body = DAY_ICON_FALLBACK;
@@ -777,6 +799,18 @@ function commas(n) {
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+// Above a bar there is room for four characters, not for "18,591".
+function short(n) {
+  n = Math.round(n);
+  if (n >= 10000) return Math.round(n / 1000) + 'k';
+  if (n >= 1000) return (Math.round(n / 100) / 10) + 'k';
+  return String(n);
+}
+
+// Three bands of training frequency. Past three sessions a week the shade
+// stops meaning anything — it is a hard week either way.
+function band(sessions) { return Math.min(3, Math.max(0, sessions || 0)); }
+
 function chip(pct) {
   if (pct === null || pct === undefined) return '<span class="chip flat">—</span>';
   var cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
@@ -800,21 +834,26 @@ function reportView(res) {
     '<div class="sub">' + esc(res.name) + ' · ' + esc(res.from) + ' to ' + esc(res.to) +
     (res.period ? '' : ' · everything logged') + '</div>';
 
-  html += '<div class="card"><h3>' + plural(res.sessions, 'session') +
-          '</h3><div class="wkbars">';
+  // Two things at once: how tall the week was (volume) and how often it was
+  // trained (colour). Neither reads without the numbers on the bars — a bare
+  // grey chart says "something happened" and nothing else.
+  html += '<div class="card"><h3>Week by week</h3><div class="wkbars">';
   weeks.forEach(function (w, i) {
     // Per cent, not pixels: print shrinks the chart, and absolute heights
     // overflowed it upwards and sat on top of the card's own heading.
     var h = Math.max(3, Math.round(w.volume / peak * 100));
-    html += '<div class="wkbar' + (i === weeks.length - 1 ? ' now' : '') +
-            '" style="height:' + h + '%" title="' + esc(w.week) + ': ' +
-            commas(w.volume) + ' lb"></div>';
+    html += '<div class="wkcol' + (i === weeks.length - 1 ? ' now' : '') + '">' +
+      '<span class="wkval">' + short(w.volume) + '</span>' +
+      '<div class="wkplot"><div class="wkbar s' + band(w.sessions) +
+      '" style="height:' + h + '%" title="' + esc(w.week) + ': ' +
+      commas(w.volume) + ' lb over ' + plural(w.sessions, 'session') +
+      '"></div></div>' +
+      '<span class="wklab">' + esc(w.week.slice(5)) + '</span></div>';
   });
-  html += '</div><div class="wklabels">';
-  weeks.forEach(function (w) {
-    html += '<span>' + esc(w.week.slice(5)) + '</span>';
-  });
-  html += '</div></div>';
+  html += '</div><div class="legend">Height is volume in lb. Colour is how ' +
+    'often you trained that week: <span class="sw s1"></span>1 ' +
+    '<span class="sw s2"></span>2 <span class="sw s3"></span>3+ sessions. ' +
+    'The last week is outlined.</div></div>';
 
   html += '<div class="card"><h3>Totals</h3><div class="tiles">' +
     tile(res.sessions, word(res.sessions, 'session')) +
@@ -835,7 +874,10 @@ function reportView(res) {
     byDay[ex.day].push(ex);
   });
 
-  html += '<div class="daygrid">';
+  html += '<div class="legend">Lightest – heaviest set of the period, with ' +
+    'your all-time range under it where it is wider. ★ marks a period that ' +
+    'holds your best ever. The pill is first session to last.</div>' +
+    '<div class="daygrid">';
   order.forEach(function (day) {
     var list = byDay[day];
     var sets = 0, volume = 0, sessions = 0;
@@ -851,9 +893,16 @@ function reportView(res) {
       (volume ? ' · ' + commas(volume) + ' lb' : '') + '</span></div>';
 
     list.forEach(function (ex) {
+      // An arrow read as "went from, to". These are the lightest and heaviest
+      // sets of the period, so it is a range and gets a range's dash — and the
+      // lifetime one next to it, which is the only way to tell a period best
+      // from a real best.
+      var life = ex.allLow && (ex.allLow !== ex.low || ex.allHigh !== ex.high)
+        ? esc(ex.allLow) + ' – ' + esc(ex.allHigh) : '';
       html += '<div class="exrow' + (ex.best ? ' pb' : '') + '">' +
         '<span class="nm">' + (ex.best ? '★ ' : '') + esc(ex.name) + '</span>' +
-        '<span class="mv">' + esc(ex.low) + ' → ' + esc(ex.high) + '</span>' +
+        '<span class="mv">' + esc(ex.low) + ' – ' + esc(ex.high) +
+        (life ? '<i class="all">' + life + '</i>' : '') + '</span>' +
         chip(ex.change) + '</div>';
     });
     html += '</div>';
@@ -866,7 +915,7 @@ function reportView(res) {
 
 // The report opens over the page. Escape and the backdrop both close it, the
 // way any dialog should.
-function showReportView(panel, res, from) {
+function showReportView(panel, res) {
   panel.remove();
 
   var modal = document.createElement('div');
@@ -885,27 +934,6 @@ function showReportView(panel, res, from) {
   print.textContent = 'Save as PDF';
   print.onclick = function () { window.print(); };
 
-  var sheetBtn = document.createElement('button');
-  sheetBtn.className = 'repclose';
-  sheetBtn.id = 'sheetreport';
-  sheetBtn.textContent = 'Sheet version';
-  sheetBtn.onclick = function () {
-    sheetBtn.disabled = true;
-    sheetBtn.textContent = 'Building…';
-    google.script.run
-      .withSuccessHandler(function (built) {
-        sheetBtn.disabled = false;
-        sheetBtn.textContent = 'Sheet version';
-        if (built) reportResult(sheetBox, built);
-      })
-      .withFailureHandler(function (e) {
-        sheetBtn.disabled = false;
-        sheetBtn.textContent = 'Sheet version';
-        flash('Failed: ' + why(e), false, true);
-      })
-      .buildReport(KEY, from);
-  };
-
   var close = document.createElement('button');
   close.className = 'repclose';
   close.id = 'closereport';
@@ -920,33 +948,11 @@ function showReportView(panel, res, from) {
   modal.onclick = function (e) { if (e.target === modal) shut(); };
   document.addEventListener('keydown', onKey, true);
 
-  bar.appendChild(print); bar.appendChild(sheetBtn); bar.appendChild(close);
+  bar.appendChild(print); bar.appendChild(close);
   sheetBox.appendChild(bar);
   sheetBox.appendChild(reportView(res));
   modal.appendChild(sheetBox);
   document.body.appendChild(modal);
-}
-
-// The spreadsheet version: its own export, fetched by this browser rather
-// than by the app — so it needs access to the sheet, which whoever owns the
-// log has and a trainer holding only the admin link may not.
-function reportResult(p, res) {
-  var row = document.createElement('div');
-  row.className = 'row';
-  var pdf = document.createElement('a');
-  pdf.className = 'go';
-  pdf.href = res.pdf;
-  pdf.target = '_blank';
-  pdf.rel = 'noopener';
-  pdf.textContent = 'Download PDF';
-  row.appendChild(pdf);
-  p.appendChild(row);
-
-  var note = document.createElement('div');
-  note.className = 'hint';
-  note.textContent = 'The Report tab has the same numbers with the charts live. ' +
-    'Its PDF needs access to the spreadsheet itself.';
-  p.appendChild(note);
 }
 
 document.getElementById('dayback').onclick = function () { shiftDay(-1); };

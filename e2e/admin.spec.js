@@ -70,7 +70,7 @@ test.describe('admin link', () => {
     expect(await link.getAttribute('href')).toContain('docs.google.com');
   });
 
-  test('the report builds and offers a PDF of the sheet', async ({ page }) => {
+  test('the report draws itself, and is the thing that prints', async ({ page }) => {
     test.skip(!T.allowWrites, 'writes disabled');
     const app = await open(page, T.adminUrl);
 
@@ -78,24 +78,31 @@ test.describe('admin link', () => {
       'the live app has no report button yet — redeploy Index.html');
 
     await app.locator('#report').click();
-    const panel = app.locator('#reportpanel');
-    await expect(panel).toBeVisible();
+    await expect(app.locator('#reportpanel')).toBeVisible();
 
-    // Blank weeks means the whole log. Building scans it and writes a tab, so
-    // this is slow by nature rather than by accident.
-    await panel.locator('.go', { hasText: 'Build' }).click();
-    const pdf = panel.locator('a.go');
-    await expect(pdf).toBeVisible({ timeout: 120_000 });
+    // Blank weeks means the whole log, so this scans every row: slow by
+    // nature rather than by accident.
+    await app.locator('#reportpanel .go', { hasText: 'Build' }).click();
+    const modal = app.locator('.repmodal');
+    await expect(modal).toBeVisible({ timeout: 120_000 });
 
-    await expect(panel).toContainText(/\d+ sessions · \d+ sets/);
-    await expect(pdf).toHaveText('Download PDF');
-    await expect(pdf).toHaveAttribute('target', '_blank');
+    // The PDF is this page printed — there is no server-side rendering and no
+    // export URL to follow, so what is on screen is the whole deliverable.
+    await expect(modal.locator('#printreport')).toHaveText('Save as PDF');
+    await expect(modal.locator('a[href*="format=pdf"]')).toHaveCount(0);
 
-    // Sheets' own export of the Report tab, not something the app generated.
-    const href = await pdf.getAttribute('href');
-    expect(href).toMatch(/\/export\?format=pdf/);
-    expect(href).toMatch(/[?&]gid=\d+/);
-    expect(href).toContain(T.sheetUrl.split('/d/')[1].split('/')[0]);
+    test.skip(!await modal.locator('.legend').count(),
+      'the live app predates the chart legend — redeploy Index.html');
+
+    await expect(modal.locator('.daycard').first()).toBeVisible();
+    await expect(modal.locator('.wkbar').first()).toBeVisible();
+    await expect(modal).toContainText(/Height is volume/);
+    await expect(modal).toContainText(/Lightest . heaviest set of the period/);
+
+    // Escape is the way out, and it must leave the session behind it intact.
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+    await expect(app.locator('#report')).toBeVisible();
   });
 
   test.describe('on a scratch date', () => {

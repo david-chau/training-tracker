@@ -943,12 +943,12 @@ test('the report draws as cards, with an icon per day type', () => {
   const el = G.reportView({
     name: 'Training — David', from: '2026-07-20', to: '2026-08-11', period: '2026-07-20',
     sessions: 7, sets: 106, volume: 66948,
-    weeks: [{ week: '2026-07-20', sessions: 3, sets: 49, volume: 33705, change: null },
+    weeks: [{ week: '2026-07-20', sessions: 1, sets: 49, volume: 33705, change: null },
             { week: '2026-07-27', sessions: 3, sets: 49, volume: 35915, change: 6.6 }],
     exercises: [
       { name: 'Barbell Bench Press', day: 'Push', sessions: 3, sets: 12,
         volume: 9600, low: '8 × 95', high: '8 × 105', last: '8 × 105',
-        change: 10.5, allLow: '8 × 95', allHigh: '8 × 105', best: true },
+        change: 10.5, allLow: '8 × 65', allHigh: '8 × 105', best: true },
       { name: 'Pull-Up', day: 'Pull', sessions: 1, sets: 3, volume: 0,
         low: '8', high: '8', last: '8', change: null, best: false }
     ]
@@ -959,12 +959,21 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /chip up/, 'a rise is a green chip');
   assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
   assert.match(html, /66,948/, 'volume is grouped in thousands');
-  assert.match(html, /class="wkbar now"/, 'the newest week is picked out');
+  assert.match(html, /class="wkcol now"/, 'the newest week is picked out');
+  // Colour carries how often a week was trained; height only carries volume.
+  assert.match(html, /class="wkbar s1"/, 'a week trained once is the light shade');
+  assert.match(html, /class="wkbar s3"/, 'and three sessions the strong one');
+  assert.match(html, /class="wkval">34k</, 'each bar says what it is worth');
+  assert.match(html, /class="legend"/, 'and the chart says what it is showing');
   // Per cent, so the chart survives being shrunk for print. Pixels overflowed
   // the box upwards and landed on the card's heading.
   assert.match(html, /style="height:\d+%"/, 'bar heights are relative');
   assert.doesNotMatch(html, /style="height:\d+px"/, 'no bar is sized in pixels');
   assert.match(html, /class="daygrid"/, 'day cards share a wrapper to lay out');
+  // Period and lifetime are different questions. Showing one number invites
+  // reading a good month as a personal best.
+  assert.match(html, /8 × 95 – 8 × 105/, 'the period is a range, not a journey');
+  assert.match(html, /class="all">8 × 65 – 8 × 105/, 'with all-time beneath it');
   // `.bar` is the fixed status bar: a chart bar named that inherits
   // position:fixed, takes the page width and is hidden by the print rule.
   assert.doesNotMatch(html, /class="bars?["' ]/, 'no chart element claims .bar');
@@ -1001,6 +1010,18 @@ test('one of something is not "1 sessions"', () => {
   assert.ok(!/0 lb/.test(el.innerHTML), 'no zero volume');
 });
 
+test('an all-time range identical to the period is not printed twice', () => {
+  const el = G.reportView({
+    name: 'Log', from: '2026-08-01', to: '2026-08-11', period: '',
+    sessions: 1, sets: 3, volume: 300, weeks: [],
+    exercises: [{ name: 'Lateral Raise', day: 'Push', sessions: 1, sets: 3,
+                  volume: 300, low: '15 × 10', high: '15 × 10', last: '15 × 10',
+                  change: null, allLow: '15 × 10', allHigh: '15 × 10',
+                  best: false }]
+  });
+  assert.ok(!/class="all"/.test(el.innerHTML), 'nothing to add, so nothing shown');
+});
+
 test('the report opens as a modal that escape closes', () => {
   const realGet = sandbox.document.getElementById;
   sandbox.document.getElementById = id => (id === 'reportpanel' ? null : realGet(id));
@@ -1014,7 +1035,7 @@ test('the report opens as a modal that escape closes', () => {
   G.showReportView(panel, {
     name: 'Log', from: '2026-08-01', to: '2026-08-11', period: '',
     sessions: 1, sets: 1, volume: 1, weeks: [], exercises: []
-  }, '');
+  });
 
   const modal = body.children.slice(-1)[0];
   assert.strictEqual(modal.className, 'repmodal', 'it is a modal, not inline');
@@ -1034,8 +1055,7 @@ test('the report panel asks the server, with the key and a start date', () => {
   sandbox.google.script.run = {
     withSuccessHandler(f) { this.ok = f; return this; },
     withFailureHandler() { return this; },
-    reportSummary(key, from) { outbox.push({ call: 'reportSummary', key, from }); },
-    buildReport(key, from) { outbox.push({ call: 'buildReport', key, from }); }
+    reportSummary(key, from) { outbox.push({ call: 'reportSummary', key, from }); }
   };
   // The stub invents an element for any id, so the panel's own toggle would
   // see itself as already open.

@@ -416,7 +416,7 @@ test('only the exercises asked for are looked up', () => {
 
 // ---------- the report ----------
 //
-// Pure, like computeRecords: the spreadsheet half is buildReport().
+// Pure, like computeRecords: the browser draws what this returns.
 
 const { reportData, weekStart } = sandbox;
 
@@ -623,7 +623,7 @@ test('the report can start from a date', () => {
 
 test('writing functions refuse a wrong key', () => {
   const guarded = {
-    buildReport: k => sandbox.buildReport(k, ''),
+    reportSummary: k => sandbox.reportSummary(k, ''),
     rebuildRecords: k => sandbox.rebuildRecords(k),
     writeArchive: k => sandbox.writeArchive(k, 'x', []),
     generateInto: k => sandbox.generateInto(k, 'Push', '2026-08-01', [], 'auto'),
