@@ -567,8 +567,17 @@ it blank for everything, and the report is drawn in the app:
   exercise: lowest → highest, and a green, red or grey trend chip
 - **★** on a best ever set inside the period
 
+It opens over the session; **Close**, the backdrop, or Escape dismiss it.
+
 **Save as PDF** prints it — on a phone that is *Share → Print → Save as PDF*.
-What you see is what prints; everything else on the page is hidden.
+What you see is what prints, colours included: browsers drop background
+colours by default, which would take the bars, the trend chips and the day
+headers with them.
+
+{: .note }
+Your browser's own print settings add the date, the page URL and page numbers
+along the top and bottom. Turn off *Headers and footers* in the print dialog
+if you would rather they were not there.
 
 **Build the sheet version** writes the `Report` tab as well, for the live
 charts and a one-click PDF of them. **Training → Training report…** in the

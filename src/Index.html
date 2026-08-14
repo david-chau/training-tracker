@@ -245,8 +245,9 @@
                letter-spacing:0.05em; }
   .bars { display:flex; align-items:flex-end; gap:6px; height:120px;
           margin-bottom:6px; }
-  .bar { flex:1; background:#d8d8d4; border-radius:5px 5px 0 0; min-height:3px; }
-  .bar.now { background:var(--ink); }
+  .bar { flex:1; background:#d8d8d4; border:1px solid #c3c3bf;
+         border-radius:5px 5px 0 0; min-height:3px; }
+  .bar.now { background:var(--ink); border-color:var(--ink); }
   .barlabels { display:flex; gap:6px; }
   .barlabels span { flex:1; text-align:center; font-size:10px;
                     color:var(--muted); }
@@ -273,14 +274,48 @@
   .chip.down { background:#fbeaea; color:var(--warn); }
   .chip.flat { background:#f0f0ee; color:var(--muted); }
 
-  /* Printing is how this becomes a PDF, so everything else gets out of the
-     way rather than being reformatted. */
+  /* The report opens over the session rather than pushing it down the page:
+     it is a thing you look at and dismiss, not part of the log. */
+  .repmodal { position:fixed; inset:0; z-index:40; background:rgba(28,28,26,0.45);
+              overflow-y:auto; padding:16px; }
+  .repsheet { background:var(--bg); border-radius:16px; padding:16px;
+              max-width:760px; margin:0 auto 16px; }
+  .repbar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .repbar .go { flex:1; }
+  .repclose { border:1px solid var(--line); background:#fff; border-radius:9px;
+              padding:10px 14px; font-size:15px; cursor:pointer; color:var(--ink); }
+
+  /* Printing is how this becomes a PDF. Everything else gets out of the way,
+     the modal stops being a modal, and colours are kept: browsers drop
+     backgrounds by default, which took the bars, the chips and the dark day
+     headers with them. */
   @media print {
+    @page { size: letter portrait; margin: 8mm; }
     .top, .datebar, .sessnav, .days, .tools, .bar, .rail, .pager,
-    .ex, .msg, .addex, .noprint { display:none !important; }
-    .rep { margin:0; }
-    .card, .daycard { break-inside:avoid; }
+    .ex, .msg, .addex, .noprint, .repbar { display:none !important; }
     body { padding:0; }
+    .repmodal { position:static; inset:auto; background:none; padding:0;
+                overflow:visible; }
+    .repsheet { max-width:none; margin:0; padding:0; border-radius:0; }
+    .rep, .card, .daycard, .dayhead, .bar, .chip, .tile, .exrow {
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    /* Tighter, so a period like this one lands on a single page. */
+    .rep h2 { font-size:16px; }
+    .rep .sub { font-size:11px; margin-bottom:8px; }
+    .card, .daycard { break-inside:avoid; margin-bottom:8px; }
+    .card { padding:10px; }
+    .card > h3 { font-size:10px; margin-bottom:6px; }
+    .tile { padding:6px 4px; }
+    .tile b { font-size:17px; }
+    .tile span { font-size:9px; }
+    .bars { height:76px; }
+    .dayhead { padding:6px 10px; }
+    .dayhead b { font-size:13px; }
+    .dayhead .totals { font-size:10px; }
+    .exrow { padding:4px 10px; font-size:11px; }
+    .exrow .mv { font-size:10px; }
+    .chip { font-size:10px; padding:1px 6px; }
   }
   .report h2 { font-size:16px; margin:0 0 8px; }
   .report .row { display:flex; gap:8px; margin-top:10px; }
@@ -811,56 +846,67 @@ function reportView(res) {
   return el;
 }
 
-// Swap the little form for the report, with the ways out underneath it.
+// The report opens over the page. Escape and the backdrop both close it, the
+// way any dialog should.
 function showReportView(panel, res, from) {
-  var wrap = document.createElement('div');
-  wrap.id = 'reportpanel';
-  wrap.appendChild(reportView(res));
+  panel.remove();
 
-  var row = document.createElement('div');
-  row.className = 'report noprint';
-  row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center';
+  var modal = document.createElement('div');
+  modal.className = 'repmodal';
+  modal.id = 'reportpanel';
+
+  var sheetBox = document.createElement('div');
+  sheetBox.className = 'repsheet';
+
+  var bar = document.createElement('div');
+  bar.className = 'repbar';
 
   var print = document.createElement('button');
   print.className = 'go';
   print.id = 'printreport';
   print.textContent = 'Save as PDF';
-  print.style.flex = '1';
   print.onclick = function () { window.print(); };
 
-  var sheet = document.createElement('button');
-  sheet.className = 'cancel';
-  sheet.id = 'sheetreport';
-  sheet.textContent = 'Build the sheet version';
-  sheet.style.flex = '1';
-  sheet.onclick = function () {
-    sheet.disabled = true;
-    sheet.textContent = 'Building…';
+  var sheetBtn = document.createElement('button');
+  sheetBtn.className = 'repclose';
+  sheetBtn.id = 'sheetreport';
+  sheetBtn.textContent = 'Sheet version';
+  sheetBtn.onclick = function () {
+    sheetBtn.disabled = true;
+    sheetBtn.textContent = 'Building…';
     google.script.run
       .withSuccessHandler(function (built) {
-        sheet.disabled = false;
-        sheet.textContent = 'Build the sheet version';
-        if (built) reportResult(row, built);
+        sheetBtn.disabled = false;
+        sheetBtn.textContent = 'Sheet version';
+        if (built) reportResult(sheetBox, built);
       })
       .withFailureHandler(function (e) {
-        sheet.disabled = false;
-        sheet.textContent = 'Build the sheet version';
+        sheetBtn.disabled = false;
+        sheetBtn.textContent = 'Sheet version';
         flash('Failed: ' + why(e), false, true);
       })
       .buildReport(KEY, from);
   };
 
   var close = document.createElement('button');
-  close.className = 'cancel';
+  close.className = 'repclose';
+  close.id = 'closereport';
   close.textContent = 'Close';
-  close.onclick = function () { wrap.remove(); };
 
-  row.appendChild(print); row.appendChild(sheet); row.appendChild(close);
-  wrap.appendChild(row);
-  panel.replaceWith(wrap);
+  function shut() {
+    modal.remove();
+    document.removeEventListener('keydown', onKey, true);
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); shut(); } }
+  close.onclick = shut;
+  modal.onclick = function (e) { if (e.target === modal) shut(); };
+  document.addEventListener('keydown', onKey, true);
 
-  // Printing a page you have to scroll to is worse than not offering it.
-  wrap.scrollIntoView({ block: 'start' });
+  bar.appendChild(print); bar.appendChild(sheetBtn); bar.appendChild(close);
+  sheetBox.appendChild(bar);
+  sheetBox.appendChild(reportView(res));
+  modal.appendChild(sheetBox);
+  document.body.appendChild(modal);
 }
 
 // The spreadsheet version: its own export, fetched by this browser rather

@@ -976,6 +976,34 @@ test('a sheet name cannot inject markup into the report', () => {
   assert.match(el.innerHTML, /&lt;img|&lt;script/, 'and shown as text');
 });
 
+test('the report opens as a modal that escape closes', () => {
+  const realGet = sandbox.document.getElementById;
+  sandbox.document.getElementById = id => (id === 'reportpanel' ? null : realGet(id));
+  const body = realGet('body');
+  const listeners = [];
+  sandbox.document.addEventListener = (type, fn) => listeners.push([type, fn]);
+  sandbox.document.removeEventListener = () => {};
+  sandbox.document.body = { appendChild: el => { body.children.push(el); return el; } };
+
+  const panel = sandbox.document.createElement();
+  G.showReportView(panel, {
+    name: 'Log', from: '2026-08-01', to: '2026-08-11', period: '',
+    sessions: 1, sets: 1, volume: 1, weeks: [], exercises: []
+  }, '');
+
+  const modal = body.children.slice(-1)[0];
+  assert.strictEqual(modal.className, 'repmodal', 'it is a modal, not inline');
+
+  const key = listeners.find(l => l[0] === 'keydown');
+  assert.ok(key, 'escape is listened for');
+  let removed = false;
+  modal.remove = () => { removed = true; };
+  key[1]({ key: 'Escape', preventDefault() {} });
+  assert.ok(removed, 'and escape closes it');
+
+  sandbox.document.getElementById = realGet;
+});
+
 test('the report panel asks the server, with the key and a start date', () => {
   const realRun = sandbox.google.script.run;
   sandbox.google.script.run = {
