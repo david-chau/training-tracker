@@ -1046,7 +1046,7 @@ test('a day type with more exercises than fit says how many are missing', () => 
 
 test('a long period labels some of its weeks, and draws all of them', () => {
   const weeks = [];
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 20; i++) {
     weeks.push({ week: '2026-0' + (1 + i % 9) + '-01', sessions: 3, sets: 40,
                  volume: 20000 + i * 100, change: 1 });
   }
@@ -1058,21 +1058,49 @@ test('a long period labels some of its weeks, and draws all of them', () => {
   const html = el.innerHTML;
   const points = (html.match(/class="pt(?! freq)[^"]*"/g) || []).length;
   const labels = (html.match(/class="xl/g) || []).length;
-  assert.strictEqual(points, 26, 'every week is a point on the line');
-  assert.ok(labels < 10, 'but 26 date labels would land on each other');
+  assert.strictEqual(points, 20, 'every week is a point on the line');
+  assert.ok(labels < 10, 'but 20 date labels would land on each other');
   // The last week is what a report is read for, and the peak is the other
   // point anyone looks for.
   assert.match(html, /class="xl now"/, 'the last week keeps its label');
-  assert.match(html, /class="pv">23k</, 'and the peak keeps its value');
-  // At 26 points the markers touch each other and bury the line.
+  assert.match(html, /class="pv">22k</, 'and the peak keeps its value');
+  // At 20 points the markers touch each other and bury the line.
   assert.match(html, /class="chart dense"/, 'so only labelled weeks keep one');
+});
+
+test('past half a year the line is drawn by month, not by week', () => {
+  // 30 weekly points is texture, and only a seventh of them can be labelled.
+  const weeks = [];
+  const d = new Date('2026-01-05');
+  for (let i = 0; i < 30; i++) {
+    weeks.push({ week: d.toISOString().slice(0, 10), sessions: 2, sets: 30,
+                 volume: 1000, change: 1 });
+    d.setDate(d.getDate() + 7);
+  }
+  const el = G.reportView({
+    name: 'Log', from: '2026-01-05', to: '2026-07-27', period: '2026-01-05',
+    sessions: 60, sets: 900, volume: 30000, weeks: weeks, lifetime: null,
+    exercises: []
+  });
+  const html = el.innerHTML;
+  const points = (html.match(/class="pt(?! freq)[^"]*"/g) || []).length;
+  assert.match(html, /<h3>Month by month<\/h3>/, 'and the card says so');
+  assert.ok(points >= 7 && points <= 9, '30 weeks is 7-8 months, got ' + points);
+  assert.match(html, /class="xl[^"]*"[^>]*>Jul</, 'the axis is named months');
+  // Nothing is dropped in the rounding: 30 weeks × 1000 lb, 30 × 2 sessions.
+  const total = [...html.matchAll(/(\d[\d,]*) lb over (\d+) session/g)]
+    .reduce((n, m) => [n[0] + Number(m[1].replace(/,/g, '')),
+                       n[1] + Number(m[2])], [0, 0]);
+  assert.deepStrictEqual(total, [30000, 60], 'every week is still counted');
 });
 
 test('a year of weeks does not crowd its last label off the axis', () => {
   const weeks = [];
+  const d = new Date('2025-09-01');
   for (let i = 0; i < 50; i++) {
-    weeks.push({ week: '2026-01-01', sessions: 2, sets: 30,
+    weeks.push({ week: d.toISOString().slice(0, 10), sessions: 2, sets: 30,
                  volume: 20000 + i, change: 1 });
+    d.setDate(d.getDate() + 7);
   }
   const el = G.reportView({
     name: 'Log', from: '2025-09-01', to: '2026-08-11', period: '2025-09-01',
@@ -1158,7 +1186,9 @@ test('the report panel asks the server, with the key and a start date', () => {
   sandbox.google.script.run = {
     withSuccessHandler(f) { this.ok = f; return this; },
     withFailureHandler() { return this; },
-    reportSummary(key, from) { outbox.push({ call: 'reportSummary', key, from }); }
+    reportSummary(key, from, to) {
+      outbox.push({ call: 'reportSummary', key, from, to });
+    }
   };
   // The stub invents an element for any id, so the panel's own toggle would
   // see itself as already open.
@@ -1178,9 +1208,47 @@ test('the report panel asks the server, with the key and a start date', () => {
   assert.strictEqual(sent.length, 1, 'one call');
   assert.strictEqual(sent[0].key, 'testkey', 'with the edit key');
   assert.strictEqual(sent[0].from, '', 'blank weeks means the whole log');
+  assert.strictEqual(sent[0].to, '', 'and no end to it either');
 
   sandbox.document.getElementById = realGet;
   sandbox.google.script.run = realRun;
+});
+
+test('a period can be counted back in days, weeks, months or years', () => {
+  const days = (from) => Math.round(
+    (Date.now() - new Date(from + 'T12:00:00Z').getTime()) / 86400000);
+
+  // Three months is not thirteen weeks, and a year is not 52 of them.
+  assert.ok(Math.abs(days(G.reportPeriod('10', 'days', '', '').from) - 10) <= 1,
+    'ten days');
+  assert.ok(Math.abs(days(G.reportPeriod('4', 'weeks', '', '').from) - 28) <= 1,
+    'four weeks');
+  assert.ok(Math.abs(days(G.reportPeriod('3', 'months', '', '').from) - 91) <= 3,
+    'three months');
+  assert.ok(Math.abs(days(G.reportPeriod('1', 'years', '', '').from) - 365) <= 1,
+    'a year');
+
+  // deepStrictEqual would compare prototypes, and these objects are built
+  // inside the vm — same trap the records tests document.
+  const span = (a, b, c, d) => {
+    const r = G.reportPeriod(a, b, c, d);
+    return r.from + '|' + r.to;
+  };
+  assert.strictEqual(span('', 'weeks', '', ''), '|', 'blank is everything');
+  assert.strictEqual(span('0', 'weeks', '', ''), '|', 'and so is zero');
+});
+
+test('two dates beat the count, whichever way round they are typed', () => {
+  const span = (a, b, c, d) => {
+    const r = G.reportPeriod(a, b, c, d);
+    return r.from + '|' + r.to;
+  };
+  assert.strictEqual(span('4', 'weeks', '2026-01-01', '2026-03-01'),
+    '2026-01-01|2026-03-01', 'the dates win over the count');
+  assert.strictEqual(span('', 'weeks', '2026-03-01', '2026-01-01'),
+    '2026-01-01|2026-03-01', 'backwards is a slip, not a nil period');
+  assert.strictEqual(span('', 'weeks', '', '2026-03-01'),
+    '|2026-03-01', 'an end on its own is allowed');
 });
 
 test('only the delete waits for a session; the report does not', () => {

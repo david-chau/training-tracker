@@ -558,12 +558,16 @@ weights at 0 on purpose.
 
 ### A report you can send
 
-**Report…** next to *Delete this session*. Ask for a number of weeks, or leave
-it blank for everything, and the report is drawn in the app:
+**Report…** next to *Delete this session*. Say how far back — a number and
+*days*, *weeks*, *months* or *years* — or give two dates for an exact range.
+The dates win when either is filled, and leaving the number blank reports
+everything logged. Then the report is drawn in the app:
 
 - **two lines across the weeks** — volume in lb, and how many sessions, each
   drawn against its own high so a hard week and a frequent week can be told
-  apart. Over a long period only some weeks are labelled; every one is plotted
+  apart. Over a long period only some weeks are labelled; every one is
+  plotted. Past half a year it switches to a point per month, since fifty
+  weekly points are texture rather than a trend
 - **totals and averages** as tiles — sets per session, sets per week, volume —
   each with the same numbers over your whole log underneath, so four weeks is
   read against everything rather than on its own

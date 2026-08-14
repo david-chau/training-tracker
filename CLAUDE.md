@@ -309,8 +309,9 @@ free of SpreadsheetApp so it stays testable — keep it that way.
 
 ## The report
 
-`reportData(rows, timed, from)` is pure and testable, like `computeRecords`.
-`reportSummary(k, from)` returns the numbers and the browser draws them
+`reportData(rows, timed, from, to)` is pure and testable, like `computeRecords`;
+either bound may be blank. `reportSummary(k, from, to)` returns the numbers and
+the browser draws them
 (`reportView`) — that is the one place in the app that builds markup from
 spreadsheet values, so everything sheet-derived goes through `esc()`.
 
@@ -356,12 +357,22 @@ only SVG (`preserveAspectRatio="none"` plus `vector-effect="non-scaling-stroke"`
 so they stretch without the strokes stretching). Volume and sessions each get
 their own band — top half and bottom quarter — because on a good week both sit
 near their own maximum and a shared height put a session marker through a
-volume label. Long periods label only some weeks, and past 14 weeks only the labelled ones
+volume label. Past 24 points `byMonth()` rolls the series up to one point per month and the
+card retitles itself — 50 weekly points cannot be labelled and read as texture.
+A week counts towards the month its Monday is in; splitting a week across two
+months would be worse than the rounding.
+
+Long periods label only some weeks, and past 14 points only the labelled ones
 keep a marker (`.chart.dense`) — at 50 weeks the dots merge into a bead chain
 with the line buried under it. A label is never placed within `every` of the
 last week, which is what stopped the final date printing over its neighbour.
 Every week is still plotted either way. Checked at 12, 26, 50 and 104 weeks
 with `generated/weeks.js`.
+
+`reportPeriod(count, unit, from, to)` turns the panel into those two bounds —
+days / weeks / months / years counted back from today, or an explicit range,
+which wins when either date is set and is swapped if typed backwards. It is
+separate from the panel so it can be tested without building one.
 
 **The report shares one stylesheet with the app, and has taken an app class
 name twice.** `.bar` (the fixed status bar) made chart bars `position:fixed`

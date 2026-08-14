@@ -370,6 +370,11 @@
     .daygrid { column-count:2; column-gap:8px; }
     .daygrid .daycard { break-inside:avoid; margin:0 0 8px; }
   }
+  .rlab { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
+  .rrow { display:flex; gap:8px; }
+  .rin { flex:1; min-width:0; padding:10px; font-size:16px; font-family:inherit;
+         border:1px solid var(--line); border-radius:9px; background:#fdfdfc;
+         color:var(--ink); }
   .report h2 { font-size:16px; margin:0 0 8px; }
   .report .row { display:flex; gap:8px; margin-top:10px; }
   .report .row button { flex:1; }
@@ -717,16 +722,28 @@ function reportPanel() {
   p.id = 'reportpanel';
   p.insertAdjacentHTML('beforeend',
     '<h2>Training report</h2>' +
-    '<label style="font-size:13px;color:var(--muted)">Weeks back — blank for everything</label>');
+    '<label class="rlab" for="repnum">Last — blank for everything</label>' +
+    '<div class="rrow">' +
+      '<input id="repnum" class="rin" type="text" inputmode="numeric" ' +
+        'placeholder="all" aria-label="How many">' +
+      '<select id="repunit" class="rin" aria-label="Days, weeks, months or years">' +
+        '<option value="days">days</option>' +
+        '<option value="weeks" selected>weeks</option>' +
+        '<option value="months">months</option>' +
+        '<option value="years">years</option>' +
+      '</select>' +
+    '</div>' +
+    '<label class="rlab" for="repfrom">Or between two dates</label>' +
+    '<div class="rrow">' +
+      '<input id="repfrom" class="rin" type="date" aria-label="From">' +
+      '<input id="repto" class="rin" type="date" aria-label="To">' +
+    '</div>' +
+    '<div class="hint">The dates win over the box above when either is set.</div>');
 
-  var weeks = document.createElement('input');
-  weeks.type = 'text';
-  weeks.inputMode = 'numeric';
-  weeks.placeholder = 'all';
-  weeks.setAttribute('aria-label', 'Weeks back');
-  weeks.style.cssText = 'width:100%;padding:10px;font-size:16px;margin-top:4px;' +
-    'border:1px solid var(--line);border-radius:9px;background:#fdfdfc;color:var(--ink)';
-  p.appendChild(weeks);
+  var num = document.getElementById('repnum');
+  var unit = document.getElementById('repunit');
+  var fromIn = document.getElementById('repfrom');
+  var toIn = document.getElementById('repto');
 
   var row = document.createElement('div');
   row.className = 'row';
@@ -739,20 +756,11 @@ function reportPanel() {
 
   cancel.onclick = function () { p.remove(); };
   go.onclick = function () {
-    var n = Math.round(parseFloat(weeks.value) || 0);
-    var from = '';
-    if (n > 0) {
-      var d = new Date();
-      d.setDate(d.getDate() - n * 7);
-      from = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
-    }
+    var period = reportPeriod(num.value, unit.value, fromIn.value, toIn.value);
     go.disabled = cancel.disabled = true;
     go.textContent = 'Building…';
     flash('Building the report…', false);
 
-    // The page draws it. The spreadsheet tab is a separate, slower thing —
-    // offered from the report itself, for whoever wants the charts or a
-    // one-click PDF of them.
     google.script.run
       .withSuccessHandler(function (res) {
         go.disabled = cancel.disabled = false;
@@ -766,11 +774,36 @@ function reportPanel() {
         go.textContent = 'Build';
         flash('Report failed: ' + why(e), false, true);
       })
-      .reportSummary(KEY, from);
+      .reportSummary(KEY, period.from, period.to);
   };
 
   document.getElementById('tools').insertAdjacentElement('afterend', p);
-  setTimeout(function () { weeks.focus(); }, 50);
+  setTimeout(function () { num.focus(); }, 50);
+}
+
+// Either an explicit range or a count back from today. Kept out of the panel
+// so it can be tested without one, and because three months is not thirteen
+// weeks and nobody wants that arithmetic inline.
+function reportPeriod(count, unit, fromDate, toDate) {
+  if (fromDate || toDate) {
+    // A range typed the wrong way round is a slip, not a request for nothing.
+    return (toDate && fromDate && toDate < fromDate)
+      ? { from: toDate, to: fromDate }
+      : { from: fromDate || '', to: toDate || '' };
+  }
+
+  var n = Math.round(parseFloat(count) || 0);
+  if (n <= 0) return { from: '', to: '' };
+
+  var d = new Date();
+  if (unit === 'years') d.setFullYear(d.getFullYear() - n);
+  else if (unit === 'months') d.setMonth(d.getMonth() - n);
+  else if (unit === 'days') d.setDate(d.getDate() - n);
+  else d.setDate(d.getDate() - n * 7);
+  return {
+    from: d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()),
+    to: ''
+  };
 }
 
 // Day types are whatever the sheet says, so the icon is chosen from the name.
@@ -825,7 +858,36 @@ function commas(n) {
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// Above a bar there is room for four characters, not for "18,591".
+var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Weekly points up to half a year, monthly past it: 50 weeks is texture
+// rather than signal, and only a seventh of them can carry a label anyway.
+// A week belongs to the month its Monday falls in — the alternative splits a
+// week's volume across two points, which is worse than the rounding.
+function byMonth(weeks) {
+  if (weeks.length <= 24) {
+    return weeks.map(function (w) {
+      return { week: w.week, label: w.week.slice(5), volume: w.volume,
+               sessions: w.sessions, rolled: false };
+    });
+  }
+  var out = [], at = {};
+  weeks.forEach(function (w) {
+    var key = w.week.slice(0, 7);
+    if (!at[key]) {
+      at[key] = { week: key, volume: 0, sessions: 0, rolled: true,
+                  label: MONTHS[Number(key.slice(5, 7)) - 1] +
+                         (key.slice(5, 7) === '01' ? " '" + key.slice(2, 4) : '') };
+      out.push(at[key]);
+    }
+    at[key].volume += w.volume;
+    at[key].sessions += w.sessions;
+  });
+  return out;
+}
+
+// Above a point there is room for four characters, not for "18,591".
 function short(n) {
   n = Math.round(n);
   if (n >= 10000) return Math.round(n / 1000) + 'k';
@@ -854,7 +916,8 @@ function reportView(res) {
   el.className = 'rep';
   el.id = 'reportview';
 
-  var weeks = res.weeks || [];
+  var weeks = byMonth(res.weeks || []);
+  var monthly = !!(weeks[0] && weeks[0].rolled);
   var peak = weeks.reduce(function (n, w) { return Math.max(n, w.volume); }, 1);
   var perSession = res.sessions ? res.sets / res.sessions : 0;
   var perWeek = weeks.length ? res.sets / weeks.length : 0;
@@ -867,7 +930,8 @@ function reportView(res) {
   // sessions in single figures, so a shared axis would flatten one of them
   // into the floor. They are asking different questions anyway — did I train,
   // and how hard — and the answers diverge, which is the interesting part.
-  html += '<div class="card"><h3>Week by week</h3>';
+  html += '<div class="card"><h3>' +
+          (monthly ? 'Month by month' : 'Week by week') + '</h3>';
   if (weeks.length) {
     var x = function (i) {
       return weeks.length === 1 ? 50 : 6 + (i / (weeks.length - 1)) * 88;
@@ -903,9 +967,11 @@ function reportView(res) {
     for (var n = 0; n < last; n += every) {
       if (last - n >= every) keep[n] = true;  // never crowd the last one
     }
-    var clear = Math.ceil(every / 2);
+    // The peak is worth labelling, but not at the cost of landing on top of a
+    // neighbour — and how close that is depends on the width, not on how many
+    // weeks apart they are.
     if (Object.keys(keep).every(function (n) {
-      return Math.abs(peakAt - Number(n)) >= clear;
+      return Math.abs(x(peakAt) - x(Number(n))) >= 10;
     })) keep[peakAt] = true;
     var labelled = function (i) { return !!keep[i]; };
     var dense = weeks.length > 14;
@@ -938,7 +1004,7 @@ function reportView(res) {
     weeks.forEach(function (w, i) {
       if (!labelled(i)) return;
       html += '<div class="xl' + (i === last ? ' now' : '') +
-        '" style="left:' + x(i).toFixed(1) + '%">' + esc(w.week.slice(5)) +
+        '" style="left:' + x(i).toFixed(1) + '%">' + esc(w.label) +
         '</div>';
     });
     html += '</div>';

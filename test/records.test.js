@@ -621,6 +621,32 @@ test('the report can start from a date', () => {
   assert.ok(out.lifetime.weeks >= 2, 'over the weeks it actually spans');
 });
 
+test('the report can end at a date as well as start at one', () => {
+  const rows = [
+    row('2026-07-01', 'Push', 'Bench', 1, 8, 95),
+    row('2026-08-10', 'Push', 'Bench', 1, 8, 100),
+    row('2026-08-20', 'Push', 'Bench', 1, 8, 105)
+  ];
+  const out = reportData(rows, {}, '2026-07-15', '2026-08-15');
+
+  assert.strictEqual(out.sessions, 1, 'only the session inside the range');
+  assert.strictEqual(out.from, '2026-08-10');
+  assert.strictEqual(out.to, '2026-08-10');
+  // Both ends excluded something, and all-time still counts all three.
+  assert.strictEqual(out.lifetime.sessions, 3, 'the log is the log');
+});
+
+test('an end date alone still counts as a period', () => {
+  const rows = [
+    row('2026-07-01', 'Push', 'Bench', 1, 8, 95),
+    row('2026-08-20', 'Push', 'Bench', 1, 8, 105)
+  ];
+  const out = reportData(rows, {}, '', '2026-08-01');
+  assert.strictEqual(out.sessions, 1, 'the later session is excluded');
+  assert.ok(out.period, 'and it is not reported as the whole log');
+  assert.ok(out.lifetime, 'so there is something to compare against');
+});
+
 test('with no period there are no all-time totals to show either', () => {
   const out = reportData([row('2026-08-03', 'Push', 'Bench', 1, 8, 100)], {}, '');
   assert.strictEqual(out.lifetime, null, 'they would be the same numbers twice');

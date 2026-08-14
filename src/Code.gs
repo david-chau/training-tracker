@@ -632,9 +632,9 @@ function epley(reps, weight) {
 
 // The report as data, for the app to draw. No writing, so it is quick enough
 // to run while someone waits and safe to re-run as they change the period.
-function reportSummary(k, from) {
+function reportSummary(k, from, to) {
   assertEdit(k);
-  const data = reportData(allRows(), timedLookup(), from);
+  const data = reportData(allRows(), timedLookup(), from, to);
   if (!data.sessions) return null;
 
   // Only what the page draws: the per-session lists behind each exercise
@@ -699,7 +699,7 @@ function topSet(ex, day) {
 // Volume is reps x weight, so it is 0 for bodyweight work and meaningless for
 // a timed hold. Both are still counted as sets, which is what makes the
 // session and set totals honest.
-function reportData(rows, timed, from) {
+function reportData(rows, timed, from, to) {
   const byExercise = {};
   const byWeek = {};
   const days = {};
@@ -710,6 +710,7 @@ function reportData(rows, timed, from) {
     const date = dateKey(r[COL.date]);
     if (!name || !date) return;
     if (from && date < from) return;
+    if (to && date > to) return;
 
     const reps = num(r[COL.reps]);
     const weight = num(r[COL.weight]);
@@ -805,15 +806,17 @@ function reportData(rows, timed, from) {
   // means more when you can see it next to the best you have ever done — the
   // same reason a body-composition printout shows recent beside total.
   let ever = null;
-  if (from) {
-    ever = reportData(rows, timed, '');
+  if (from || to) {
+    ever = reportData(rows, timed, '', '');
     const byKey = {};
     ever.exercises.forEach(function (e) { byKey[e.day + '|' + e.name] = e; });
     exercises.forEach(function (e) {
       const all = byKey[e.day + '|' + e.name];
       if (!all) return;
 
-      const before = all.sessions.filter(function (d) { return d.date < from; }).pop();
+      const before = all.sessions.filter(function (d) {
+        return from ? d.date < from : d.date < first;
+      }).pop();
       e.lifetime = {
         sessions: all.total.sessions, low: all.total.low,
         high: all.total.high, best: all.total.best, before: before || null
@@ -832,7 +835,7 @@ function reportData(rows, timed, from) {
 
   return {
     from: first, to: last,
-    period: from || '',
+    period: from || to || '',
     sessions: Object.keys(days).length,
     sets: sets,
     volume: Math.round(volume),
