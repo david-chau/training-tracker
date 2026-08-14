@@ -542,6 +542,55 @@ test('a timed exercise contributes sets but no volume or 1RM', () => {
   out.exercises.forEach(e => assert.strictEqual(e.sessions[0].est1rm, 0));
 });
 
+test('a period also reports the all-time low and high', () => {
+  const rows = [
+    row('2026-01-05', 'Push', 'Bench', 1, 8, 60),    // lifetime low
+    row('2026-06-01', 'Push', 'Bench', 1, 8, 140),   // lifetime high
+    row('2026-08-03', 'Push', 'Bench', 1, 8, 100),   // in the period
+    row('2026-08-10', 'Push', 'Bench', 1, 8, 110)
+  ];
+  const bench = reportData(rows, {}, '2026-08-01').exercises[0];
+
+  assert.strictEqual(bench.total.low.topWeight, 100, 'the period low');
+  assert.strictEqual(bench.total.high.topWeight, 110, 'the period high');
+  assert.strictEqual(bench.lifetime.low.topWeight, 60, 'the all-time low');
+  assert.strictEqual(bench.lifetime.high.topWeight, 140, 'the all-time high');
+  assert.strictEqual(bench.lifetime.sessions, 4, 'across every session ever');
+});
+
+test('one session in the period is compared with the one before it', () => {
+  const rows = [
+    row('2026-07-20', 'Pull', 'Row', 1, 8, 85),      // before the period
+    row('2026-08-05', 'Pull', 'Row', 1, 8, 90)       // the only one inside it
+  ];
+  const t = reportData(rows, {}, '2026-08-01').exercises[0].total;
+
+  assert.strictEqual(t.sessions, 1);
+  assert.strictEqual(t.change, 5.9, '85 to 90 is +5.9%, not "nothing to compare"');
+});
+
+test('a star needs history to beat, not just a first session', () => {
+  const fresh = reportData([
+    row('2026-08-05', 'Pull', 'Row', 1, 8, 90)
+  ], {}, '2026-08-01').exercises[0];
+  assert.strictEqual(fresh.lifetime.sessions, 1,
+    'nothing before it, so nothing was beaten');
+
+  const beat = reportData([
+    row('2026-07-20', 'Pull', 'Row', 1, 8, 85),
+    row('2026-08-05', 'Pull', 'Row', 1, 8, 90)
+  ], {}, '2026-08-01').exercises[0];
+  assert.strictEqual(beat.lifetime.sessions, 2);
+  assert.strictEqual(beat.lifetime.high.topWeight, 90, 'the period set the best');
+  assert.strictEqual(beat.lifetime.before.topWeight, 85, 'and it had one to beat');
+});
+
+test('with no period there is nothing to compare a lifetime against', () => {
+  const rows = [row('2026-08-03', 'Push', 'Bench', 1, 8, 100)];
+  const bench = reportData(rows, {}, '').exercises[0];
+  assert.strictEqual(bench.lifetime, null, 'the period is the whole log');
+});
+
 test('the report can start from a date', () => {
   const rows = [
     row('2026-07-01', 'Push', 'Bench', 1, 8, 95),

@@ -567,20 +567,29 @@ and offers it as a PDF:
 | Header | The period, and totals: sessions, sets, volume |
 | Weekly summary | One row per week — sessions, sets, volume — with a column chart |
 | Estimated 1RM | One column per exercise, one row per session date, as a line chart |
-| Per day type | One line per exercise: sessions, lowest, highest, latest, change |
+| Per day type | One line per exercise: sessions, lowest, highest, latest, trend, and the all-time low and high |
 
 ```
-   PUSH                     Sessions  Lowest     Highest    Latest     Change
-   Barbell Bench Press      3         8 x 95 lb  8 x 105    8 x 105    +10.5%
-   Seated DB Shoulder Press 3         10 x 20    12 x 20    12 x 20    +20%
+   PUSH                      Sess  Lowest     Highest   Latest    Trend     All-time
+ ★ Barbell Bench Press       2     8 x 100    8 x 105   8 x 105   ▲ +5%     95 → 105
+ ★ Seated DB Shoulder Press  2     10 x 20    12 x 20   12 x 20   ▲ +20%    20 → 20
+   Pull-Up                   1     8          8         8         —         8 → 8
 ```
 
-Lowest and highest are the worst and best of the period, not its first and
-last — a bad week in the middle shows up. **Change** compares the first
-session with the latest: by weight when the weight moved, by reps when it did
-not, because more reps at the same load is progress and used to read as 0%.
-An exercise with one session in the period has nothing to compare against and
-reads `—`.
+- **Lowest and highest** are the worst and best of the period, not its first
+  and last, so a bad week in the middle shows up.
+- **All-time** is the same pair over the whole log, so a good month can be
+  read against the best you have ever done.
+- **Trend** compares the latest session with the first one in the period — or,
+  when the period holds only one, with the last time before it. By weight when
+  the weight moved, by reps when it did not: more reps at the same load is
+  progress and read as 0% until it was fixed.
+- **★** marks a best ever set inside the period. It needs history to beat, so
+  a first-ever session does not star itself.
+
+Ask for a number of weeks and you get both halves. Leave it blank and the
+period *is* the whole log, so the all-time columns are dropped rather than
+repeated.
 
 **Download PDF** is Sheets' own export of that tab, so the app needs no extra
 permission for it. It opens in a new tab and is fetched by your browser, not

@@ -696,6 +696,11 @@ function buildReport(k, from) {
   out.push([data.from + ' to ' + data.to, '', '', '', '']);
   out.push([data.sessions + ' sessions', data.sets + ' sets',
             data.volume + ' lb volume', '', '']);
+  if (data.period) {
+    out.push(['Lowest, highest, latest and trend cover this period; all-time ' +
+              'covers the whole log. ★ marks a best ever, set in this period.',
+              '', '', '', '']);
+  }
   out.push(['', '', '', '', '']);
 
   const weekAt = out.length + 1;
@@ -734,13 +739,23 @@ function buildReport(k, from) {
       currentDay = ex.day;
       if (out.length && out[out.length - 1][0] !== '') out.push(['']);
       headings.push(out.length + 1);
-      out.push([ex.day.toUpperCase(), 'Sessions', 'Lowest', 'Highest',
-                'Latest', 'Change']);
+      out.push([ex.day.toUpperCase(), 'Sessions', 'Lowest', 'Highest', 'Latest',
+                'Trend']
+        .concat(data.period ? ['All-time low', 'All-time high'] : []));
     }
     const t = ex.total;
-    out.push([ex.name, t.sessions, topSet(ex, t.low), topSet(ex, t.high),
-              topSet(ex, t.last),
-              t.change === null ? '—' : (t.change > 0 ? '+' : '') + t.change + '%']);
+    // A best ever, set in this period — and only worth a star if there was
+    // history to beat. Without that check a first-ever session stars itself
+    // and every line on the page ends up marked, which marks nothing.
+    const best = ex.lifetime && ex.lifetime.high &&
+                 ex.lifetime.sessions > t.sessions &&
+                 topSet(ex, t.high) === topSet(ex, ex.lifetime.high);
+    out.push([(best ? '★ ' : '') + ex.name,
+              t.sessions, topSet(ex, t.low), topSet(ex, t.high),
+              topSet(ex, t.last), trend(t.change)]
+      .concat(ex.lifetime
+        ? [topSet(ex, ex.lifetime.low), topSet(ex, ex.lifetime.high)]
+        : []));
   });
 
   // Five exercises in the 1RM block makes a six-column row, so the range is as
@@ -784,8 +799,31 @@ function buildReport(k, from) {
     pdf: ss.getUrl().replace(/\/edit.*$/, '') +
          '/export?format=pdf&gid=' + sheet.getSheetId() +
          '&portrait=false&fitw=true&gridlines=false&printtitle=false' +
-         '&sheetnames=false&pagenum=false&size=letter'
+         '&sheetnames=false&pagenum=false&size=letter&scale=4'
   };
+}
+
+// How far one top set moved against another, as a percentage. Whichever
+// number actually moved: more reps at the same weight is progress, and
+// measuring it by load would report 0%, which is the opposite of the point.
+function topSetChange(then, now) {
+  if (!then || !now) return null;
+  if (now.topWeight !== then.topWeight && then.topWeight > 0) {
+    return Math.round((now.topWeight / then.topWeight - 1) * 1000) / 10;
+  }
+  if (then.topReps > 0) {
+    return Math.round((now.topReps / then.topReps - 1) * 1000) / 10;
+  }
+  return null;
+}
+
+// The direction, then the size. An arrow is read before a number is, which is
+// the whole job of this column.
+function trend(pct) {
+  if (pct === null) return '—';
+  if (pct > 0) return '▲ +' + pct + '%';
+  if (pct < 0) return '▼ ' + pct + '%';
+  return '▬ 0%';
 }
 
 // "8 x 105 lb", "45s", "20" — whichever the exercise actually is.
@@ -880,20 +918,7 @@ function reportData(rows, timed, from) {
       if (rank(d) >= rank(high)) high = d;
     });
 
-    // Whichever number actually moved. More reps at the same weight is
-    // progress and used to report 0%, which is the opposite of the point.
-    // One session has nothing to compare against, so it reports nothing.
-    const pct = function (now, then) {
-      return Math.round((now / then - 1) * 1000) / 10;
-    };
-    let moved = null;
-    if (list.length > 1) {
-      if (last.topWeight !== first.topWeight && first.topWeight > 0) {
-        moved = pct(last.topWeight, first.topWeight);
-      } else if (first.topReps > 0) {
-        moved = pct(last.topReps, first.topReps);
-      }
-    }
+    const moved = list.length > 1 ? topSetChange(first, last) : null;
 
     return {
       name: ex.name, day: ex.day, timed: ex.timed, sessions: list,
@@ -912,8 +937,37 @@ function reportData(rows, timed, from) {
            (a.name < b.name ? -1 : 1);
   });
 
+  // What the period looks like against everything ever logged. A good month
+  // means more when you can see it next to the best you have ever done — the
+  // same reason a body-composition printout shows recent beside total.
+  if (from) {
+    const ever = reportData(rows, timed, '');
+    const byKey = {};
+    ever.exercises.forEach(function (e) { byKey[e.day + '|' + e.name] = e; });
+    exercises.forEach(function (e) {
+      const all = byKey[e.day + '|' + e.name];
+      if (!all) return;
+
+      const before = all.sessions.filter(function (d) { return d.date < from; }).pop();
+      e.lifetime = {
+        sessions: all.total.sessions, low: all.total.low,
+        high: all.total.high, best: all.total.best, before: before || null
+      };
+
+      // A single session in the period is still worth a trend — against the
+      // last time it was done, which is exactly the comparison the app shows
+      // under each field while you train.
+      if (e.total.sessions === 1 && before) {
+        e.total.change = topSetChange(before, e.total.last);
+      }
+    });
+  } else {
+    exercises.forEach(function (e) { e.lifetime = null; });
+  }
+
   return {
     from: first, to: last,
+    period: from || '',
     sessions: Object.keys(days).length,
     sets: sets,
     volume: Math.round(volume),
