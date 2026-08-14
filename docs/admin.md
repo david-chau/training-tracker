@@ -77,7 +77,7 @@ If nothing is logged for that day and date, you choose how to begin:
 
 <img src="{{ site.baseurl }}/img/clip-start.gif" loading="lazy"
      alt="The start chooser offering From last time, From the template and Empty; choosing From last time builds the session"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 | Choice | What you get |
 |---|---|
@@ -142,7 +142,7 @@ Personal records were already per exercise and are unchanged.
 
 <img src="{{ site.baseurl }}/img/clip-logging.gif" loading="lazy"
      alt="Reps and weight being stepped up on the first set, and the status bar reporting the row and values it read back"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 The bar reports the row and the values it read back out of the spreadsheet, so
 a save you can see is a save that landed.
@@ -231,7 +231,7 @@ which ships with 255 movements — then choose **Reps** or **Seconds**,
 
 <img src="{{ site.baseurl }}/img/clip-unit.gif" loading="lazy"
      alt="Adding Plank to an empty session: the toggles pick Seconds and Bodyweight from the Exercises tab, the weight box goes, and the seconds are set to 45"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 Pick a known exercise and the toggle follows the `Exercises` tab and says so.
 Change it and your choice wins for this add. The weight box disappears
@@ -288,7 +288,7 @@ takes it apart again.
 
 <img src="{{ site.baseurl }}/img/clip-superset.gif" loading="lazy"
      alt="Two exercises on separate pages being paired into one superset card laid out round by round"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 | | |
 |---|---|
@@ -325,7 +325,7 @@ above it:
 
 <img src="{{ site.baseurl }}/img/clip-pages.gif" loading="lazy"
      alt="Moving through a session with the Next button and by tapping straight to an exercise in the list"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 Three ways to move: **swipe** left or right, the **‹ Previous / Next ›**
 buttons under the card, or tap any line in the list to jump straight to it.
@@ -345,7 +345,7 @@ mid-session is a normal time to use it.
 
 <img src="{{ site.baseurl }}/img/clip-kg.gif" loading="lazy"
      alt="Tapping kg converts every weight on the card, and tapping lb converts them back"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 **The sheet is always pounds.** Column F stays `Weight (LB)`, so records,
 progression and every comparison keep working on one unit. Kilograms are
@@ -373,7 +373,7 @@ cancels. Useful when you logged something under a throwaway name mid-session.
 
 <img src="{{ site.baseurl }}/img/clip-rename.gif" loading="lazy"
      alt="The pencil beside Lat Pulldown opening a full-width box, the name being retyped as Machine by the window, and the card reloading under the new name"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 {: .note }
 It renames **this session only**. The same exercise in earlier sessions keeps

@@ -32,7 +32,7 @@ starred:
 
 <img src="{{ site.baseurl }}/img/clip-records.gif" loading="lazy"
      alt="Stepping reps past the old record: the personal best tag appears and one set is starred"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 **Only one set is marked per exercise.** Progression steps a whole session up
 together, so in a typical week every set beats last time — marking them all

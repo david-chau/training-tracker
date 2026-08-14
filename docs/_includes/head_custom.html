@@ -1,0 +1,32 @@
+<!-- Follow the reader's system theme.
+
+     just-the-docs compiles the configured scheme into just-the-docs-default.css
+     and publishes just-the-docs-light.css and -dark.css alongside it for
+     switching at runtime. Its own jtd.setTheme() runs after the page has
+     painted, which gives a dark-mode reader a white flash first; rewriting the
+     href here in <head> — before the stylesheet is fetched — avoids that and
+     needs nothing from the theme's JavaScript.
+
+     The head-nav stylesheet matches "just-the-docs-" too, hence the specific
+     pattern. If the theme ever renames these files this quietly does nothing,
+     which is the right way for it to fail. -->
+<script>
+  (function () {
+    var FILE = /just-the-docs-(default|light|dark)\.css/;
+    var link = null, links = document.querySelectorAll('link[rel="stylesheet"]');
+    for (var i = 0; i < links.length; i++) {
+      if (FILE.test(links[i].getAttribute('href') || '')) { link = links[i]; break; }
+    }
+    if (!link) return;
+
+    var query = window.matchMedia('(prefers-color-scheme: dark)');
+    function apply() {
+      link.setAttribute('href', link.getAttribute('href')
+        .replace(FILE, 'just-the-docs-' + (query.matches ? 'dark' : 'light') + '.css'));
+    }
+    apply();
+    // Following the system means following it while the page is open, too.
+    if (query.addEventListener) query.addEventListener('change', apply);
+    else if (query.addListener) query.addListener(apply);
+  })();
+</script>

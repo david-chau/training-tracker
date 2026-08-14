@@ -14,7 +14,7 @@ proposes slightly more.
 
 <img src="{{ site.baseurl }}/img/clip-tour.gif" loading="lazy"
      alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"
-     style="max-width:340px;width:100%;border-radius:12px;border:1px solid #e3e3e0;display:block;margin:1.5rem 0">
+     class="shot">
 
 ---
 

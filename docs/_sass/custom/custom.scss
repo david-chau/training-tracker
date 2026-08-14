@@ -1,0 +1,26 @@
+// Compiled once per colour scheme. Deliberately free of the theme's SCSS
+// variables: a renamed variable would fail the Pages build rather than look
+// slightly wrong, and nothing here is worth that.
+
+// Screenshots and clips. This was an inline style repeated on ten images with
+// the border hardcoded to the light scheme's grey, which drew a pale box round
+// every clip on a dark page.
+.shot {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  margin: 1.5rem 0;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 12px;
+}
+
+.shot--wide {
+  max-width: 100%;
+}
+
+// The app is light whatever the docs are set to, so its screenshots stay
+// light. Rounding them stops them reading as a bright rectangle dropped onto
+// a dark page.
+.main-content img {
+  border-radius: 12px;
+}
