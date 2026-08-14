@@ -45,12 +45,12 @@ Opening the link shows **Loading Web App…** centred on the page until the
 spreadsheet answers. Nothing above it means anything until then: no name, no
 date, no day types.
 
-While a day is loading, or while a change that rewrites rows is in flight, the
-session dims and the controls disable until it settles.
+The session dims only while a day is **loading**, or while a rename or a
+delete is in flight. Everything else happens on screen first and writes behind
+it: values, set counts, adding an exercise, pairing a superset.
 
-Tapping reps, weight or RPE is **exempt** — those stay instant however fast
-you tap. A burst of presses collapses into a single write, sent once you stop
-for about half a second, so holding **+** costs one save rather than twenty.
+A burst of presses collapses into a single write, sent once you stop for about
+half a second, so holding **+** costs one save rather than twenty.
 
 {: .note }
 Every link in the app opens in a **new tab**, on purpose. Navigating away
@@ -109,7 +109,7 @@ the same thing last Custom day, *From last time* is offered and works.
 | Field | Steps by | Range |
 |---|---|---|
 | **Reps** *or* **Seconds** | 1 / 5 | 0 and up |
-| **Weight (LB)** | 2.5 | 0 and up |
+| **Weight** (`lb` or `kg`) | 2.5 | 0 and up |
 | **RPE** | 0.5 | 1–10, or blank |
 
 Use **−** and **+**, or tap the number and type. Changes save themselves about
@@ -129,9 +129,9 @@ exercise one week, do it on a Custom day instead, or add it halfway through a
 cycle, and the old rule had nothing to show you even with months of it in the
 log.
 
-The status bar still names the previous session of this day type, since that
-is what *From last time* would build from. When a card's comparison comes from
-a different date, the card says so:
+The status bar names a date only when every exercise on screen was last done
+that day. Otherwise it says the comparisons come from different days, or that
+these exercises are new — and the card names its own date:
 
 ```
    Bulgarian Split Squat                        [− 3 sets +]
@@ -242,16 +242,10 @@ The name is **free text** — it autocompletes, but nothing stops you typing
 something that is not on the list. The same exercise cannot be added to one
 session twice.
 
-**The card appears straight away** and the rows are written behind it, so you
-can start logging the first set while the sheet catches up. Its edge stays
-dashed until the sheet has it. Anything typed in that window is kept and
-saved the moment the rows exist — nothing is thrown away by the response
-landing.
-
-While an add is in flight the app will not let you change day, date or set
-counts: those move rows, and the add is about to be given some. It clears in a
-second or two, and a stuck one falls back to reloading from the sheet rather
-than leaving the page wedged.
+**The card appears straight away**, dashed until the sheet has it, and
+anything typed in that window is saved the moment the rows exist. Day, date
+and set counts wait until it lands — they move rows, and the add is about to
+be given some.
 
 {: .note }
 **A name that is not on the list gets added to the `Exercises` tab**, so it
@@ -310,13 +304,6 @@ session with the same supersets. Blank means a normal exercise.
 You can also plan one: put the same letter in column **G** of the `Templates`
 tab against two exercises for the same day. The shipped template pairs
 *Lateral Raise* with *Triceps Rope Pushdown* on Push as a worked example.
-
-{: .note }
-Before this existed, the way to record a superset was in the name — `Dead Bug
-(ss)`. That works, but records key off the name, so `Dead Bug (ss)` and `Dead
-Bug` count as two different exercises with two separate histories. Renaming
-them back with **✎** merges nothing retrospectively, but it stops the split
-from growing.
 
 ### One exercise at a time
 
@@ -382,8 +369,7 @@ than a round 2.5. The generated number is a proposal you overwrite anyway.
 
 The **✎** beside an exercise name opens a full-width text box across the top of
 the card. Rename, press Enter, done — no trip to the spreadsheet. Escape
-cancels. Useful when you logged something under a
-[throwaway name](#when-you-cannot-name-it-mid-session).
+cancels. Useful when you logged something under a throwaway name mid-session.
 
 <img src="{{ site.baseurl }}/img/clip-rename.gif" loading="lazy"
      alt="The pencil beside Lat Pulldown opening a full-width box, the name being retyped as Machine by the window, and the card reloading under the new name"
@@ -395,19 +381,10 @@ its old name, deliberately — rewriting history would change what progression
 and records were built from. The new name joins the `Exercises` tab so it
 autocompletes next time.
 
-<details markdown="block">
-<summary>When you cannot name it mid-session</summary>
-
-Type anything — the box is free text, not a fixed list. `Machine by the
-window` is a perfectly good name for one session, and **✎** renames it the
-moment you find out what it is really called.
-
 {: .warning }
-If you do use a throwaway name, rename it before the next session of that day
-type. Progression matches on the name, so two different movements both logged
-as `temp` get progressed into each other.
-
-</details>
+A throwaway name like `temp` should be renamed before the next session of that
+day type. Progression matches on the name, so two different movements both
+logged as `temp` get progressed into each other.
 
 ### Notes
 
@@ -501,27 +478,10 @@ judgement worth making yourself.
 thumbnail; tap it, or the name, to see it full width. Blank by default,
 because an image URL has to be one you are allowed to use.
 
-<details markdown="block">
-<summary>Which image links work</summary>
-
-It must be a **direct link to the image**, reachable without signing in and
-ending in `.jpg`, `.png`, `.gif` or `.webp`. A link to a page *containing* an
-image will not work — that is what column F is for.
-
-For a picture in your own Google Drive:
-
-1. Upload it, then **Share → Anyone with the link**.
-2. Copy the link — `https://drive.google.com/file/d/FILE_ID/view?usp=sharing`.
-3. Take `FILE_ID` from the middle and use this instead:
-
-   ```
-   https://drive.google.com/thumbnail?id=FILE_ID&sz=w640
-   ```
-
-Reload the app after editing the tab. A dead link shows no thumbnail rather
-than breaking the card.
-
-</details>
+It has to be a direct link to the image file, public, not a link to a page
+containing one — see
+[an exercise picture does not show](troubleshooting.html#data-and-display) for
+the Google Drive recipe.
 
 ---
 

@@ -16,23 +16,11 @@ someone about to change the code.
 
 ## Ownership model: bring your own Google Workspace
 
-This repository is a **starting point, not a hosted service**. The tracker is
-free to copy and run: there is no subscription, per-user charge, or separate
-hosting bill from this project. It does not operate a shared web app, database,
-account system, or central copy of anyone's training data.
-
-{: .note }
-**Free does not mean a new Google account is supplied.** The implementation
-runs inside the Google account or Workspace you choose. Any cost for that
-account, its storage, or its Workspace plan remains between you and Google;
-the tracker itself adds no fee.
-
-When you implement the tracker, you make a copy of the spreadsheet template,
-paste in the code, and publish the Apps Script web app from **your own Google
-account or Workspace**. That account owns the spreadsheet, the bound script,
-the deployment, and the sharing decisions. The project supplies templates and
-source code that you can change to fit your own training, clients, terminology,
-and workflow.
+This repository is a **starting point, not a hosted service**. There is no
+subscription, no per-user charge, and no shared web app, database or central
+copy of anyone's training data. You copy the template, paste in the code, and
+publish the web app from **your own Google account**, which then owns the
+spreadsheet, the script, the deployment and the sharing decisions.
 
 ```
   THIS REPOSITORY                         YOUR GOOGLE WORKSPACE
@@ -44,25 +32,15 @@ and workflow.
                                              your customisations
 ```
 
-There is deliberately nothing to sign up for, no common database to migrate
-from, and no platform operator with access to all logs. Each implementation is
-independent; keeping it current or changing it is the responsibility of the
-person or organisation that owns that copy.
+{: .note }
+**Free does not mean a Google account is supplied.** Any cost for that
+account, its storage or its Workspace plan is between you and Google.
 
-### What that means in practice
-
-| Concern | Who owns it |
-|---|---|
-| **Google account and Workspace plan** | The implementing person or organisation. The tracker adds no separate hosting bill, but it runs within the Google account, quotas, storage, and any Workspace plan they choose. |
-| **Data and access** | The owner of that Google Workspace: they decide who can access the Sheet, who receives the admin or viewer link, and how long the data is retained. |
-| **Deployment and availability** | The implementer. Google serves the Apps Script web app, but each owner publishes and maintains their own deployment. |
-| **Custom features and fixes** | The implementer, their developer, or whoever they arrange to support the copy. A change here is a template or source update, not an automatic update to existing installations. |
-| **Operational support** | The implementer. This project is not a managed SaaS product and does not provide monitoring, incident response, uptime commitments, or an on-call developer for individual installations. |
-
-That separation is intentional. It keeps the project lightweight and lets an
-owner adapt a copy freely, but it also means adopting the tracker is an
-implementation decision: make a copy, customise it as needed, and decide who
-will maintain it over time.
+That makes adopting the tracker an implementation decision. Each copy is
+independent: its owner decides who gets which link and how long data is kept,
+publishes and maintains its deployment, and arranges any changes or support
+themselves. A fix here is a source update, not an automatic update to
+installations — nobody operating this project has access to your log.
 
 ---
 
@@ -394,6 +372,16 @@ session safe to close". While anything is outstanding it turns amber and reads
 if the tab is closed in that state. Notes go through the same queue, keeping
 their three triggers — the **Save note** button, a 1.5 s debounce, and blur.
 
+### Structural writes are optimistic too
+
+Only *values* go through that queue. Adding an exercise, changing a set count
+and pairing a superset render immediately and write behind the screen, because
+each is a round trip that appends or deletes rows and re-reads the log —
+seconds on gym wifi, and a dimmed page with a status line reads as a freeze.
+Rows the server has not created yet carry `row: 0`; `absorbAdd` and
+`absorbResize` move anything typed onto the real rows once they exist. Only a
+day load, a rename and a delete still dim the session.
+
 ### Why the queue verifies four columns
 
 A queued write is addressed by row number, and row numbers move — deleting a
@@ -676,8 +664,7 @@ reads at around 500 sessions a day, which is twenty times the intended load.
 {: .warning }
 The limit that will actually be felt first is none of the above: it is the
 6-minute execution ceiling meeting a `Log` that has grown for years, because
-every read scans all of it and every structural write rebuilds `Records`.
-Archive old seasons and it stays quick.
+every read scans all of it. Archive old seasons and it stays quick.
 
 ---
 
@@ -712,7 +699,7 @@ What the constraints actually demanded:
 | **Free, no per-seat licence** | About 25 people, not a commercial product. |
 | **No upkeep burden on the user** | They may not be technical; a terminal is a non-starter. |
 | **Tablet-first** | Entry happens standing up, mid-session. |
-| **No typing into cells** | It is too easy to mistype a weight on glass. |
+| **No editing the spreadsheet itself** | Entry is ± buttons in the app; typing is there as a fallback, hunting for a cell is not. |
 | **Stays in Sheets** | The sheet is the database, not a mirror. |
 
 </details>

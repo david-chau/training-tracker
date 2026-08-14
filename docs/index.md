@@ -39,7 +39,7 @@ Every log has an **admin link** and a **viewer link**.
     changes reps / weight / RPE        reads the notes
     adds and removes sets              ✗ cannot change anything
     writes notes
-    deletes a day
+    deletes a session
 ```
 
 Who holds the admin link is up to you:
@@ -78,10 +78,14 @@ genuinely cannot write.
   sets, reps and weights appear already filled in, nudged up from last time.
 - **Records RPE.** Every set gets a 1–10 "how hard was that", which is what
   drives next week's numbers.
-- **No typing into cells.** Everything is a plus or minus button. Mistyping a
-  weight on a tablet mid-set is the thing this design exists to prevent.
+- **Never edited in the spreadsheet.** Entry happens in the app, where every
+  number is a **−** / **+** button — you can still tap a field and type, but
+  hunting for the right cell on a tablet mid-set is what this avoids.
 - **Tracks personal bests.** Worked out from the log, shown on the card as you
   train, and listed on their own tab. [Configurable](records.html).
+- **One exercise on screen at a time**, with the whole session listed above it
+  — including supersets, which are one card laid out round by round.
+- **Reads in lb or kg.** A switch per device; the sheet always stores pounds.
 - **Shows you the movement.** Every exercise carries a **▶ How to** link, and
   you can add your own picture or GIF beside it — worth a lot if you are new
   to a lift.

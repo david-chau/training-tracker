@@ -25,7 +25,7 @@ starred:
 ```
   Best 8 × 100 lb · est 1RM 127 · on 2026-07-19 · ★ personal best today
 
-       Reps    Weight (LB)    RPE
+       Reps    Weight (lb)    RPE
  1       8         105          8
  2 ★    10         105          9      ← the set that actually takes it
 ```
@@ -62,9 +62,10 @@ The **`Records`** tab, one row per record:
 | Barbell Bench Press | Est. 1RM | 132.3 | 8 x 105 | 2026-08-09 | Push |
 | Pull-Up | Most reps | 12 | 12 x 0 | 2026-08-02 | Pull |
 
-Rewritten when a session is started, deleted, or gains an exercise or set, and
-on demand from **Training → Rebuild records**. Not on every tap, so logging
-stays fast — the strip inside the app is live regardless.
+Rewritten by **Training → Rebuild records**, by deleting a session, and by
+archiving — never while you are logging, since a rebuild is a full pass over
+the `Log`. The strip inside the app is live regardless: it is worked out from
+the `Log` on every load and never reads this tab.
 
 {: .warning }
 The `Records` tab is output. Anything you type there is erased on the next

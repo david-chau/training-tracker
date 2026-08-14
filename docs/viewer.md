@@ -48,9 +48,12 @@ then opens like an app.
 ## Finding an old session
 
 1. Tap the day type along the top — **Push**, **Pull**, **Legs**, or whatever
-   names your log uses.
-2. Use the **‹** arrow next to the date to step back through previous
-   sessions of that type. **›** goes forward again.
+   names your log uses. A green dot means that day has a session on the date
+   shown.
+2. **‹ Previous session** jumps to the nearest earlier session; **Next
+   session ›** goes forward again. With no day type picked they walk every
+   session in the log, whatever type. The **‹ ›** either side of the date move
+   one calendar day at a time.
 
 Only day types that have sessions appear, so every button leads somewhere. If
 you see *"Nothing has been logged yet"*, nothing has been recorded in this log
@@ -65,9 +68,10 @@ just means you did not train that day.
 
 One card per exercise, one numbered row per set.
 
-- **Reps** — how many you did.
-- **Weight (LB)** — in pounds. Missing entirely for exercises with no weight,
-  like push-ups or the rower.
+- **Reps**, or **Seconds** for a hold or a carry.
+- **Weight** — the **lb / kg** switch by the heading changes which unit you
+  read; it is your choice and changes nothing in the log. Missing entirely for
+  exercises with no weight, like push-ups or the rower.
 - **RPE** — how hard the set felt, out of 10. A dash means it was not
   recorded.
 - **was 8** under a field — what you did for that same set last time, so you
@@ -78,7 +82,8 @@ Beside each exercise name is a **▶ How to** link, which opens a video search
 for that movement in a new tab. If a picture has been added, the name has a
 thumbnail too — tap it to see it full width.
 
-Any note left against an exercise appears underneath it.
+Any note left against an exercise appears underneath it. A **superset** — two
+exercises done back to back — is one card, listed round by round.
 
 ---
 
