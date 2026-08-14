@@ -314,8 +314,11 @@ free of SpreadsheetApp so it stays testable — keep it that way.
 output — the `Report` tab is rewritten wholesale and created on demand, so it
 is not in the shipped template.
 
-Reachable from the Training menu and from `Report…` in the app's tools row,
-which calls `buildReport(KEY, from)` over the bridge.
+Two surfaces on one aggregation. `reportSummary(k, from)` returns the numbers
+and the app draws them as cards (`reportView`) — that is the one place in the
+app that builds markup from spreadsheet values, so everything sheet-derived
+goes through `esc()`. `buildReport(k, from)` writes the `Report` tab for the
+live charts. The menu item and the app's `Report…` button both exist.
 
 The PDF is Sheets' own export URL (`/export?format=pdf&gid=…`) opened by the
 browser, NOT a fetch. It is therefore fetched as the *visitor*, so an admin

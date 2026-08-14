@@ -939,11 +939,49 @@ test('the bar says so when the comparisons are from different days', () => {
 
 // ---------- the report panel ----------
 
+test('the report draws as cards, with an icon per day type', () => {
+  const el = G.reportView({
+    name: 'Training — David', from: '2026-07-20', to: '2026-08-11', period: '2026-07-20',
+    sessions: 7, sets: 106, volume: 66948,
+    weeks: [{ week: '2026-07-20', sessions: 3, sets: 49, volume: 33705, change: null },
+            { week: '2026-07-27', sessions: 3, sets: 49, volume: 35915, change: 6.6 }],
+    exercises: [
+      { name: 'Barbell Bench Press', day: 'Push', sessions: 3, sets: 12,
+        volume: 9600, low: '8 × 95', high: '8 × 105', last: '8 × 105',
+        change: 10.5, allLow: '8 × 95', allHigh: '8 × 105', best: true },
+      { name: 'Pull-Up', day: 'Pull', sessions: 1, sets: 3, volume: 0,
+        low: '8', high: '8', last: '8', change: null, best: false }
+    ]
+  });
+
+  const html = el.innerHTML;
+  assert.match(html, /<svg/, 'day types carry an icon');
+  assert.match(html, /chip up/, 'a rise is a green chip');
+  assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
+  assert.match(html, /66,948/, 'volume is grouped in thousands');
+  assert.match(html, /class="bar now"|bar now/, 'the newest week is picked out');
+});
+
+test('a sheet name cannot inject markup into the report', () => {
+  // The one place in the app that builds HTML from spreadsheet values.
+  const el = G.reportView({
+    name: '<img src=x onerror=alert(1)>', from: '2026-01-01', to: '2026-01-02',
+    period: '', sessions: 1, sets: 1, volume: 1, weeks: [],
+    exercises: [{ name: '<script>alert(2)</script>', day: 'Push</b><i>x',
+                  sessions: 1, sets: 1, volume: 1, low: '1', high: '1',
+                  last: '1', change: null, best: false }]
+  });
+
+  assert.ok(!/<img|<script/i.test(el.innerHTML), 'tags are escaped, not run');
+  assert.match(el.innerHTML, /&lt;img|&lt;script/, 'and shown as text');
+});
+
 test('the report panel asks the server, with the key and a start date', () => {
   const realRun = sandbox.google.script.run;
   sandbox.google.script.run = {
     withSuccessHandler(f) { this.ok = f; return this; },
     withFailureHandler() { return this; },
+    reportSummary(key, from) { outbox.push({ call: 'reportSummary', key, from }); },
     buildReport(key, from) { outbox.push({ call: 'buildReport', key, from }); }
   };
   // The stub invents an element for any id, so the panel's own toggle would
@@ -960,7 +998,7 @@ test('the report panel asks the server, with the key and a start date', () => {
   assert.ok(build, 'the panel offers a Build button');
 
   build.onclick();
-  const sent = outbox.filter(o => o.call === 'buildReport');
+  const sent = outbox.filter(o => o.call === 'reportSummary');
   assert.strictEqual(sent.length, 1, 'one call');
   assert.strictEqual(sent[0].key, 'testkey', 'with the edit key');
   assert.strictEqual(sent[0].from, '', 'blank weeks means the whole log');

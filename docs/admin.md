@@ -558,9 +558,21 @@ weights at 0 on purpose.
 
 ### A report you can send
 
-**Report…** next to *Delete this session*, or **Training → Training report…**
-in the spreadsheet. Either asks how many weeks back, writes a `Report` tab,
-and offers it as a PDF:
+**Report…** next to *Delete this session*. Ask for a number of weeks, or leave
+it blank for everything, and the report is drawn in the app:
+
+- **a bar per week**, the newest picked out, over the session count
+- **totals and averages** as tiles — sets per session, sets per week, volume
+- **a card per day type**, with an icon, its own totals, and one row per
+  exercise: lowest → highest, and a green, red or grey trend chip
+- **★** on a best ever set inside the period
+
+**Save as PDF** prints it — on a phone that is *Share → Print → Save as PDF*.
+What you see is what prints; everything else on the page is hidden.
+
+**Build the sheet version** writes the `Report` tab as well, for the live
+charts and a one-click PDF of them. **Training → Training report…** in the
+spreadsheet does the same thing:
 
 | | |
 |---|---|

@@ -678,6 +678,37 @@ function showReport() {
   ui.showModalDialog(html, 'Report ready');
 }
 
+// The report as data, for the app to draw. No writing, so it is quick enough
+// to run while someone waits and safe to re-run as they change the period.
+function reportSummary(k, from) {
+  assertEdit(k);
+  const data = reportData(allRows(), timedLookup(), from);
+  if (!data.sessions) return null;
+
+  // Only what the page draws: the per-session lists behind each exercise are
+  // for the sheet's chart and would triple the payload.
+  return {
+    name: logName(),
+    from: data.from, to: data.to, period: data.period,
+    sessions: data.sessions, sets: data.sets, volume: data.volume,
+    weeks: data.weeks,
+    exercises: data.exercises.map(function (e) {
+      return {
+        name: e.name, day: e.day, timed: e.timed,
+        sessions: e.total.sessions, sets: e.total.sets, volume: e.total.volume,
+        low: topSet(e, e.total.low), high: topSet(e, e.total.high),
+        last: topSet(e, e.total.last), change: e.total.change,
+        allLow: e.lifetime ? topSet(e, e.lifetime.low) : '',
+        allHigh: e.lifetime ? topSet(e, e.lifetime.high) : '',
+        best: !!(e.lifetime && e.lifetime.high &&
+                 e.lifetime.sessions > e.total.sessions &&
+                 topSet(e, e.total.high) === topSet(e, e.lifetime.high))
+      };
+    })
+  };
+}
+
+
 // Writes the Report tab and returns the totals plus a PDF link for it.
 // Rewritten wholesale, like Records: it is output, never a source.
 function buildReport(k, from) {
