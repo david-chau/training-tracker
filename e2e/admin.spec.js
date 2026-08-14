@@ -105,6 +105,28 @@ test.describe('admin link', () => {
     await expect(app.locator('#report')).toBeVisible();
   });
 
+  test('a date range reports that range, against the whole log', async ({ page }) => {
+    test.skip(!T.allowWrites, 'writes disabled');
+    const app = await open(page, T.adminUrl);
+
+    await app.locator('#report').click();
+    test.skip(!await app.locator('#repfrom').count(),
+      'the live app has no date range yet — redeploy Index.html');
+
+    // A range the demo log straddles, so the period is a real slice of it.
+    await app.locator('#repfrom').fill('2026-08-01');
+    await app.locator('#repto').fill('2026-08-11');
+    await app.locator('#reportpanel .go', { hasText: 'Build' }).click();
+
+    const modal = app.locator('.repmodal');
+    await expect(modal).toBeVisible({ timeout: 120_000 });
+    await expect(modal.locator('.rep .sub')).toContainText('2026-08-11');
+    await expect(modal.locator('.rep .sub')).not.toContainText('everything logged');
+
+    // The point of a bounded period: the totals say what the log holds too.
+    await expect(modal.locator('.allrow').first()).toContainText(/All time · \d+ sessions/);
+  });
+
   test.describe('on a scratch date', () => {
     test.skip(!T.allowWrites, 'writes disabled');
 

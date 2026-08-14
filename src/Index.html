@@ -720,30 +720,59 @@ function reportPanel() {
   var p = document.createElement('div');
   p.className = 'report';
   p.id = 'reportpanel';
-  p.insertAdjacentHTML('beforeend',
-    '<h2>Training report</h2>' +
-    '<label class="rlab" for="repnum">Last — blank for everything</label>' +
-    '<div class="rrow">' +
-      '<input id="repnum" class="rin" type="text" inputmode="numeric" ' +
-        'placeholder="all" aria-label="How many">' +
-      '<select id="repunit" class="rin" aria-label="Days, weeks, months or years">' +
-        '<option value="days">days</option>' +
-        '<option value="weeks" selected>weeks</option>' +
-        '<option value="months">months</option>' +
-        '<option value="years">years</option>' +
-      '</select>' +
-    '</div>' +
-    '<label class="rlab" for="repfrom">Or between two dates</label>' +
-    '<div class="rrow">' +
-      '<input id="repfrom" class="rin" type="date" aria-label="From">' +
-      '<input id="repto" class="rin" type="date" aria-label="To">' +
-    '</div>' +
-    '<div class="hint">The dates win over the box above when either is set.</div>');
+  // Built rather than parsed from a string: the panel is not in the document
+  // yet, so document.getElementById would return null for everything in it —
+  // which is exactly what shipped once. Hold the references instead.
+  p.insertAdjacentHTML('beforeend', '<h2>Training report</h2>');
 
-  var num = document.getElementById('repnum');
-  var unit = document.getElementById('repunit');
-  var fromIn = document.getElementById('repfrom');
-  var toIn = document.getElementById('repto');
+  function field(text, el, id) {
+    var lab = document.createElement('label');
+    lab.className = 'rlab';
+    lab.textContent = text;
+    lab.setAttribute('for', id);
+    p.appendChild(lab);
+    return el;
+  }
+  function input(id, type, label) {
+    var el = document.createElement('input');
+    el.type = type;
+    el.id = id;
+    el.className = 'rin';
+    el.setAttribute('aria-label', label);
+    return el;
+  }
+  function rowOf(a, b) {
+    var r = document.createElement('div');
+    r.className = 'rrow';
+    r.appendChild(a); r.appendChild(b);
+    p.appendChild(r);
+  }
+
+  var num = input('repnum', 'text', 'How many');
+  num.inputMode = 'numeric';
+  num.placeholder = 'all';
+
+  var unit = document.createElement('select');
+  unit.id = 'repunit';
+  unit.className = 'rin';
+  unit.setAttribute('aria-label', 'Days, weeks, months or years');
+  ['days', 'weeks', 'months', 'years'].forEach(function (u) {
+    var o = document.createElement('option');
+    o.value = u;
+    o.textContent = u;
+    if (u === 'weeks') o.selected = true;
+    unit.appendChild(o);
+  });
+
+  var fromIn = input('repfrom', 'date', 'From');
+  var toIn = input('repto', 'date', 'To');
+
+  field('Last — blank for everything', num, 'repnum');
+  rowOf(num, unit);
+  field('Or between two dates', fromIn, 'repfrom');
+  rowOf(fromIn, toIn);
+  p.insertAdjacentHTML('beforeend',
+    '<div class="hint">The dates win over the box above when either is set.</div>');
 
   var row = document.createElement('div');
   row.className = 'row';

@@ -1203,6 +1203,19 @@ test('the report panel asks the server, with the key and a start date', () => {
   const build = find(panel, 'Build');
   assert.ok(build, 'the panel offers a Build button');
 
+  // The panel is not in the document while it is being built, so anything
+  // fetched with getElementById is null and the first click throws. The
+  // controls have to be real children the panel already holds. (The stub
+  // invents an element for any id, so only this structural check catches it.)
+  const ids = [];
+  (function walk(n) {
+    if (n.id) ids.push(n.id);
+    (n.children || []).forEach(walk);
+  })(panel);
+  ['repnum', 'repunit', 'repfrom', 'repto'].forEach(id => {
+    assert.ok(ids.indexOf(id) >= 0, id + ' is inside the panel, not looked up');
+  });
+
   build.onclick();
   const sent = outbox.filter(o => o.call === 'reportSummary');
   assert.strictEqual(sent.length, 1, 'one call');
