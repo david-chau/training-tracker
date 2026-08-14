@@ -343,8 +343,18 @@ because they would be the same numbers twice.
 
 Each exercise row carries the period's range and, where it is wider, the
 all-time one. Two numbers because one invites reading a good month as a
-personal best. The chart carries two variables as well: height is volume,
-colour is how many sessions that week.
+personal best.
+
+`REPORT_ROWS` (12) caps the rows per day card, with the remainder counted on a
+line beneath. Not only for length: a day card taller than the page cannot be
+placed at all — `break-inside:avoid` sends it to the next page and leaves the
+current one blank below the summary. 204 exercises was 7 pages with an empty
+first one; it is 3 full ones now.
+
+The chart is a line over percentage-placed points, with the polyline the only
+SVG (`preserveAspectRatio="none"` plus `vector-effect="non-scaling-stroke"`,
+so it stretches without the stroke stretching). Long periods label only some
+weeks — every week is still plotted.
 
 Volume is reps × weight and deliberately 0 for timed work; bodyweight sets
 count as sets with no volume. Both still count as sessions.

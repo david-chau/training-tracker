@@ -561,13 +561,15 @@ weights at 0 on purpose.
 **Report…** next to *Delete this session*. Ask for a number of weeks, or leave
 it blank for everything, and the report is drawn in the app:
 
-- **a bar per week** — how tall it is, is how much volume; how green it is, is
-  how often you trained that week; the last week is outlined
+- **a line across the weeks** — weekly volume, with a marked point per week
+  labelled with its total, and the session count on the axis under it (`×3`).
+  Over a long period only some weeks are labelled; every one is still plotted
 - **totals and averages** as tiles — sets per session, sets per week, volume —
   each with the same numbers over your whole log underneath, so four weeks is
   read against everything rather than on its own
 - **a card per day type**, with an icon, its own totals, and one row per
-  exercise: the period's range, your all-time range, and a trend pill
+  exercise: the period's range, your all-time range, and a trend pill. The
+  twelve most-trained are listed and the rest counted on a line beneath
 - **★** on a period holding a best ever set
 
 It opens over the session; **Close**, the backdrop, or Escape dismiss it.

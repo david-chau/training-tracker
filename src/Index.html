@@ -243,30 +243,28 @@
             font-variant-numeric:tabular-nums; }
   .tile span { font-size:11px; color:var(--muted); text-transform:uppercase;
                letter-spacing:0.05em; }
-  /* wk-, not bar-: `.bar` is the fixed status bar at the foot of the page, and
-     a chart bar sharing the name inherited `position:fixed` and its colour.
-     A column per week: its total above, the bar itself in whatever room is
-     left, the week under. The bar is a percentage of .wkplot rather than of
-     the whole column, so the number above it is never overrun. */
-  .wkbars { display:flex; align-items:stretch; justify-content:center;
-            gap:6px; height:128px; margin-bottom:8px; }
-  .wkcol { flex:1; min-width:0; max-width:104px; display:flex;
-           flex-direction:column; gap:3px; }
-  .wkplot { flex:1; display:flex; align-items:flex-end; }
-  .wkval, .wklab { font-size:10px; text-align:center; color:var(--muted);
-                   font-variant-numeric:tabular-nums; }
-  .wkcol.now .wkval, .wkcol.now .wklab { color:var(--ink); font-weight:600; }
-  .wkbar { width:100%; border-radius:5px 5px 0 0; min-height:3px;
-           border:1px solid rgba(0,0,0,0.08); }
-  /* One colour, three strengths: a week reads as light, solid or hard before
-     any number is. */
-  .s0 { background:#eceae5; }
-  .s1 { background:#bcdcc8; }
-  .s2 { background:#67b58b; }
-  .s3 { background:var(--ok); }
-  .wkcol.now .wkbar { border:2px solid var(--ink); }
-  .sw { display:inline-block; width:11px; height:11px; border-radius:3px;
-        border:1px solid rgba(0,0,0,0.08); vertical-align:-1px; }
+  /* The plot is a box with percentage-placed points over it; the line itself
+     is the only SVG, stretched to fit and told to keep its stroke width. */
+  .chart { position:relative; height:120px; margin:2px 0 0; }
+  .chart svg { position:absolute; inset:0; width:100%; height:100%; }
+  .chart .fill { fill:#e4f0e9; }
+  .chart .ln { fill:none; stroke:var(--ok); stroke-width:2;
+               stroke-linejoin:round; stroke-linecap:round; }
+  .pt { position:absolute; transform:translate(-50%, 50%); }
+  .pt i { display:block; width:9px; height:9px; border-radius:50%;
+          background:#fff; border:2px solid var(--ok); }
+  .pt.now i { background:var(--ok); box-shadow:0 0 0 3px rgba(29,122,79,0.15); }
+  .pv { position:absolute; bottom:15px; left:50%; transform:translateX(-50%);
+        font-size:10px; color:var(--muted); white-space:nowrap;
+        font-variant-numeric:tabular-nums; }
+  .pt.now .pv { color:var(--ink); font-weight:600; }
+  .xaxis { position:relative; height:32px; border-top:1px solid var(--line);
+           margin-bottom:8px; }
+  .xl { position:absolute; top:5px; transform:translateX(-50%);
+        font-size:10px; color:var(--muted); text-align:center;
+        white-space:nowrap; }
+  .xl b { display:block; font-weight:500; opacity:0.8; }
+  .xl.now { color:var(--ink); font-weight:600; }
   .legend { font-size:11px; color:var(--muted); line-height:1.5; }
   .rep > .legend { margin:-4px 0 10px; }
 
@@ -288,6 +286,7 @@
                font-size:13px; white-space:nowrap; text-align:right; }
   .allrow { margin-top:10px; padding-top:8px; border-top:1px solid var(--line);
             font-size:11px; color:var(--muted); text-align:center; }
+  .exrow.more { color:var(--muted); font-size:12px; font-style:italic; }
   .exrow .all { display:block; font-style:normal; font-size:11px;
                 opacity:0.75; }
   .exrow .all::before { content:'all '; }
@@ -320,7 +319,7 @@
     .repmodal { position:static; inset:auto; background:none; padding:0;
                 overflow:visible; }
     .repsheet { max-width:none; margin:0; padding:0; border-radius:0; }
-    .rep, .card, .daycard, .dayhead, .wkbar, .chip, .tile, .exrow {
+    .rep, .card, .daycard, .dayhead, .chart, .pt, .chip, .tile, .exrow {
       -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
     /* Sized to fill one page rather than to survive it: two columns of day
@@ -333,7 +332,7 @@
     .tile { padding:8px 5px; }
     .tile b { font-size:20px; }
     .tile span { font-size:10px; }
-    .wkbars { height:92px; }
+    .chart { height:88px; }
     .dayhead { padding:7px 11px; }
     .dayhead b { font-size:14px; }
     .dayhead .totals { font-size:10px; }
@@ -818,9 +817,12 @@ function short(n) {
   return String(n);
 }
 
-// Three bands of training frequency. Past three sessions a week the shade
-// stops meaning anything — it is a hard week either way.
-function band(sessions) { return Math.min(3, Math.max(0, sessions || 0)); }
+// A summary stops being one somewhere around a dozen lines per day type, and
+// a card taller than a page cannot be laid out at all: `break-inside:avoid`
+// pushes it to the next page and leaves the rest of this one blank. The rows
+// are sorted most-trained first, so what falls off the end is what was done
+// least in the period.
+var REPORT_ROWS = 12;
 
 function chip(pct) {
   if (pct === null || pct === undefined) return '<span class="chip flat">—</span>';
@@ -845,30 +847,59 @@ function reportView(res) {
     '<div class="sub">' + esc(res.name) + ' · ' + esc(res.from) + ' to ' + esc(res.to) +
     (res.period ? '' : ' · everything logged') + '</div>';
 
-  // Two things at once: how tall the week was (volume) and how often it was
-  // trained (colour). Neither reads without the numbers on the bars — a bare
-  // grey chart says "something happened" and nothing else.
-  html += '<div class="card"><h3>Week by week</h3><div class="wkbars">';
-  weeks.forEach(function (w, i) {
-    // Per cent, not pixels: print shrinks the chart, and absolute heights
-    // overflowed it upwards and sat on top of the card's own heading.
-    var h = Math.max(3, Math.round(w.volume / peak * 100));
-    html += '<div class="wkcol' + (i === weeks.length - 1 ? ' now' : '') + '">' +
-      '<span class="wkval">' + short(w.volume) + '</span>' +
-      '<div class="wkplot"><div class="wkbar s' + band(w.sessions) +
-      '" style="height:' + h + '%" title="' + esc(w.week) + ': ' +
-      commas(w.volume) + ' lb over ' + plural(w.sessions, 'session') +
-      '"></div></div>' +
-      '<span class="wklab">' + esc(w.week.slice(5)) + '</span></div>';
-  });
-  html += '</div><div class="legend">Height is volume in lb. Colour is how ' +
-    'often you trained that week: <span class="sw s1"></span>1 ' +
-    '<span class="sw s2"></span>2 <span class="sw s3"></span>3+ sessions. ' +
-    'The last week is outlined.</div></div>';
+  // A line, not bars: it reads as a direction rather than as four unrelated
+  // blocks, every week gets a marked and labelled point, and the shading that
+  // needed a colour key is gone — sessions are on the axis instead.
+  html += '<div class="card"><h3>Week by week</h3>';
+  if (weeks.length) {
+    var x = function (i) {
+      return weeks.length === 1 ? 50 : 6 + (i / (weeks.length - 1)) * 88;
+    };
+    var y = function (v) { return 6 + (peak ? v / peak : 0) * 82; };
+    var pts = weeks.map(function (w, i) {
+      return x(i).toFixed(1) + ',' + (100 - y(w.volume)).toFixed(1);
+    }).join(' ');
 
-  // Asking for four weeks should not hide the fact that there are eighteen
-  // behind them. The period is the headline; everything ever logged sits
-  // under it, and is left off entirely when the period already is everything.
+    // Half a year is 26 points. Every one gets drawn; only some can be
+    // labelled without the labels landing on each other. The last week is
+    // always labelled — it is the one being read.
+    var every = Math.ceil(weeks.length / 7);
+    var peakAt = weeks.reduce(function (best, w, i) {
+      return w.volume > weeks[best].volume ? i : best;
+    }, 0);
+    var labelled = function (i) {
+      return i === weeks.length - 1 || i === peakAt || i % every === 0;
+    };
+
+    html += '<div class="chart">' +
+      '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+      (weeks.length > 1
+        ? '<polygon class="fill" points="' + pts + ' ' + x(weeks.length - 1) +
+          ',100 ' + x(0) + ',100"/>' +
+          '<polyline class="ln" points="' + pts + '" ' +
+          'vector-effect="non-scaling-stroke"/>'
+        : '') +
+      '</svg>';
+    weeks.forEach(function (w, i) {
+      html += '<div class="pt' + (i === weeks.length - 1 ? ' now' : '') +
+        '" style="left:' + x(i).toFixed(1) + '%;bottom:' +
+        y(w.volume).toFixed(1) + '%" title="' + esc(w.week) + ': ' +
+        commas(w.volume) + ' lb over ' + plural(w.sessions, 'session') + '">' +
+        (labelled(i) ? '<span class="pv">' + short(w.volume) + '</span>' : '') +
+        '<i></i></div>';
+    });
+    html += '</div><div class="xaxis">';
+    weeks.forEach(function (w, i) {
+      if (!labelled(i)) return;
+      html += '<div class="xl' + (i === weeks.length - 1 ? ' now' : '') +
+        '" style="left:' + x(i).toFixed(1) + '%">' + esc(w.week.slice(5)) +
+        '<b>×' + w.sessions + '</b></div>';
+    });
+    html += '</div>';
+  }
+  html += '<div class="legend">Weekly volume in lb. ×n is how many sessions ' +
+    'that week.</div></div>';
+
   var life = res.lifetime;
   html += '<div class="sumgrid"><div class="card"><h3>Totals</h3><div class="tiles">' +
     tile(res.sessions, word(res.sessions, 'session')) +
@@ -919,7 +950,8 @@ function reportView(res) {
       plural(sessions, 'session') + ' · ' + plural(sets, 'set') +
       (volume ? ' · ' + commas(volume) + ' lb' : '') + '</span></div>';
 
-    list.forEach(function (ex) {
+    var shown = list.slice(0, REPORT_ROWS);
+    shown.forEach(function (ex) {
       // An arrow read as "went from, to". These are the lightest and heaviest
       // sets of the period, so it is a range and gets a range's dash — and the
       // lifetime one next to it, which is the only way to tell a period best
@@ -932,6 +964,10 @@ function reportView(res) {
         (life ? '<i class="all">' + life + '</i>' : '') + '</span>' +
         chip(ex.change) + '</div>';
     });
+    if (list.length > shown.length) {
+      html += '<div class="exrow more">+ ' + (list.length - shown.length) +
+        ' more, trained less often this period</div>';
+    }
     html += '</div>';
   });
   html += '</div>';

@@ -959,23 +959,22 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /chip up/, 'a rise is a green chip');
   assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
   assert.match(html, /66,948/, 'volume is grouped in thousands');
-  assert.match(html, /class="wkcol now"/, 'the newest week is picked out');
-  // Colour carries how often a week was trained; height only carries volume.
-  assert.match(html, /class="wkbar s1"/, 'a week trained once is the light shade');
-  assert.match(html, /class="wkbar s3"/, 'and three sessions the strong one');
-  assert.match(html, /class="wkval">34k</, 'each bar says what it is worth');
-  assert.match(html, /class="legend"/, 'and the chart says what it is showing');
-  // Per cent, so the chart survives being shrunk for print. Pixels overflowed
-  // the box upwards and landed on the card's heading.
-  assert.match(html, /style="height:\d+%"/, 'bar heights are relative');
-  assert.doesNotMatch(html, /style="height:\d+px"/, 'no bar is sized in pixels');
+  assert.match(html, /class="pt now"/, 'the newest week is picked out');
+  assert.match(html, /<polyline class="ln"/, 'the weeks are joined into a line');
+  assert.match(html, /class="pv">34k</, 'every point says what it is worth');
+  assert.match(html, /<b>×1<\/b>/, 'and the axis carries the session count');
+  assert.match(html, /class="legend"/, 'with a line saying what is plotted');
+  // Per cent, so the chart survives being shrunk for print. Absolute values
+  // overflowed the box and landed on the card's heading.
+  assert.match(html, /bottom:[\d.]+%/, 'points are placed relatively');
+  assert.doesNotMatch(html, /px"/, 'nothing in the chart is sized in pixels');
   assert.match(html, /class="daygrid"/, 'day cards share a wrapper to lay out');
   // Period and lifetime are different questions. Showing one number invites
   // reading a good month as a personal best.
   assert.match(html, /8 × 95 – 8 × 105/, 'the period is a range, not a journey');
   assert.match(html, /class="all">8 × 65 – 8 × 105/, 'with all-time beneath it');
-  // `.bar` is the fixed status bar: a chart bar named that inherits
-  // position:fixed, takes the page width and is hidden by the print rule.
+  // `.bar` is the fixed status bar at the foot of the page: a chart element
+  // named that inherits position:fixed and is hidden by the print rule.
   assert.doesNotMatch(html, /class="bars?["' ]/, 'no chart element claims .bar');
 });
 
@@ -1008,6 +1007,50 @@ test('one of something is not "1 sessions"', () => {
   });
   assert.match(el.innerHTML, /1 session ·/, 'singular in the day header');
   assert.ok(!/0 lb/.test(el.innerHTML), 'no zero volume');
+});
+
+test('a day type with more exercises than fit says how many are missing', () => {
+  const many = [];
+  for (let i = 1; i <= 30; i++) {
+    many.push({ name: 'Exercise ' + i, day: 'Push', sessions: 3, sets: 9,
+                volume: 900, low: '8 × 95', high: '8 × 105', last: '8 × 105',
+                change: 5, best: false });
+  }
+  const el = G.reportView({
+    name: 'Log', from: '2026-01-01', to: '2026-08-11', period: '',
+    sessions: 60, sets: 900, volume: 540000, weeks: [], lifetime: null,
+    exercises: many
+  });
+  const html = el.innerHTML;
+  // A card taller than the page cannot be placed at all: break-inside:avoid
+  // sends it to the next page and leaves this one blank below the summary.
+  assert.strictEqual((html.match(/class="exrow/g) || []).length, 13,
+    '12 exercises and the line that accounts for the rest');
+  assert.match(html, /\+ 18 more, trained less often/, 'and it says how many');
+  assert.match(html, /Exercise 12/, 'the twelfth is in');
+  assert.ok(!/Exercise 13</.test(html), 'the thirteenth is not');
+});
+
+test('a long period labels some of its weeks, and draws all of them', () => {
+  const weeks = [];
+  for (let i = 0; i < 26; i++) {
+    weeks.push({ week: '2026-0' + (1 + i % 9) + '-01', sessions: 3, sets: 40,
+                 volume: 20000 + i * 100, change: 1 });
+  }
+  const el = G.reportView({
+    name: 'Log', from: '2026-01-01', to: '2026-08-11', period: '2026-01-01',
+    sessions: 70, sets: 1000, volume: 600000, weeks: weeks, lifetime: null,
+    exercises: []
+  });
+  const html = el.innerHTML;
+  const points = (html.match(/class="pt/g) || []).length;
+  const labels = (html.match(/class="xl/g) || []).length;
+  assert.strictEqual(points, 26, 'every week is a point on the line');
+  assert.ok(labels < 10, 'but 26 date labels would land on each other');
+  // The last week is what a report is read for, and the peak is the other
+  // point anyone looks for.
+  assert.match(html, /class="xl now"/, 'the last week keeps its label');
+  assert.match(html, /class="pv">23k</, 'and the peak keeps its value');
 });
 
 test('a period is shown against everything ever logged', () => {
