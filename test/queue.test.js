@@ -962,7 +962,8 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /class="pt now"/, 'the newest week is picked out');
   assert.match(html, /<polyline class="ln"/, 'the weeks are joined into a line');
   assert.match(html, /class="pv">34k</, 'every point says what it is worth');
-  assert.match(html, /<b>×1<\/b>/, 'and the axis carries the session count');
+  assert.match(html, /<polyline class="ln2"/, 'sessions are a second line');
+  assert.match(html, /class="pt freq"/, 'with their own marked points');
   assert.match(html, /class="legend"/, 'with a line saying what is plotted');
   // Per cent, so the chart survives being shrunk for print. Absolute values
   // overflowed the box and landed on the card's heading.
@@ -973,9 +974,21 @@ test('the report draws as cards, with an icon per day type', () => {
   // reading a good month as a personal best.
   assert.match(html, /8 × 95 – 8 × 105/, 'the period is a range, not a journey');
   assert.match(html, /class="all">8 × 65 – 8 × 105/, 'with all-time beneath it');
-  // `.bar` is the fixed status bar at the foot of the page: a chart element
-  // named that inherits position:fixed and is hidden by the print rule.
-  assert.doesNotMatch(html, /class="bars?["' ]/, 'no chart element claims .bar');
+  // The report shares a stylesheet with the app, and has twice now taken a
+  // name the app already styles: `.bar` is the fixed status bar, so chart bars
+  // went position:fixed and vanished from print; `.sess` is the previous/next
+  // session button, so session markers grew its border and background.
+  const owned = ['bar', 'sess', 'set', 'ex', 'nav', 'go', 'choice', 'fld',
+                 'val', 'step', 'msg', 'rail', 'pager', 'days', 'tools', 'top',
+                 'datebar', 'sessnav', 'cnt', 'meta', 'hint', 'report', 'row',
+                 'retry', 'saved', 'failed', 'mini', 'addex', 'prtag'];
+  const used = new Set();
+  for (const m of html.matchAll(/class="([^"]+)"/g)) {
+    m[1].split(/\s+/).forEach(c => used.add(c));
+  }
+  const clash = owned.filter(c => used.has(c));
+  assert.deepStrictEqual(clash, [],
+    'the report is wearing a class the app already styles');
 });
 
 test('a sheet name cannot inject markup into the report', () => {
@@ -1043,7 +1056,7 @@ test('a long period labels some of its weeks, and draws all of them', () => {
     exercises: []
   });
   const html = el.innerHTML;
-  const points = (html.match(/class="pt/g) || []).length;
+  const points = (html.match(/class="pt"|class="pt now"/g) || []).length;
   const labels = (html.match(/class="xl/g) || []).length;
   assert.strictEqual(points, 26, 'every week is a point on the line');
   assert.ok(labels < 10, 'but 26 date labels would land on each other');

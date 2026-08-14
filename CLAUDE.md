@@ -351,10 +351,19 @@ placed at all — `break-inside:avoid` sends it to the next page and leaves the
 current one blank below the summary. 204 exercises was 7 pages with an empty
 first one; it is 3 full ones now.
 
-The chart is a line over percentage-placed points, with the polyline the only
-SVG (`preserveAspectRatio="none"` plus `vector-effect="non-scaling-stroke"`,
-so it stretches without the stroke stretching). Long periods label only some
-weeks — every week is still plotted.
+The chart is two lines over percentage-placed points, with the polylines the
+only SVG (`preserveAspectRatio="none"` plus `vector-effect="non-scaling-stroke"`,
+so they stretch without the strokes stretching). Volume and sessions each get
+their own band — top half and bottom quarter — because on a good week both sit
+near their own maximum and a shared height put a session marker through a
+volume label. Long periods label only some weeks; every week is still plotted.
+
+**The report shares one stylesheet with the app, and has taken an app class
+name twice.** `.bar` (the fixed status bar) made chart bars `position:fixed`
+and hid them from print; `.sess` (the previous/next session button) gave
+session markers its border and background. `queue.test.js` now fails on any
+report element wearing a name from that list — add to it rather than
+rediscovering this a third time.
 
 Volume is reps × weight and deliberately 0 for timed work; bodyweight sets
 count as sets with no volume. Both still count as sessions.

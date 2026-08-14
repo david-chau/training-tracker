@@ -561,9 +561,9 @@ weights at 0 on purpose.
 **Report…** next to *Delete this session*. Ask for a number of weeks, or leave
 it blank for everything, and the report is drawn in the app:
 
-- **a line across the weeks** — weekly volume, with a marked point per week
-  labelled with its total, and the session count on the axis under it (`×3`).
-  Over a long period only some weeks are labelled; every one is still plotted
+- **two lines across the weeks** — volume in lb, and how many sessions, each
+  drawn against its own high so a hard week and a frequent week can be told
+  apart. Over a long period only some weeks are labelled; every one is plotted
 - **totals and averages** as tiles — sets per session, sets per week, volume —
   each with the same numbers over your whole log underneath, so four weeks is
   read against everything rather than on its own

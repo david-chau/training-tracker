@@ -245,15 +245,27 @@
                letter-spacing:0.05em; }
   /* The plot is a box with percentage-placed points over it; the line itself
      is the only SVG, stretched to fit and told to keep its stroke width. */
-  .chart { position:relative; height:120px; margin:2px 0 0; }
+  .chart { position:relative; height:120px; margin:14px 0 0; }
   .chart svg { position:absolute; inset:0; width:100%; height:100%; }
-  .chart .fill { fill:#e4f0e9; }
   .chart .ln { fill:none; stroke:var(--ok); stroke-width:2;
                stroke-linejoin:round; stroke-linecap:round; }
+  /* Sessions: dashed and quieter, because volume is the headline and this is
+     the context for it. */
+  .chart .ln2 { fill:none; stroke:var(--muted); stroke-width:1.5;
+                stroke-dasharray:4 3; stroke-linejoin:round; }
   .pt { position:absolute; transform:translate(-50%, 50%); }
   .pt i { display:block; width:9px; height:9px; border-radius:50%;
           background:#fff; border:2px solid var(--ok); }
   .pt.now i { background:var(--ok); box-shadow:0 0 0 3px rgba(29,122,79,0.15); }
+  /* freq, not sess: `.sess` is the previous/next session button, and a point
+     wearing that name picked up its border, padding and white background. */
+  .pt.freq i { width:6px; height:6px; background:var(--muted);
+               border-color:var(--muted); }
+  .pt.freq .pv { bottom:11px; font-size:9px; }
+  .ky { display:inline-block; width:14px; height:0; vertical-align:3px;
+        margin:0 4px 0 7px; }
+  .ky.vol { border-top:2px solid var(--ok); }
+  .ky.ses { border-top:2px dashed var(--muted); }
   .pv { position:absolute; bottom:15px; left:50%; transform:translateX(-50%);
         font-size:10px; color:var(--muted); white-space:nowrap;
         font-variant-numeric:tabular-nums; }
@@ -847,18 +859,30 @@ function reportView(res) {
     '<div class="sub">' + esc(res.name) + ' · ' + esc(res.from) + ' to ' + esc(res.to) +
     (res.period ? '' : ' · everything logged') + '</div>';
 
-  // A line, not bars: it reads as a direction rather than as four unrelated
-  // blocks, every week gets a marked and labelled point, and the shading that
-  // needed a colour key is gone — sessions are on the axis instead.
+  // Two lines, each on its own scale: volume is in tens of thousands and
+  // sessions in single figures, so a shared axis would flatten one of them
+  // into the floor. They are asking different questions anyway — did I train,
+  // and how hard — and the answers diverge, which is the interesting part.
   html += '<div class="card"><h3>Week by week</h3>';
   if (weeks.length) {
     var x = function (i) {
       return weeks.length === 1 ? 50 : 6 + (i / (weeks.length - 1)) * 88;
     };
-    var y = function (v) { return 6 + (peak ? v / peak : 0) * 82; };
-    var pts = weeks.map(function (w, i) {
-      return x(i).toFixed(1) + ',' + (100 - y(w.volume)).toFixed(1);
-    }).join(' ');
+    // Stacked bands rather than one plot area: on a good week both series sit
+    // near their own maximum, and sharing the height put a session marker
+    // straight through a volume label. Volume takes the top half, sessions the
+    // bottom quarter, and neither can reach the other.
+    var y = function (v) { return 46 + (peak ? v / peak : 0) * 48; };
+    var peakS = weeks.reduce(function (n, w) {
+      return Math.max(n, w.sessions || 0);
+    }, 1);
+    var ys = function (n) { return 6 + (n / peakS) * 24; };
+    var line = function (fn, key) {
+      return weeks.map(function (w, i) {
+        return x(i).toFixed(1) + ',' + (100 - fn(w[key])).toFixed(1);
+      }).join(' ');
+    };
+    var pts = line(y, 'volume');
 
     // Half a year is 26 points. Every one gets drawn; only some can be
     // labelled without the labels landing on each other. The last week is
@@ -874,9 +898,9 @@ function reportView(res) {
     html += '<div class="chart">' +
       '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
       (weeks.length > 1
-        ? '<polygon class="fill" points="' + pts + ' ' + x(weeks.length - 1) +
-          ',100 ' + x(0) + ',100"/>' +
-          '<polyline class="ln" points="' + pts + '" ' +
+        ? '<polyline class="ln" points="' + pts + '" ' +
+          'vector-effect="non-scaling-stroke"/>' +
+          '<polyline class="ln2" points="' + line(ys, 'sessions') + '" ' +
           'vector-effect="non-scaling-stroke"/>'
         : '') +
       '</svg>';
@@ -887,18 +911,24 @@ function reportView(res) {
         commas(w.volume) + ' lb over ' + plural(w.sessions, 'session') + '">' +
         (labelled(i) ? '<span class="pv">' + short(w.volume) + '</span>' : '') +
         '<i></i></div>';
+      html += '<div class="pt freq" style="left:' + x(i).toFixed(1) +
+        '%;bottom:' + ys(w.sessions).toFixed(1) + '%" title="' +
+        plural(w.sessions, 'session') + '">' +
+        (labelled(i) ? '<span class="pv">' + w.sessions + '</span>' : '') +
+        '<i></i></div>';
     });
     html += '</div><div class="xaxis">';
     weeks.forEach(function (w, i) {
       if (!labelled(i)) return;
       html += '<div class="xl' + (i === weeks.length - 1 ? ' now' : '') +
         '" style="left:' + x(i).toFixed(1) + '%">' + esc(w.week.slice(5)) +
-        '<b>×' + w.sessions + '</b></div>';
+        '</div>';
     });
     html += '</div>';
   }
-  html += '<div class="legend">Weekly volume in lb. ×n is how many sessions ' +
-    'that week.</div></div>';
+  html += '<div class="legend"><span class="ky vol"></span>volume in lb ' +
+    '<span class="ky ses"></span>sessions — each against its own high, so the ' +
+    'two lines are shapes to compare, not one scale.</div></div>';
 
   var life = res.lifetime;
   html += '<div class="sumgrid"><div class="card"><h3>Totals</h3><div class="tiles">' +
