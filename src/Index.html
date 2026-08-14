@@ -339,10 +339,12 @@
     .exrow .mv { font-size:11px; }
     .chip { font-size:11px; padding:1px 6px; }
     /* Paper is wider than a phone. One column of day cards spilled a nearly
-       empty second page; two columns put the same content back on one. */
-    .daygrid { display:grid; grid-template-columns:1fr 1fr; gap:8px;
-               align-items:start; }
-    .daygrid .daycard { margin-bottom:0; }
+       empty second page; two columns put the same content back on one.
+       Columns rather than a grid: a grid row cannot be broken, so a row too
+       tall for what is left of the page moved whole and left half a page
+       blank. Multicol just keeps filling. */
+    .daygrid { column-count:2; column-gap:8px; }
+    .daygrid .daycard { break-inside:avoid; margin:0 0 8px; }
   }
   .report h2 { font-size:16px; margin:0 0 8px; }
   .report .row { display:flex; gap:8px; margin-top:10px; }

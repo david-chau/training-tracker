@@ -323,8 +323,11 @@ to produce. Don't rebuild it. What that means for the print rules:
 - `@media print` in `Index.html` is load-bearing, not decoration. It hides the
   session, un-modals the report and keeps background colours — browsers drop
   those by default, which took the bars, the chips and the day headers.
-- Day cards print two across (`.daygrid`). One column spilled a fourth card
-  onto an otherwise blank second page.
+- Day cards print two across (`.daygrid`), as **columns, not a grid**. One
+  column spilled a fourth card onto an otherwise blank second page; a grid
+  fixed that until the rows grew, at which point a row too tall for the
+  remaining page moved whole and left half a page blank. Multicol keeps
+  filling.
 - Chart bar heights are percentages. Pixels were sized against the 120px
   on-screen chart and overflowed the shorter print one, onto its own heading.
 - `window.print()` inside the sandbox iframe prints *that frame*, so it
