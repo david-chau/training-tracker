@@ -733,6 +733,7 @@ function buildReport(k, from) {
   // One block per day type, so a Push week reads as a Push week. Lowest and
   // highest first: they are the two numbers that answer "am I doing better".
   const headings = [];
+  const countCells = [];
   let currentDay = null;
   data.exercises.forEach(function (ex) {
     if (ex.day !== currentDay) {
@@ -743,6 +744,7 @@ function buildReport(k, from) {
                 'Trend']
         .concat(data.period ? ['All-time low', 'All-time high'] : []));
     }
+    countCells.push(out.length + 1);
     const t = ex.total;
     // A best ever, set in this period — and only worth a star if there was
     // history to beat. Without that check a first-ever session stars itself
@@ -763,6 +765,17 @@ function buildReport(k, from) {
   const width = out.reduce(function (w, r) { return Math.max(w, r.length); }, 5);
   out.forEach(function (r) { while (r.length < width) r.push(''); });
   sheet.getRange(1, 1, out.length, width).setValues(out);
+
+  // A session count is a count. Written into a cell the tab had previously
+  // used for dates, "2" renders as 1900-01-01 — clear() does not always take
+  // a column format with it, so the format is stated rather than inherited.
+  sheet.getRange(weekAt + 1, 2, Math.max(1, weekRows), 3).setNumberFormat('0');
+  countCells.forEach(function (row) {
+    sheet.getRange(row, 2).setNumberFormat('0');
+  });
+  if (chartRows && top.length) {
+    sheet.getRange(chartAt + 1, 2, chartRows, top.length).setNumberFormat('0.#');
+  }
 
   sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
   [weekAt, chartAt].concat(headings).forEach(function (row) {
