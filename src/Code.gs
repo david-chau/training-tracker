@@ -725,14 +725,22 @@ function buildReport(k, from) {
   const chartRows = dates.length;
   out.push(['', '', '', '', '']);
 
-  out.push(['Exercise', 'Date', 'Sets', 'Top set', 'Volume (lb)']);
+  // One block per day type, so a Push week reads as a Push week. Lowest and
+  // highest first: they are the two numbers that answer "am I doing better".
+  const headings = [];
+  let currentDay = null;
   data.exercises.forEach(function (ex) {
-    ex.sessions.forEach(function (d) {
-      out.push([ex.name, d.date, d.sets,
-                d.topReps + (ex.timed ? 's' : '') +
-                  (d.topWeight ? ' x ' + d.topWeight + ' lb' : ''),
-                d.volume || '']);
-    });
+    if (ex.day !== currentDay) {
+      currentDay = ex.day;
+      if (out.length && out[out.length - 1][0] !== '') out.push(['']);
+      headings.push(out.length + 1);
+      out.push([ex.day.toUpperCase(), 'Sessions', 'Lowest', 'Highest',
+                'Latest', 'Change']);
+    }
+    const t = ex.total;
+    out.push([ex.name, t.sessions, topSet(ex, t.low), topSet(ex, t.high),
+              topSet(ex, t.last),
+              t.change === null ? '—' : (t.change > 0 ? '+' : '') + t.change + '%']);
   });
 
   // Five exercises in the 1RM block makes a six-column row, so the range is as
@@ -742,7 +750,7 @@ function buildReport(k, from) {
   sheet.getRange(1, 1, out.length, width).setValues(out);
 
   sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
-  [weekAt, chartAt, out.length - totalDetail(data)].forEach(function (row) {
+  [weekAt, chartAt].concat(headings).forEach(function (row) {
     if (row > 0) sheet.getRange(row, 1, 1, width).setFontWeight('bold');
   });
   sheet.setFrozenRows(3);
@@ -780,9 +788,11 @@ function buildReport(k, from) {
   };
 }
 
-// How many rows the per-exercise detail takes, so its heading can be found.
-function totalDetail(data) {
-  return data.exercises.reduce(function (n, e) { return n + e.sessions.length; }, 0);
+// "8 x 105 lb", "45s", "20" — whichever the exercise actually is.
+function topSet(ex, day) {
+  if (!day) return '';
+  return day.topReps + (ex.timed ? 's' : '') +
+         (day.topWeight ? ' x ' + day.topWeight + ' lb' : '');
 }
 
 
@@ -818,7 +828,10 @@ function reportData(rows, timed, from) {
     if (!first || date < first) first = date;
     if (!last || date > last) last = date;
 
-    const ex = byExercise[name] || (byExercise[name] = { name: name, timed: isTimed, days: {} });
+    const dayType = String(r[COL.day]).trim();
+    const key = dayType + '|' + name;
+    const ex = byExercise[key] ||
+      (byExercise[key] = { name: name, day: dayType, timed: isTimed, days: {} });
     const day = ex.days[date] || (ex.days[date] = {
       date: date, sets: 0, volume: 0, topReps: 0, topWeight: 0, est1rm: 0
     });
@@ -850,9 +863,53 @@ function reportData(rows, timed, from) {
     const ex = byExercise[k];
     const list = Object.keys(ex.days).sort().map(function (d) { return ex.days[d]; });
     list.forEach(function (d) { d.volume = Math.round(d.volume); });
-    return { name: ex.name, timed: ex.timed, sessions: list };
+
+    // The report is a summary: one line per exercise, not one per session.
+    // The per-session list stays for the chart, which needs the points.
+    //
+    // Lowest and highest are what answer "am I doing better" at a glance —
+    // by load where there is load, by reps or seconds where there is not.
+    const first = list[0], last = list[list.length - 1];
+    const rank = ex.timed || !list.some(function (d) { return d.topWeight > 0; })
+      ? function (d) { return d.topReps; }
+      : function (d) { return d.topWeight * 1000 + d.topReps; };
+
+    let low = list[0], high = list[0];
+    list.forEach(function (d) {
+      if (rank(d) < rank(low)) low = d;
+      if (rank(d) >= rank(high)) high = d;
+    });
+
+    // Whichever number actually moved. More reps at the same weight is
+    // progress and used to report 0%, which is the opposite of the point.
+    // One session has nothing to compare against, so it reports nothing.
+    const pct = function (now, then) {
+      return Math.round((now / then - 1) * 1000) / 10;
+    };
+    let moved = null;
+    if (list.length > 1) {
+      if (last.topWeight !== first.topWeight && first.topWeight > 0) {
+        moved = pct(last.topWeight, first.topWeight);
+      } else if (first.topReps > 0) {
+        moved = pct(last.topReps, first.topReps);
+      }
+    }
+
+    return {
+      name: ex.name, day: ex.day, timed: ex.timed, sessions: list,
+      total: {
+        sessions: list.length,
+        sets: list.reduce(function (n, d) { return n + d.sets; }, 0),
+        volume: list.reduce(function (n, d) { return n + d.volume; }, 0),
+        best: list.reduce(function (n, d) { return Math.max(n, d.est1rm); }, 0),
+        first: first, last: last, low: low, high: high,
+        change: moved
+      }
+    };
   }).sort(function (a, b) {
-    return b.sessions.length - a.sessions.length || (a.name < b.name ? -1 : 1);
+    return (a.day < b.day ? -1 : a.day > b.day ? 1 : 0) ||
+           b.sessions.length - a.sessions.length ||
+           (a.name < b.name ? -1 : 1);
   });
 
   return {

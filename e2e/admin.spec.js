@@ -70,6 +70,34 @@ test.describe('admin link', () => {
     expect(await link.getAttribute('href')).toContain('docs.google.com');
   });
 
+  test('the report builds and offers a PDF of the sheet', async ({ page }) => {
+    test.skip(!T.allowWrites, 'writes disabled');
+    const app = await open(page, T.adminUrl);
+
+    test.skip(!await deployedFeature(app, '#report'),
+      'the live app has no report button yet — redeploy Index.html');
+
+    await app.locator('#report').click();
+    const panel = app.locator('#reportpanel');
+    await expect(panel).toBeVisible();
+
+    // Blank weeks means the whole log. Building scans it and writes a tab, so
+    // this is slow by nature rather than by accident.
+    await panel.locator('.go', { hasText: 'Build' }).click();
+    const pdf = panel.locator('a.go');
+    await expect(pdf).toBeVisible({ timeout: 120_000 });
+
+    await expect(panel).toContainText(/\d+ sessions · \d+ sets/);
+    await expect(pdf).toHaveText('Download PDF');
+    await expect(pdf).toHaveAttribute('target', '_blank');
+
+    // Sheets' own export of the Report tab, not something the app generated.
+    const href = await pdf.getAttribute('href');
+    expect(href).toMatch(/\/export\?format=pdf/);
+    expect(href).toMatch(/[?&]gid=\d+/);
+    expect(href).toContain(T.sheetUrl.split('/d/')[1].split('/')[0]);
+  });
+
   test.describe('on a scratch date', () => {
     test.skip(!T.allowWrites, 'writes disabled');
 

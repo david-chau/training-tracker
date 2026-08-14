@@ -461,6 +461,75 @@ test('each exercise gets its sessions in order, with its top set', () => {
   assert.strictEqual(bench.sessions[1].volume, 5 * 110 + 8 * 105);
 });
 
+test('each exercise is summarised: first, latest, best and how far it moved', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Bench', 1, 8, 95),
+    row('2026-07-20', 'Push', 'Bench', 2, 8, 95),
+    row('2026-08-03', 'Push', 'Bench', 1, 8, 105)
+  ];
+  const t = reportData(rows, {}, '').exercises[0].total;
+
+  assert.strictEqual(t.sessions, 2);
+  assert.strictEqual(t.sets, 3);
+  assert.strictEqual(t.first.topWeight, 95);
+  assert.strictEqual(t.last.topWeight, 105);
+  assert.strictEqual(t.best, epley(8, 105), 'the best estimate of the period');
+  assert.strictEqual(t.change, 10.5, '95 to 105 is +10.5%');
+  assert.strictEqual(t.volume, 8 * 95 * 2 + 8 * 105);
+});
+
+test('bodyweight progress is measured in reps, since there is no load', () => {
+  const rows = [
+    row('2026-07-20', 'Pull', 'Pull-Up', 1, 8, 0),
+    row('2026-08-03', 'Pull', 'Pull-Up', 1, 12, 0)
+  ];
+  const t = reportData(rows, {}, '').exercises[0].total;
+
+  assert.strictEqual(t.change, 50, '8 to 12 reps is +50%');
+  assert.strictEqual(t.low.topReps, 8);
+  assert.strictEqual(t.high.topReps, 12);
+});
+
+test('more reps at the same weight is progress, not 0%', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Press', 1, 10, 20),
+    row('2026-08-03', 'Push', 'Press', 1, 12, 20)
+  ];
+  const t = reportData(rows, {}, '').exercises[0].total;
+  assert.strictEqual(t.change, 20, '10 to 12 reps at the same load is +20%');
+});
+
+test('one session has nothing to compare against', () => {
+  const rows = [row('2026-08-03', 'Push', 'Press', 1, 10, 20)];
+  assert.strictEqual(reportData(rows, {}, '').exercises[0].total.change, null);
+});
+
+test('lowest and highest come from the whole period, not its ends', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Bench', 1, 8, 100),
+    row('2026-07-27', 'Push', 'Bench', 1, 8, 115),   // best, mid-period
+    row('2026-08-03', 'Push', 'Bench', 1, 8, 90),    // worst, mid-period
+    row('2026-08-10', 'Push', 'Bench', 1, 8, 105)
+  ];
+  const t = reportData(rows, {}, '').exercises[0].total;
+
+  assert.strictEqual(t.high.topWeight, 115, 'the best week counts');
+  assert.strictEqual(t.low.topWeight, 90, 'so does the worst');
+  assert.strictEqual(t.first.topWeight, 100);
+  assert.strictEqual(t.last.topWeight, 105);
+});
+
+test('the same exercise on two day types is two lines', () => {
+  const rows = [
+    row('2026-07-20', 'Push', 'Bench', 1, 8, 100),
+    row('2026-08-05', 'Custom', 'Bench', 1, 8, 80)
+  ];
+  const out = reportData(rows, {}, '');
+
+  assert.strictEqual(out.exercises.length, 2, 'grouped by day type');
+  assert.deepStrictEqual(plain(out.exercises.map(e => e.day)), ['Custom', 'Push']);
+});
+
 test('a timed exercise contributes sets but no volume or 1RM', () => {
   const rows = [
     row('2026-08-10', 'Custom', 'Plank', 1, 45, 0),

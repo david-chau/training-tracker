@@ -567,7 +567,20 @@ and offers it as a PDF:
 | Header | The period, and totals: sessions, sets, volume |
 | Weekly summary | One row per week — sessions, sets, volume — with a column chart |
 | Estimated 1RM | One column per exercise, one row per session date, as a line chart |
-| Per exercise | Every session: date, sets, top set, volume |
+| Per day type | One line per exercise: sessions, lowest, highest, latest, change |
+
+```
+   PUSH                     Sessions  Lowest     Highest    Latest     Change
+   Barbell Bench Press      3         8 x 95 lb  8 x 105    8 x 105    +10.5%
+   Seated DB Shoulder Press 3         10 x 20    12 x 20    12 x 20    +20%
+```
+
+Lowest and highest are the worst and best of the period, not its first and
+last — a bad week in the middle shows up. **Change** compares the first
+session with the latest: by weight when the weight moved, by reps when it did
+not, because more reps at the same load is progress and used to read as 0%.
+An exercise with one session in the period has nothing to compare against and
+reads `—`.
 
 **Download PDF** is Sheets' own export of that tab, so the app needs no extra
 permission for it. It opens in a new tab and is fetched by your browser, not
