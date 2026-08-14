@@ -32,3 +32,6 @@ playwright-report/
 
 # Scratch dir for clip recording
 .clips/
+
+# Anything generated for a look — reports, renders, scratch output
+/generated/

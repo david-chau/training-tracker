@@ -824,8 +824,11 @@ function buildReport(k, from) {
     from: data.from, to: data.to,
     pdf: ss.getUrl().replace(/\/edit.*$/, '') +
          '/export?format=pdf&gid=' + sheet.getSheetId() +
-         '&portrait=false&fitw=true&gridlines=false&printtitle=false' +
-         '&sheetnames=false&pagenum=false&size=letter&scale=4'
+         // Portrait, fit to page. The report is a narrow, tall thing — eight
+         // short columns and two stacked charts — and landscape left it using
+         // the left third of the sheet at a size nobody would read.
+         '&portrait=true&scale=4&gridlines=false&printtitle=false' +
+         '&sheetnames=false&pagenum=false&size=letter'
   };
 }
 
