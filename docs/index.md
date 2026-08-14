@@ -83,9 +83,10 @@ genuinely cannot write.
 - **One exercise on screen at a time**, with the whole session listed above it
   — including supersets, which are one card laid out round by round.
 - **Reads in lb or kg.** A switch per device; the sheet always stores pounds.
-- **Shows you the movement.** Every exercise carries a **▶ How to** link, and
-  you can add your own picture or GIF beside it — worth a lot if you are new
-  to a lift.
+- **Shows you the movement.** The 255 exercises in the starter list each carry
+  a **▶ How to** link — a video search for that movement — and you can add a
+  picture or GIF of your own beside any of them. An exercise you type in
+  yourself has neither until you fill them in.
 - **Survives bad wifi.** Changes queue on the device and save themselves when
   the connection comes back.
 - **Scales by copying.** A trainer with twenty-five people runs twenty-five

@@ -78,9 +78,9 @@ One card per exercise, one numbered row per set.
   can see the progression. Blank on a first session.
 - **Best 8 × 15 lb · est 1RM 19** — the best ever recorded for that exercise.
 
-Beside each exercise name is a **▶ How to** link, which opens a video search
-for that movement in a new tab. If a picture has been added, the name has a
-thumbnail too — tap it to see it full width.
+Most exercise names carry a **▶ How to** link, which opens a video search for
+that movement in a new tab; one typed in by hand may not. If a picture has
+been added, the name has a thumbnail too — tap it to see it full width.
 
 Any note left against an exercise appears underneath it. A **superset** — two
 exercises done back to back — is one card, listed round by round.

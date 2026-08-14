@@ -465,9 +465,13 @@ Pull-Up` and `Weighted Chin-Up` already ship unflagged.
 
 Two columns on the `Exercises` tab, both optional.
 
-**Column F, `video`** — every exercise ships with one already: a **▶ How to**
-link beside the name that opens a YouTube search for that movement, in a new
-tab. Replace any of them with a specific video you trust.
+**Column F, `video`** — all 255 shipped exercises have one: a **▶ How to** link
+beside the name that opens a YouTube search for that movement, in a new tab.
+Replace any of them with a specific video you trust.
+
+{: .note }
+An exercise you add by typing a new name gets a row with this column **blank**,
+so it has no **▶ How to** until you paste one in. Same for the picture.
 
 {: .note }
 A search rather than one fixed video, because a search never rots, covers all
