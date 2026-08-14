@@ -734,6 +734,7 @@ function buildReport(k, from) {
   // highest first: they are the two numbers that answer "am I doing better".
   const headings = [];
   const countCells = [];
+  const trendCells = [];          // [row, direction] for colouring afterwards
   let currentDay = null;
   data.exercises.forEach(function (ex) {
     if (ex.day !== currentDay) {
@@ -745,6 +746,9 @@ function buildReport(k, from) {
         .concat(data.period ? ['All-time low', 'All-time high'] : []));
     }
     countCells.push(out.length + 1);
+    if (ex.total.change !== null) {
+      trendCells.push([out.length + 1, ex.total.change]);
+    }
     const t = ex.total;
     // A best ever, set in this period — and only worth a star if there was
     // history to beat. Without that check a first-ever session stars itself
@@ -776,6 +780,13 @@ function buildReport(k, from) {
   if (chartRows && top.length) {
     sheet.getRange(chartAt + 1, 2, chartRows, top.length).setNumberFormat('0.#');
   }
+
+  // Up is green, down is red, flat is neither. The arrow already says which
+  // way; colour is what makes a page of them readable without reading.
+  trendCells.forEach(function (hit) {
+    sheet.getRange(hit[0], 6)
+      .setFontColor(hit[1] > 0 ? '#1d7a4f' : hit[1] < 0 ? '#a33' : '#6b6b66');
+  });
 
   sheet.getRange(1, 1).setFontSize(14).setFontWeight('bold');
   [weekAt, chartAt].concat(headings).forEach(function (row) {
