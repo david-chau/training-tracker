@@ -558,8 +558,9 @@ weights at 0 on purpose.
 
 ### A report you can send
 
-**Training → Training report…** asks how many weeks back, writes a `Report`
-tab, and offers it as a PDF:
+**Report…** next to *Delete this session*, or **Training → Training report…**
+in the spreadsheet. Either asks how many weeks back, writes a `Report` tab,
+and offers it as a PDF:
 
 | | |
 |---|---|
@@ -568,9 +569,13 @@ tab, and offers it as a PDF:
 | Estimated 1RM | One column per exercise, one row per session date, as a line chart |
 | Per exercise | Every session: date, sets, top set, volume |
 
-**Download PDF** in the dialog is Sheets' own export of that tab, so it needs
-no extra permission and lands in your downloads like any other file. The tab
-stays behind with the charts live if you would rather sort or chart it
+**Download PDF** is Sheets' own export of that tab, so the app needs no extra
+permission for it. It opens in a new tab and is fetched by your browser, not
+by the app — so it needs access to the spreadsheet. If you hold the admin link
+but the sheet is not shared with you, the totals still show in the app; ask
+whoever owns the log for the PDF.
+
+The tab stays behind with the charts live if you would rather sort or chart it
 yourself.
 
 Volume is reps × weight, so bodyweight work counts as sets but adds no volume,

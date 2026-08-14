@@ -222,6 +222,18 @@
                 font-variant-numeric:tabular-nums; color:var(--ink); }
   .step input:focus { outline:0; background:#fffbe8; }
   .tools { display:flex; justify-content:space-between; gap:8px; margin:4px 0 16px; }
+  .plain { padding:10px 14px; border:1px solid var(--line); background:#fff;
+           border-radius:9px; font-size:15px; cursor:pointer; color:var(--ink); }
+  .report { border:1px solid var(--line); border-radius:12px; background:#fff;
+            padding:14px; margin:4px 0 16px; }
+  .report h2 { font-size:16px; margin:0 0 8px; }
+  .report .row { display:flex; gap:8px; margin-top:10px; }
+  .report .row button { flex:1; }
+  .report .totals { font-size:15px; color:var(--ink); margin:6px 0; }
+  .report .hint { font-size:13px; color:var(--muted); margin-top:8px; }
+  .report a.go { display:inline-block; padding:11px 16px; border-radius:9px;
+                 background:var(--ink); color:#fff; text-decoration:none;
+                 font-size:15px; }
   .addex { width:100%; padding:15px; border:1px dashed var(--line); background:#fff;
            border-radius:10px; font-size:16px; color:var(--muted); cursor:pointer; }
   .panel { background:#fff; border:1px solid var(--line); border-radius:12px;
@@ -345,6 +357,7 @@
      screen, and next to "Legs" it read as deleting the day type itself. -->
 <div class="tools" id="tools">
   <button class="danger" id="wipe">Delete this session</button>
+  <button class="plain" id="report">Report…</button>
 </div>
 <div class="bar" id="bar"><span id="barmsg">Ready</span><button class="retry" id="retry" hidden>Retry now</button></div>
 
@@ -546,6 +559,115 @@ paintUnit();
     showPage(S.page + (dx < 0 ? 1 : -1));
   }, { passive: true });
 })();
+
+document.getElementById('report').onclick = function () { reportPanel(); };
+
+// A summary of the whole log, built on demand. The same thing the Training
+// menu does in the spreadsheet, so the admin never has to open it.
+function reportPanel() {
+  var open = document.getElementById('reportpanel');
+  if (open) { open.remove(); return; }
+
+  var p = document.createElement('div');
+  p.className = 'report';
+  p.id = 'reportpanel';
+  p.insertAdjacentHTML('beforeend',
+    '<h2>Training report</h2>' +
+    '<label style="font-size:13px;color:var(--muted)">Weeks back — blank for everything</label>');
+
+  var weeks = document.createElement('input');
+  weeks.type = 'text';
+  weeks.inputMode = 'numeric';
+  weeks.placeholder = 'all';
+  weeks.setAttribute('aria-label', 'Weeks back');
+  weeks.style.cssText = 'width:100%;padding:10px;font-size:16px;margin-top:4px;' +
+    'border:1px solid var(--line);border-radius:9px;background:#fdfdfc;color:var(--ink)';
+  p.appendChild(weeks);
+
+  var row = document.createElement('div');
+  row.className = 'row';
+  var go = document.createElement('button');
+  go.className = 'go'; go.textContent = 'Build';
+  var cancel = document.createElement('button');
+  cancel.className = 'cancel'; cancel.textContent = 'Cancel';
+  row.appendChild(go); row.appendChild(cancel);
+  p.appendChild(row);
+
+  cancel.onclick = function () { p.remove(); };
+  go.onclick = function () {
+    var n = Math.round(parseFloat(weeks.value) || 0);
+    var from = '';
+    if (n > 0) {
+      var d = new Date();
+      d.setDate(d.getDate() - n * 7);
+      from = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
+    }
+    go.disabled = cancel.disabled = true;
+    go.textContent = 'Building…';
+    flash('Building the report…', false);
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res) {
+          go.disabled = cancel.disabled = false;
+          go.textContent = 'Build';
+          flash('Nothing logged in that period', false, true);
+          return;
+        }
+        reportResult(p, res);
+        flash('Report built', true);
+      })
+      .withFailureHandler(function (e) {
+        go.disabled = cancel.disabled = false;
+        go.textContent = 'Build';
+        flash('Report failed: ' + why(e), false, true);
+      })
+      .buildReport(KEY, from);
+  };
+
+  document.getElementById('tools').insertAdjacentElement('afterend', p);
+  setTimeout(function () { weeks.focus(); }, 50);
+}
+
+// What came back, and the way out to the PDF. The link is the spreadsheet's
+// own export, fetched by this browser rather than by the app — so it needs
+// access to the sheet, which whoever owns the log has and a trainer holding
+// only the admin link may not.
+function reportResult(p, res) {
+  p.innerHTML = '';
+  p.insertAdjacentHTML('beforeend', '<h2>Training report</h2>');
+
+  var totals = document.createElement('div');
+  totals.className = 'totals';
+  totals.textContent = res.sessions + ' sessions · ' + res.sets + ' sets · ' +
+    Math.round(res.volume).toLocaleString() + ' lb';
+  p.appendChild(totals);
+
+  var when = document.createElement('div');
+  when.className = 'hint';
+  when.textContent = res.from + ' to ' + res.to;
+  p.appendChild(when);
+
+  var row = document.createElement('div');
+  row.className = 'row';
+  var pdf = document.createElement('a');
+  pdf.className = 'go';
+  pdf.href = res.pdf;
+  pdf.target = '_blank';
+  pdf.rel = 'noopener';
+  pdf.textContent = 'Download PDF';
+  var close = document.createElement('button');
+  close.className = 'cancel'; close.textContent = 'Close';
+  close.onclick = function () { p.remove(); };
+  row.appendChild(pdf); row.appendChild(close);
+  p.appendChild(row);
+
+  var note = document.createElement('div');
+  note.className = 'hint';
+  note.textContent = 'The Report tab in the spreadsheet has the same thing with ' +
+    'the charts live. The PDF needs access to that spreadsheet.';
+  p.appendChild(note);
+}
 
 document.getElementById('dayback').onclick = function () { shiftDay(-1); };
 document.getElementById('dayfwd').onclick = function () { shiftDay(1); };
@@ -787,9 +909,12 @@ function load(create, source) {
 // not one exercise on screen had been done that day, which is what a changed
 // programme looks like. It named a date the page said nothing about.
 // "Delete this session" only means something while one is on screen.
+// The row belongs to the admin; only deleting depends on there being a
+// session to delete. The report reads the whole log and is always available.
 function showTools(on) {
-  var el = document.getElementById('tools');
-  if (el && CAN_EDIT) el.style.display = on ? '' : 'none';
+  if (!CAN_EDIT) return;
+  var wipe = document.getElementById('wipe');
+  if (wipe) wipe.style.display = on ? '' : 'none';
 }
 
 function comparisonText(res, order) {

@@ -37,6 +37,7 @@ function node() {
     appendChild(c) { this.children.push(c); return c; },
     insertBefore(c) { this.children.unshift(c); return c; },
     insertAdjacentHTML() {}, addEventListener() {}, setAttribute() {},
+    insertAdjacentElement(pos, el) { this.children.push(el); return el; },
     replaceWith() {}, focus() {}, select() {}, blur() {}, remove() {},
     querySelector() { return null; }, querySelectorAll() { return []; },
     // Real code reads firstChild after setting innerHTML to a <label>, so the
@@ -934,6 +935,51 @@ test('the bar says so when the comparisons are from different days', () => {
     G.comparisonText({ priorDate: '2026-08-05', lastDates: { Bench: '2026-08-03' } },
                      order),
     /some are new/);
+});
+
+// ---------- the report panel ----------
+
+test('the report panel asks the server, with the key and a start date', () => {
+  const realRun = sandbox.google.script.run;
+  sandbox.google.script.run = {
+    withSuccessHandler(f) { this.ok = f; return this; },
+    withFailureHandler() { return this; },
+    buildReport(key, from) { outbox.push({ call: 'buildReport', key, from }); }
+  };
+  // The stub invents an element for any id, so the panel's own toggle would
+  // see itself as already open.
+  const realGet = sandbox.document.getElementById;
+  sandbox.document.getElementById = id => (id === 'reportpanel' ? null : realGet(id));
+
+  G.reportPanel();
+
+  const panel = realGet('tools').children.slice(-1)[0];
+  const find = (n, text) => (n.textContent === text ? n : (n.children || [])
+    .reduce((hit, c) => hit || find(c, text), null));
+  const build = find(panel, 'Build');
+  assert.ok(build, 'the panel offers a Build button');
+
+  build.onclick();
+  const sent = outbox.filter(o => o.call === 'buildReport');
+  assert.strictEqual(sent.length, 1, 'one call');
+  assert.strictEqual(sent[0].key, 'testkey', 'with the edit key');
+  assert.strictEqual(sent[0].from, '', 'blank weeks means the whole log');
+
+  sandbox.document.getElementById = realGet;
+  sandbox.google.script.run = realRun;
+});
+
+test('only the delete waits for a session; the report does not', () => {
+  const wipe = sandbox.document.getElementById('wipe');
+  G.showTools(false);
+  assert.strictEqual(wipe.style.display, 'none', 'nothing to delete');
+
+  G.showTools(true);
+  assert.notStrictEqual(wipe.style.display, 'none');
+
+  // The row itself is never hidden for an admin — the report lives there and
+  // reads the whole log, session or no session.
+  assert.notStrictEqual(sandbox.document.getElementById('tools').style.display, 'none');
 });
 
 // ---------- read-only ----------

@@ -314,8 +314,13 @@ free of SpreadsheetApp so it stays testable — keep it that way.
 output — the `Report` tab is rewritten wholesale and created on demand, so it
 is not in the shipped template.
 
+Reachable from the Training menu and from `Report…` in the app's tools row,
+which calls `buildReport(KEY, from)` over the bridge.
+
 The PDF is Sheets' own export URL (`/export?format=pdf&gid=…`) opened by the
-browser, NOT a fetch. Generating one server-side would mean `UrlFetchApp` plus
+browser, NOT a fetch. It is therefore fetched as the *visitor*, so an admin
+without access to the spreadsheet gets a permission page rather than a file —
+the totals in the panel come from the app and always work. Generating one server-side would mean `UrlFetchApp` plus
 a Drive scope, and setup is meant to stay inside the one authorisation the
 bound script already has. Don't "improve" this into a fetch.
 
