@@ -665,7 +665,7 @@ function showReport() {
 
   const html = HtmlService.createHtmlOutput(
     '<p style="font:14px/1.5 system-ui,sans-serif">' +
-    built.sessions + ' sessions · ' + built.sets + ' sets · ' +
+    plural(built.sessions, 'session') + ' · ' + plural(built.sets, 'set') + ' · ' +
     Math.round(built.volume).toLocaleString() + ' lb of volume<br>' +
     '<span style="color:#666">' + built.from + ' to ' + built.to + '</span></p>' +
     '<p style="font:14px/1.5 system-ui,sans-serif">' +
@@ -725,7 +725,7 @@ function buildReport(k, from) {
   const out = [];
   out.push(['Training report — ' + logName(), '', '', '', '']);
   out.push([data.from + ' to ' + data.to, '', '', '', '']);
-  out.push([data.sessions + ' sessions', data.sets + ' sets',
+  out.push([plural(data.sessions, 'session'), plural(data.sets, 'set'),
             data.volume + ' lb volume · weights in lb', '', '']);
   if (data.period) {
     out.push(['Lowest, highest, latest and trend cover this period; all-time ' +
@@ -781,8 +781,9 @@ function buildReport(k, from) {
       const g = byDay[ex.day];
       dayLabels.push(out.length + 1);
       out.push([ex.day.toUpperCase() + '  ·  ' +
-                Object.keys(g.dates).length + ' sessions  ·  ' +
-                g.sets + ' sets  ·  ' + thousands(g.volume) + ' lb',
+                plural(Object.keys(g.dates).length, 'session') + '  ·  ' +
+                plural(g.sets, 'set') +
+                (g.volume ? '  ·  ' + thousands(g.volume) + ' lb' : ''),
                 '', '', '', '']);
       headings.push(out.length + 1);
       out.push(['Exercise', 'Sess', 'Lowest', 'Highest', 'Latest', 'Trend']
@@ -977,6 +978,9 @@ function trend(pct) {
   if (pct < 0) return '▼ ' + pct + '%';
   return '▬ 0%';
 }
+
+// "1 sessions" is the kind of thing that makes a report look automated.
+function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
 // 28400 reads as 28,400. Apps Script has toLocaleString, but a report should
 // not depend on which locale the script happens to run under.

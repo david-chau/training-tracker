@@ -761,6 +761,10 @@ function tile(value, label) {
   return '<div class="tile"><b>' + value + '</b><span>' + label + '</span></div>';
 }
 
+// "1 sessions" is the kind of thing that makes a report look automated.
+function word(n, w) { return w + (n === 1 ? '' : 's'); }
+function plural(n, w) { return n + ' ' + word(n, w); }
+
 function commas(n) {
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
@@ -788,7 +792,8 @@ function reportView(res) {
     '<div class="sub">' + esc(res.name) + ' · ' + esc(res.from) + ' to ' + esc(res.to) +
     (res.period ? '' : ' · everything logged') + '</div>';
 
-  html += '<div class="card"><h3>' + res.sessions + ' sessions</h3><div class="bars">';
+  html += '<div class="card"><h3>' + plural(res.sessions, 'session') +
+          '</h3><div class="bars">';
   weeks.forEach(function (w, i) {
     var h = Math.max(3, Math.round(w.volume / peak * 110));
     html += '<div class="bar' + (i === weeks.length - 1 ? ' now' : '') +
@@ -802,8 +807,8 @@ function reportView(res) {
   html += '</div></div>';
 
   html += '<div class="card"><h3>Totals</h3><div class="tiles">' +
-    tile(res.sessions, 'sessions') +
-    tile(res.sets, 'sets') +
+    tile(res.sessions, word(res.sessions, 'session')) +
+    tile(res.sets, word(res.sets, 'set')) +
     tile(commas(res.volume), 'lb volume') +
     '</div></div>';
 
@@ -830,8 +835,9 @@ function reportView(res) {
     });
 
     html += '<div class="daycard"><div class="dayhead">' + dayIcon(day) +
-      '<b>' + esc(day) + '</b><span class="totals">' + sessions + ' sessions · ' +
-      sets + ' sets · ' + commas(volume) + ' lb</span></div>';
+      '<b>' + esc(day) + '</b><span class="totals">' +
+      plural(sessions, 'session') + ' · ' + plural(sets, 'set') +
+      (volume ? ' · ' + commas(volume) + ' lb' : '') + '</span></div>';
 
     list.forEach(function (ex) {
       html += '<div class="exrow' + (ex.best ? ' pb' : '') + '">' +
@@ -1846,7 +1852,7 @@ function card(name, sets) {
   if (!CAN_EDIT) {
     var tag = document.createElement('span');
     tag.className = 'notestate';
-    tag.textContent = sets.length + ' sets';
+    tag.textContent = plural(sets.length, 'set');
     head.appendChild(tag);
     el.appendChild(head);
     var setTagRo = metaLine(el, name, sets);
@@ -1949,7 +1955,7 @@ function supersetCard(page, groups) {
     } else {
       var count = document.createElement('span');
       count.className = 'notestate';
-      count.textContent = sets.length + (sets.length === 1 ? ' set' : ' sets');
+      count.textContent = plural(sets.length, 'set');
       line.appendChild(count);
     }
     block.appendChild(line);
@@ -2030,7 +2036,8 @@ function setCounter(name, sets) {
   var cnt = document.createElement('div');
   cnt.className = 'cnt';
   var minus = document.createElement('button'); minus.textContent = '−';
-  var label = document.createElement('span'); label.textContent = sets.length + ' sets';
+  var label = document.createElement('span');
+  label.textContent = plural(sets.length, 'set');
   var plus = document.createElement('button'); plus.textContent = '+';
   minus.title = sets.length === 1 ? 'Remove ' + name : 'One fewer set';
   minus.onclick = function () { resize(name, sets.length - 1, label); };

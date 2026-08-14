@@ -976,6 +976,23 @@ test('a sheet name cannot inject markup into the report', () => {
   assert.match(el.innerHTML, /&lt;img|&lt;script/, 'and shown as text');
 });
 
+test('one of something is not "1 sessions"', () => {
+  assert.strictEqual(G.plural(1, 'session'), '1 session');
+  assert.strictEqual(G.plural(0, 'session'), '0 sessions');
+  assert.strictEqual(G.plural(9, 'set'), '9 sets');
+
+  // A day of bodyweight and timed work has no volume, and "0 lb" reads as a
+  // fault rather than as a category.
+  const el = G.reportView({
+    name: 'Log', from: '2026-08-05', to: '2026-08-05', period: '',
+    sessions: 1, sets: 9, volume: 0, weeks: [],
+    exercises: [{ name: 'Plank', day: 'Custom', sessions: 1, sets: 3, volume: 0,
+                  low: '45s', high: '45s', last: '45s', change: null, best: false }]
+  });
+  assert.match(el.innerHTML, /1 session ·/, 'singular in the day header');
+  assert.ok(!/0 lb/.test(el.innerHTML), 'no zero volume');
+});
+
 test('the report opens as a modal that escape closes', () => {
   const realGet = sandbox.document.getElementById;
   sandbox.document.getElementById = id => (id === 'reportpanel' ? null : realGet(id));
