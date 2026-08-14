@@ -783,6 +783,13 @@ function buildReport(k, from) {
   });
   sheet.setFrozenRows(3);
   sheet.autoResizeColumns(1, width);
+  sheet.setColumnWidth(1, 230);     // room for the longest exercise name
+
+  // Below the tables, full width. Anchored beside them they landed on top of
+  // the columns the report grew, and were squeezed into the margin at about a
+  // quarter of the width they needed.
+  const CHART_W = 940, CHART_H = 300;
+  let chartRow = out.length + 2;
 
   if (weekRows) {
     sheet.insertChart(sheet.newChart().asColumnChart()
@@ -791,15 +798,21 @@ function buildReport(k, from) {
       .setNumHeaders(1)
       .setOption('title', 'Volume per week (lb)')
       .setOption('legend', { position: 'none' })
-      .setPosition(weekAt, 6, 0, 0)
+      .setOption('width', CHART_W)
+      .setOption('height', CHART_H)
+      .setPosition(chartRow, 1, 0, 0)
       .build());
+    chartRow += 16;                 // roughly the height of one chart in rows
   }
   if (chartRows && top.length) {
     sheet.insertChart(sheet.newChart().asLineChart()
       .addRange(sheet.getRange(chartAt, 1, chartRows + 1, top.length + 1))
       .setNumHeaders(1)
-      .setOption('title', 'Estimated 1RM')
-      .setPosition(chartAt, 6, 0, 0)
+      .setOption('title', 'Estimated 1RM — heaviest working set, per session')
+      .setOption('legend', { position: 'bottom' })
+      .setOption('width', CHART_W)
+      .setOption('height', CHART_H)
+      .setPosition(chartRow, 1, 0, 0)
       .build());
   }
 
