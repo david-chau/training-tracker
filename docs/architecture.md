@@ -482,6 +482,61 @@ rather than `was 0`.
 
 ---
 
+## The report
+
+Two aggregations over the same rows, one pure and one not. `reportData` does
+the counting and knows nothing about spreadsheets, so it can be tested under
+`node`; everything that touches `SpreadsheetApp` sits outside it.
+
+```
+  admin picks a period
+     ┌──────────────────────────────────────────┐
+     │ last [ 6 ] [months ▾]                    │  a count back from today
+     │ or between [ ____ ] and [ ____ ]         │  or an explicit range
+     └──────────────────┬───────────────────────┘
+                        │ reportPeriod() → {from, to}   dates win when set
+                        ▼
+  google.script.run.reportSummary(key, from, to)
+                        │
+                        ▼  ┌───────────────────────────────────────────┐
+                           │ assertEdit(key)                           │
+                           │ allRows()          ← one read of the Log  │
+                           │ reportData(rows, timed, from, to)  PURE   │
+                           │   ├── per week: sessions, sets, volume    │
+                           │   ├── per (day|exercise): low, high,      │
+                           │   │     first→last change, best-ever flag │
+                           │   └── if a period was asked for, run      │
+                           │       itself again over EVERY row for     │
+                           │       the all-time figures                │
+                           └────────────────────┬──────────────────────┘
+                                                ▼
+                  {weeks[], exercises[], lifetime{}, totals}
+                                                │
+                                                ▼
+  reportView(res)  ── the one place the app builds HTML from sheet values,
+        │             so everything sheet-derived goes through esc()
+        │
+        ├── > 24 points ?  ──yes──▶ byMonth()   one point per month
+        │                                        card retitles itself
+        ├── volume line + sessions line, each against its own high
+        ├── totals and averages, with the all-time row beneath
+        └── a card per day type, 12 exercises at most, rest counted
+                                                │
+                                                ▼
+                          window.print()  →  the PDF is this page
+```
+
+The period is always compared against the whole log, which is why
+`reportData` calls itself: a good month means nothing without the year behind
+it. The second pass is over every row, so a report costs two full reads.
+
+**The PDF is the page, printed.** There is no server-side rendering and no
+export URL — `@media print` hides the session, un-modals the report and keeps
+the background colours that browsers drop by default. `window.print()` inside
+the sandbox iframe prints *that frame*, which is what makes it paginate.
+
+---
+
 ## Pages and supersets
 
 A session renders as a list of **pages**: one exercise, or one superset of two
@@ -680,6 +735,52 @@ The limit that will actually be felt first is none of the above: it is a
 on the demo: ~3s to open a session at 230 rows, ~13s at 1,100, ~19s at 1,800.
 Archiving is what keeps it quick, and it can run
 [weekly on its own](admin.html#archiving-on-a-schedule).
+
+---
+
+## Archiving
+
+The only thing here that destroys data, so it is also the most careful. One
+decision function, one doing function, two ways in.
+
+```
+  Training ▸ Archive old sessions…        Training ▸ Archive automatically…
+  (a date, typed, with a confirmation)    (months to keep → weekly trigger)
+        │                                          │
+        │                                          ▼   Monday 03:00
+        │                                   autoArchive(e)
+        │                                          │ is e.triggerUid one of
+        │                                          │ this project's triggers?
+        │                                          │ no ▶ refuse
+        │                                          ▼ yes
+        └──────────────┬───────────────────────────┘
+                       ▼
+        runArchive(key, cutoff)          assertEdit(key)
+                       │
+                       ▼
+        archivePlan(raw, cutoff)   PURE — decides, writes nothing
+                       │  {doomed[], keep[], from, to, sessions}
+                       ▼
+        writeArchive() → a NEW spreadsheet in Drive
+                         "<log>_<from>_<to>"  with Log + Records tabs
+                       │
+                       ▼
+        read the archive back ── rows written ≠ rows planned ──▶ throw,
+                       │                                        delete nothing
+                       ▼ counts match
+        rewrite Log without those rows  ·  refreshRecords()
+                       │
+                       ▼
+        Settings ▸ archive_last_run  ← what moved, and when
+```
+
+The read-back exists because this now runs unattended. Writing the copy and
+deleting the original on the assumption that the write worked is survivable
+while a human is watching a dialog; on a timer at 3am it is not.
+
+Records are derived from what is left, so bests inside an archived period
+stop showing in the app — the archive keeps its own copy. Nothing merges one
+back.
 
 ---
 
