@@ -30,7 +30,23 @@ proposes slightly more.
 - [Open the demo viewer](https://script.google.com/macros/s/AKfycbxdLep_VYq7ZnH6yGTcM_UzKGZWp7t5jYmtz84GnSGAWTpuydB7OsHtC6-rtqqHaFhIYQ/exec)
 - [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1_xVY-Ha2tO6oNJ_I-BWMPHeAT4BM2ww-aGzm7jnab1Y/edit?usp=sharing)
 
-Both links are read-only and use the same sample training log.
+Both links are read-only. The log holds about six months of seeded training — some
+1,100 sets over 70 sessions — chosen to show the things worth seeing:
+
+| Day type | Sessions | What it demonstrates |
+|---|---|---|
+| **Push** | ~24, weekly | Months of the same lifts, so weights climb and the `was 95` line under each field has something to say. The newest sessions carry RPE and a note. |
+| **Pull** | ~23, weekly | Includes `Pull-Up` — no weight field at all |
+| **Legs** | ~20, weekly | The heaviest numbers, so records read clearly |
+| **Custom** | one, in August | `Plank` in seconds, `Push-Up` unweighted, `Farmer Carry` both timed *and* loaded |
+
+Use **‹ Previous session** to walk back through them — landing on today shows
+nothing, because nothing is logged today. Anything older than six months is
+[archived off](admin.html#history-costs-speed),
+which is what keeps the demo quick.
+
+It is a live spreadsheet rather than a fixture, so the exact numbers drift as
+the demo gets used.
 
 ---
 
