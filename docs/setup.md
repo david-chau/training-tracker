@@ -149,6 +149,7 @@ new URL — run **Training → Set web app link**.
 | Sets and exercises | Adds and removes | — |
 | Notes | Writes them | Reads them |
 | A whole session | Deletes it | — |
+| The report | Builds it, prints it | — |
 
 Keep the admin link if you log your own training; give it to your trainer if
 they record your sessions. The viewer link is optional either way.

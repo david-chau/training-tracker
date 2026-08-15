@@ -44,6 +44,7 @@ Every log has an **admin link** and a **viewer link**.
 | Sets and exercises | Adds and removes | — |
 | Notes | Writes them | Reads them |
 | A whole session | Deletes it | — |
+| The report | Builds it, prints it | — |
 
 Who holds the admin link is up to you:
 
