@@ -11,8 +11,10 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-![Starting a Push session from last week, stepping reps and weight up, and
-moving on to the next exercise](docs/img/clip-tour.gif)
+**[Documentation home →](https://david-chau.github.io/training-tracker/)**
+
+<img src="docs/img/clip-tour.gif" width="320"
+     alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise">
 
 One exercise on screen at a time, last week's numbers under each field, and
 every tap read back out of the spreadsheet before it counts as saved.
@@ -22,13 +24,10 @@ week by week, or month by month once you ask for more than half a year, with
 each exercise's range for the period against your all-time range. **Save as
 PDF** prints what you are looking at.
 
-![The report: a line chart of volume and sessions by month, totals and
-averages with all-time figures under them, and a card per day type listing
-each exercise's range](docs/img/report.png)
+<img src="docs/img/report-top.png" width="360"
+     alt="The report: a line chart of volume and sessions by month, with totals and averages beneath it">
 
 ## Documentation
-
-**[Documentation home →](https://david-chau.github.io/training-tracker/)**
 
 - [Setup guide](https://david-chau.github.io/training-tracker/setup.html) — import
   the template, paste in the code, publish, share the links

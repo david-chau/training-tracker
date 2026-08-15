@@ -18,8 +18,8 @@ proposes slightly more.
 
 Ask for a report over any period and it draws one, in the app, ready to print.
 
-<img src="{{ site.baseurl }}/img/report.png" loading="lazy"
-     alt="The report: a line chart of volume and sessions by month, totals and averages with all-time figures under them, and a card per day type listing each exercise's range"
+<img src="{{ site.baseurl }}/img/report-top.png" loading="lazy"
+     alt="The report: a line chart of volume and sessions by month, with totals and averages beneath it"
      class="shot">
 
 ---

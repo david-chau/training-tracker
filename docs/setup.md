@@ -111,11 +111,17 @@ when a wrong zone would file a session under the previous day.
 
 **Deploy → New deployment**, gear icon → **Web app**.
 
+![The Deploy menu in the Apps Script editor, open on New
+deployment]({{ site.baseurl }}/img/deploy-menu.png)
+
 | Field | Set to | Why |
 |---|---|---|
 | Description | **Training log** | Anything you like — it is how you pick this deployment out later in *Manage deployments*, which is where you go to publish a new version |
 | Execute as | **Me** | The app edits *your* sheet on everyone's behalf, so nobody else needs access to it |
 | Who has access | **Anyone** | Links open without signing in. What they can *do* is decided by the key in the URL |
+
+![The New deployment dialog: Description reading Training log, Execute as Me,
+Who has access Anyone]({{ site.baseurl }}/img/new-deployment.png)
 
 **Deploy**, then authorize — pick your account, **Advanced → Go to Training
 log (unsafe) → Allow**.
@@ -137,6 +143,15 @@ When it finishes, copy the **Web app URL** ending in `/exec`. Step 4 needs it.
 
 In the spreadsheet: **Training → Show shareable links**. The first time it
 asks you to paste that `/exec` URL. Paste, OK — it is remembered.
+
+![The Web app link prompt, asking for the URL ending in
+/exec]({{ site.baseurl }}/img/set-web-app-link.png)
+
+It then shows both links, every time you run it:
+
+![The Links dialog: an admin URL ending in /exec?key= with the key blacked
+out, and the same URL without a key as the viewer
+link]({{ site.baseurl }}/img/links-dialog.png)
 
 {: .warning }
 It must be the link ending in **`/exec`**. The `/dev` one is the editor's test
