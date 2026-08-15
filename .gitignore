@@ -33,5 +33,7 @@ playwright-report/
 # Scratch dir for clip recording
 .clips/
 
-# Anything generated for a look — reports, renders, scratch output
+# Anything generated for a look — reports, renders, scratch output. The
+# scripts that produce it live in scripts/ and are committed; this is where
+# they put things.
 /generated/

@@ -18,6 +18,9 @@ test/queue.test.js           pending-write queue, run with plain node
 test/records.test.js         personal-record maths, run with plain node
 e2e/                         Playwright, against a live deployment
 e2e/targets.example.json     copy to targets.json (gitignored) and fill in
+scripts/                     tools against a live deployment: doc images,
+                             benchmarks, seeding, archiving — scripts/README.md
+generated/                   where those tools put things to look at; gitignored
 docs/              the GitHub Pages site
 docs/download/training-tracker-template.xlsx   generated; what users import
 ```
@@ -139,6 +142,12 @@ it slow (a few minutes) and means it has to respect the app's own guards:
 > Adds get slower as the log grows, because every call rescans the whole `Log`
 > — not because of the `Records` tab, which adds deliberately never touch.
 > That is why the timeouts here are minutes rather than seconds.
+
+> [!NOTE]
+> `scripts/seed-history.js` fills months of history behind that, session by
+> session through the app's own progression rule — which is what gives the
+> report and the archive something to work on. It takes about an hour for six
+> months, because every call rescans the log.
 
 ## Recording the doc clips
 
