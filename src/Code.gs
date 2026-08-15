@@ -25,7 +25,11 @@ const CFG = {
 // spreadsheet keeps working without being edited.
 const DEFAULTS = {
   pr_rep_targets: '1,5,10',
-  pr_metrics: 'est1rm,volume,reps'
+  pr_metrics: 'est1rm,volume,reps',
+  // Months of history to keep in this sheet. 0 is off, and off is the
+  // default: this one deletes rows, so nobody gets it without asking.
+  archive_after_months: '0',
+  archive_last_run: ''
 };
 
 const COL = {
@@ -183,6 +187,7 @@ function onOpen() {
     .addItem('Set web app link…', 'setWebAppLink')
     .addItem('Rebuild records', 'showRecords')
     .addItem('Archive old sessions…', 'archiveSessions')
+    .addItem('Archive automatically…', 'setAutoArchive')
     .addItem('Refresh exercise dropdown', 'setupExerciseValidation')
     .addToUi();
 }
@@ -943,6 +948,68 @@ function showRecords() {
 //
 // A Log grows forever and every read pulls the whole sheet. Archiving lifts
 // a closed period out into its own spreadsheet and removes it from this one.
+// What an archive would move, given what the sheet holds and a cutoff. Pure,
+// so the decision can be tested without a spreadsheet — the doing cannot be.
+function archivePlan(raw, cutoff) {
+  const isOld = function (r) {
+    return r[COL.date] && r[COL.exercise] && dateKey(r[COL.date]) <= cutoff;
+  };
+  const doomed = raw.filter(isOld);
+  if (!doomed.length) return null;
+
+  const dates = doomed.map(function (r) { return dateKey(r[COL.date]); }).sort();
+  return {
+    doomed: doomed,
+    keep: raw.filter(function (r) { return !isOld(r); }),
+    from: dates[0],
+    to: dates[dates.length - 1],
+    sessions: dedupe(doomed.map(function (r) {
+      return dateKey(r[COL.date]) + '|' + String(r[COL.day]).trim();
+    })).length
+  };
+}
+
+// The actual move, shared by the menu item and the scheduled job. Returns the
+// plan it carried out, or null when there was nothing to do.
+//
+// The archive is written and READ BACK before a single row is deleted. This
+// is the one operation in the app that destroys data, and it now runs
+// unattended — "the copy was made" has to be a fact, not an assumption.
+function runArchive(k, cutoff) {
+  assertEdit(k);
+  const sheet = logSheet();
+  const last = sheet.getLastRow();
+  if (last < 2) return null;
+
+  // Raw rather than allRows(), so anything the sheet holds that is not a log
+  // row stays exactly where it is rather than being tidied away below.
+  const raw = sheet.getRange(2, 1, last - 1, WIDTH).getValues();
+  const plan = archivePlan(raw, cutoff);
+  if (!plan) return null;
+
+  const name = logName() + '_' + plan.from + '_' + plan.to;
+  const book = writeArchive(k, name, plan.doomed);
+
+  const written = book.getSheetByName(CFG.logSheet);
+  const got = written ? written.getLastRow() - 1 : 0;
+  if (got !== plan.doomed.length) {
+    throw new Error('Archive "' + name + '" holds ' + got + ' rows, not ' +
+                    plan.doomed.length + ' — nothing was deleted.');
+  }
+
+  sheet.getRange(2, 1, last - 1, WIDTH).clearContent();
+  if (plan.keep.length) {
+    sheet.getRange(2, 1, plan.keep.length, WIDTH).setValues(plan.keep);
+    sheet.getRange(2, 1, plan.keep.length, 1).setNumberFormat('yyyy-mm-dd');
+  }
+  SpreadsheetApp.flush();
+  refreshRecords();
+
+  plan.name = name;
+  plan.url = book.getUrl();
+  return plan;
+}
+
 function archiveSessions() {
   const ui = SpreadsheetApp.getUi();
 
@@ -961,65 +1028,155 @@ function archiveSessions() {
   }
 
   const sheet = logSheet();
-  const last = sheet.getLastRow();
-  if (last < 2) return ui.alert('Nothing logged yet.');
+  if (sheet.getLastRow() < 2) return ui.alert('Nothing logged yet.');
 
-  // Read raw rather than through allRows(), so anything the sheet holds that
-  // is not a log row is left exactly where it is rather than being tidied
-  // away by the rewrite below.
-  const raw = sheet.getRange(2, 1, last - 1, WIDTH).getValues();
-  const isOld = function (r) {
-    return r[COL.date] && r[COL.exercise] && dateKey(r[COL.date]) <= cutoff;
-  };
-
-  const doomed = raw.filter(isOld);
-  if (!doomed.length) return ui.alert('Nothing logged on or before ' + cutoff + '.');
-
-  const dates = doomed.map(function (r) { return dateKey(r[COL.date]); }).sort();
-  const from = dates[0];
-  const to = dates[dates.length - 1];
-  const name = logName() + '_' + from + '_' + to;
-  const sessions = dedupe(doomed.map(function (r) {
-    return dateKey(r[COL.date]) + '|' + String(r[COL.day]).trim();
-  })).length;
+  const raw = sheet.getRange(2, 1, sheet.getLastRow() - 1, WIDTH).getValues();
+  const plan = archivePlan(raw, cutoff);
+  if (!plan) return ui.alert('Nothing logged on or before ' + cutoff + '.');
 
   const go = ui.alert(
-    'Archive ' + doomed.length + ' rows?',
-    doomed.length + ' rows, ' + sessions + ' sessions, ' + from + ' to ' + to + '.\n\n' +
-    'They are copied to a new spreadsheet in your Drive:\n' + name + '\n\n' +
-    'and then deleted from this one. Personal records are worked out from\n' +
-    'what is left, so bests set in that period will stop showing here — the\n' +
-    'archive keeps its own copy of them.\n\nContinue?',
+    'Archive ' + plan.doomed.length + ' rows?',
+    plan.doomed.length + ' rows, ' + plan.sessions + ' sessions, ' +
+    plan.from + ' to ' + plan.to + '.\n\n' +
+    'They are copied to a new spreadsheet in your Drive and then deleted\n' +
+    'from this one. Personal records are worked out from what is left, so\n' +
+    'bests set in that period will stop showing here — the archive keeps\n' +
+    'its own copy of them.\n\nContinue?',
     ui.ButtonSet.YES_NO
   );
   if (go !== ui.Button.YES) return;
 
-  writeArchive(editKey(), name, doomed);
-
-  const keep = raw.filter(function (r) { return !isOld(r); });
-  sheet.getRange(2, 1, last - 1, WIDTH).clearContent();
-  if (keep.length) {
-    sheet.getRange(2, 1, keep.length, WIDTH).setValues(keep);
-    sheet.getRange(2, 1, keep.length, 1).setNumberFormat('yyyy-mm-dd');
-  }
-  SpreadsheetApp.flush();
-  refreshRecords();
-
+  const done = runArchive(editKey(), cutoff);
   ui.alert(
     'Archived',
-    doomed.length + ' rows moved to "' + name + '" in your Google Drive.\n\n' +
-    'This sheet now starts at ' + (keep.length ? nextDate(keep) : '(empty)') + '.',
+    done.doomed.length + ' rows moved to "' + done.name + '" in your Drive.\n\n' +
+    'This sheet now starts at ' + (done.keep.length ? nextDate(done.keep) : '(empty)') + '.',
     ui.ButtonSet.OK
   );
 }
 
-function nextDate(rows) {
-  return rows.map(function (r) { return r[COL.date] ? dateKey(r[COL.date]) : ''; })
-    .filter(Boolean).sort()[0] || '(empty)';
+// ---------- the scheduled archive ----------
+//
+// A long log is a slow log: every load scans the whole of it, and a year of
+// three sessions a week is a few thousand rows. Archiving is the answer, and
+// nobody remembers to do it by hand.
+//
+// Off unless someone turns it on. This is the only thing in the app that
+// deletes data, and doing that on a timer needs asking for, not defaulting
+// to. `runArchive` reads the copy back before it removes anything.
+const ARCHIVE_JOB = 'autoArchive';
+
+// The cutoff a monthly setting means today. Month arithmetic, not 30 days:
+// "keep six months" should mean the same date in a different month.
+function archiveCutoff(months, now) {
+  if (!(months > 0)) return '';
+  const d = new Date(now || new Date());
+  d.setMonth(d.getMonth() - months);
+  return dateKey(d);
 }
 
-// The archive is a standalone spreadsheet: the rows, plus the records for
-// that period so they survive being taken out of the live log.
+// google.script.run reaches any global, and this one deletes rows without
+// asking anybody. It cannot take an edit key — a trigger calls it with an
+// event object — so it checks that the event names a trigger this project
+// actually holds. The UID is never sent to the page, so a viewer holding the
+// bridge has nothing to pass.
+function autoArchive(e) {
+  const uid = e && e.triggerUid;
+  const real = uid && ScriptApp.getProjectTriggers().some(function (t) {
+    return t.getUniqueId() === uid;
+  });
+  if (!real) throw new Error('Read-only: this one runs on a schedule.');
+
+  const months = Math.round(num(settings().archive_after_months));
+  if (!(months > 0)) return;                       // switched off
+
+  const cutoff = archiveCutoff(months, new Date());
+  const done = runArchive(editKey(), cutoff);
+  noteArchiveRun(editKey(), done
+    ? dateKey(new Date()) + ': moved ' + done.doomed.length + ' rows (' +
+      done.from + ' to ' + done.to + ') into ' + done.name
+    : dateKey(new Date()) + ': nothing older than ' + cutoff);
+}
+
+// Written back to the Settings tab, because a job that runs while nobody is
+// watching needs to leave a note saying it ran.
+function noteArchiveRun(k, text) {
+  assertEdit(k);
+  const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.settingsSheet);
+  if (!sheet) return;
+  const last = sheet.getLastRow();
+  const keys = last > 1 ? sheet.getRange(2, 1, last - 1, 1).getValues() : [];
+  for (let i = 0; i < keys.length; i++) {
+    if (String(keys[i][0]).trim() === 'archive_last_run') {
+      sheet.getRange(i + 2, 2).setValue(text);
+      return;
+    }
+  }
+  sheet.getRange(last + 1, 1, 1, 3).setValues([['archive_last_run', text,
+    'Written by the scheduled archive. Nothing reads it.']]);
+}
+
+function setAutoArchive() {
+  const ui = SpreadsheetApp.getUi();
+  const now = Math.round(num(settings().archive_after_months));
+
+  const asked = ui.prompt(
+    'Archive automatically',
+    'Sessions older than this many months are moved into their own\n' +
+    'spreadsheet in your Drive each week, and removed from this one.\n\n' +
+    'A long log makes every page load slower, which is what this is for.\n' +
+    'Personal records are worked out from what is left, so bests older\n' +
+    'than the cutoff stop showing here — the archive keeps its own copy.\n\n' +
+    'Months to keep (0 turns it off)' +
+      (now > 0 ? ', currently ' + now : '') + ':',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (asked.getSelectedButton() !== ui.Button.OK) return;
+
+  const months = Math.round(num(asked.getResponseText()));
+  if (months < 0 || months > 120) return ui.alert('Somewhere between 0 and 120.');
+  // Three months of a three-a-week split is 39 sessions. Below that the job
+  // would be archiving history the app still shows you as "last time".
+  if (months > 0 && months < 3) {
+    return ui.alert('Keep at least three months — the app reads recent ' +
+                    'history to build each session from.');
+  }
+
+  putSetting(editKey(), 'archive_after_months', String(months));
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === ARCHIVE_JOB) ScriptApp.deleteTrigger(t);
+  });
+
+  if (!months) return ui.alert('Automatic archiving is off.');
+
+  ScriptApp.newTrigger(ARCHIVE_JOB).timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(3).create();
+  ui.alert('Scheduled',
+    'Every Monday morning, sessions older than ' + months + ' months move to ' +
+    'their own spreadsheet in your Drive.\n\nThe first run happens next ' +
+    'Monday. Archive old sessions… still does it on demand.',
+    ui.ButtonSet.OK);
+}
+
+// Settings is key | value | help, and a missing key is appended rather than
+// assumed — the tab ships with only the keys the template knew about.
+function putSetting(k, key, value) {
+  assertEdit(k);
+  const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.settingsSheet);
+  if (!sheet) throw new Error('No ' + CFG.settingsSheet + ' tab.');
+  const last = sheet.getLastRow();
+  const keys = last > 1 ? sheet.getRange(2, 1, last - 1, 1).getValues() : [];
+  for (let i = 0; i < keys.length; i++) {
+    if (String(keys[i][0]).trim() === key) {
+      sheet.getRange(i + 2, 2).setValue(value);
+      SpreadsheetApp.flush();
+      return;
+    }
+  }
+  sheet.getRange(last + 1, 1, 1, 2).setValues([[key, value]]);
+  SpreadsheetApp.flush();
+}
+
 function writeArchive(k, name, rows) {
   assertEdit(k);
   const book = SpreadsheetApp.create(name);

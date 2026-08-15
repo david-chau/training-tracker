@@ -628,6 +628,24 @@ Records are worked out from what is left, so bests set in the archived period
 stop showing in the app. The archive keeps its own `Records` tab, so they are
 not lost — just no longer live.
 
+### Archiving on a schedule
+
+**Training → Archive automatically…** turns the same thing into a weekly job.
+Give it a number of months to keep; anything older moves to its own
+spreadsheet every Monday morning, and `0` switches it off again.
+
+It is off until you ask for it, and the minimum is three months — the app
+builds each session from recent history, so archiving that history away would
+take "last time" with it.
+
+Why bother: every page load reads the whole log, so a year of training is a
+slower app than a month of it. Archiving is what keeps it quick.
+
+The job writes the archive **and reads it back** before deleting anything, and
+leaves a note in `Settings` under `archive_last_run` saying what it moved and
+when. Nothing in the app reads that note; it is there so you can see the job
+ran without going hunting in Drive.
+
 ### The spreadsheet underneath
 
 The `Log` tab is the actual record; the app is a convenient front door. Sort,

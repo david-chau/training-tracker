@@ -621,6 +621,26 @@ test('the report can start from a date', () => {
   assert.ok(out.lifetime.weeks >= 2, 'over the weeks it actually spans');
 });
 
+test('the scheduled archive refuses to run for anyone who just asks', () => {
+  // It takes a trigger event, not a key, so the guard is that the event has
+  // to name a trigger this project holds. Nothing sends that id to a page.
+  sandbox.ScriptApp = { getProjectTriggers: () => [{ getUniqueId: () => 'real' }] };
+
+  [undefined, {}, { triggerUid: '' }, { triggerUid: 'guessed' }].forEach(e => {
+    assert.throws(() => sandbox.autoArchive(e), /Read-only/,
+      'a caller supplying ' + JSON.stringify(e) + ' got through');
+  });
+});
+
+test('a cutoff is months back, not thirty days times months', () => {
+  assert.strictEqual(sandbox.archiveCutoff(6, new Date('2026-08-14T12:00:00Z')),
+    '2026-02-14', 'six months back is the same day in February');
+  assert.strictEqual(sandbox.archiveCutoff(0, new Date('2026-08-14T12:00:00Z')), '',
+    'zero is off, not today');
+  assert.strictEqual(sandbox.archiveCutoff(12, new Date('2026-08-14T12:00:00Z')),
+    '2025-08-14', 'a year is a year');
+});
+
 test('the report can end at a date as well as start at one', () => {
   const rows = [
     row('2026-07-01', 'Push', 'Bench', 1, 8, 95),
@@ -664,7 +684,11 @@ test('writing functions refuse a wrong key', () => {
     rebuildRecords: k => sandbox.rebuildRecords(k),
     writeArchive: k => sandbox.writeArchive(k, 'x', []),
     generateInto: k => sandbox.generateInto(k, 'Push', '2026-08-01', [], 'auto'),
-    rememberExercise: k => sandbox.rememberExercise(k, 'Bench', false, false)
+    rememberExercise: k => sandbox.rememberExercise(k, 'Bench', false, false),
+    // Archiving deletes rows, and the scheduled one does it unattended.
+    runArchive: k => sandbox.runArchive(k, '2026-01-01'),
+    putSetting: k => sandbox.putSetting(k, 'archive_after_months', '999'),
+    noteArchiveRun: k => sandbox.noteArchiveRun(k, 'x')
   };
 
   Object.keys(guarded).forEach(name => {

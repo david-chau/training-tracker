@@ -394,11 +394,20 @@ count as sets with no volume. Both still count as sessions.
 - No roster view across logs. Deliberate — not needed yet.
 - Weights seed at 0 from templates, and `+2 reps, same weight` keeps 0 at
   0 forever. Real weights must be entered once per exercise.
-- Archiving (`archiveSessions`) is manual and one-way: it writes a new
-  spreadsheet named `<log>_<from>_<to>` with `Log` + `Records` tabs, then
-  rewrites the source `Log` without those rows. Records are derived, so
-  archiving removes those bests from the live app — the archive keeps its
-  own copy. Nothing merges an archive back.
+- Archiving is one-way: it writes a new spreadsheet named
+  `<log>_<from>_<to>` with `Log` + `Records` tabs, then rewrites the source
+  `Log` without those rows. Records are derived, so archiving removes those
+  bests from the live app — the archive keeps its own copy. Nothing merges an
+  archive back.
+  `archivePlan(raw, cutoff)` decides, `runArchive(k, cutoff)` does, and both
+  `archiveSessions` (menu) and `autoArchive` (weekly trigger, opt-in via
+  `archive_after_months`) go through them. `runArchive` reads the archive back
+  and compares row counts before deleting anything.
+  **`autoArchive` cannot take an edit key** — a trigger passes an event, not
+  arguments — so it checks `e.triggerUid` against `ScriptApp.getProjectTriggers()`
+  instead. That id is never sent to a page, so the bridge has nothing to pass.
+  Every other new writer (`runArchive`, `putSetting`, `noteArchiveRun`) takes
+  the key and calls `assertEdit`.
 
 ## Testing
 
