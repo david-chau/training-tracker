@@ -15,10 +15,12 @@ const sandbox = {
   console,
   // dateKey() formats through Utilities/Session in Apps Script.
   Utilities: {
-    formatDate: d => d.toISOString().slice(0, 10),
+    formatDate: (d) => { sandbox.calls.formatDate++;
+                         return d.toISOString().slice(0, 10); },
     getUuid: () => 'test'
   },
-  Session: { getScriptTimeZone: () => 'UTC' },
+  Session: { getScriptTimeZone: () => { sandbox.calls.timeZone++; return 'UTC'; } },
+  calls: { formatDate: 0, timeZone: 0 },
   SpreadsheetApp: { getActive: () => null },
   PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'k' }) }
 };
@@ -619,6 +621,25 @@ test('the report can start from a date', () => {
   assert.strictEqual(out.lifetime.volume, 8 * 95 + 8 * 100, 'and all the volume');
   assert.strictEqual(out.lifetime.from, '2026-07-01', 'back to the first row');
   assert.ok(out.lifetime.weeks >= 2, 'over the weeks it actually spans');
+});
+
+test('a thousand rows do not mean a thousand date lookups', () => {
+  // dateKey runs once per row, everywhere. Both halves of it are Apps Script
+  // API calls, which is what made reading a long log slow.
+  sandbox.DATE_KEYS = {};
+  sandbox.TIME_ZONE = '';
+  sandbox.calls.formatDate = 0;
+  sandbox.calls.timeZone = 0;
+
+  const monday = new Date('2026-08-10T12:00:00Z');
+  for (let i = 0; i < 200; i++) sandbox.dateKey(new Date(monday.getTime()));
+  for (let i = 0; i < 200; i++) sandbox.dateKey(new Date('2026-08-11T12:00:00Z'));
+
+  assert.strictEqual(sandbox.dateKey(monday), '2026-08-10', 'still correct');
+  assert.strictEqual(sandbox.calls.formatDate, 2,
+    '400 rows over two dates cost two formats, not 400');
+  assert.strictEqual(sandbox.calls.timeZone, 1,
+    'and the time zone is looked up once');
 });
 
 test('one read of the Exercises tab gives what five helpers gave', () => {

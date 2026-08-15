@@ -75,13 +75,17 @@ function renderApp(canEdit) {
 // does not change it — so without this, someone in Sydney would have sessions
 // dated by Toronto's clock, and an evening workout could land on the previous
 // day. The spreadsheet's zone is the one its owner actually set.
+var TIME_ZONE = '';
+
 function logTimeZone() {
+  if (TIME_ZONE) return TIME_ZONE;
   try {
-    return SpreadsheetApp.getActive().getSpreadsheetTimeZone() ||
-           Session.getScriptTimeZone();
+    TIME_ZONE = SpreadsheetApp.getActive().getSpreadsheetTimeZone() ||
+                Session.getScriptTimeZone();
   } catch (e) {
-    return Session.getScriptTimeZone();
+    TIME_ZONE = Session.getScriptTimeZone();
   }
+  return TIME_ZONE;
 }
 
 function logName() {
@@ -1715,9 +1719,20 @@ function sameDay(a, b) {
   return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
 }
 
+// Called once per row, everywhere. Both halves of it used to be Apps Script
+// API calls — the time zone and the formatting — so a thousand-row read made
+// a couple of thousand round trips, which was most of what the loading screen
+// waited for. Memoised per execution: globals reset between them, so nothing
+// survives long enough to go stale.
+var DATE_KEYS = {};
+
 function dateKey(d) {
   const dt = (d instanceof Date) ? d : new Date(d);
-  return Utilities.formatDate(dt, logTimeZone(), 'yyyy-MM-dd');
+  const at = dt.getTime();
+  if (at !== at) return Utilities.formatDate(dt, logTimeZone(), 'yyyy-MM-dd');
+  const seen = DATE_KEYS[at];
+  if (seen) return seen;
+  return (DATE_KEYS[at] = Utilities.formatDate(dt, logTimeZone(), 'yyyy-MM-dd'));
 }
 
 function parseKey(k) {
