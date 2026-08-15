@@ -30,8 +30,12 @@ proposes slightly more.
 - [Open the demo viewer](https://script.google.com/macros/s/AKfycbxdLep_VYq7ZnH6yGTcM_UzKGZWp7t5jYmtz84GnSGAWTpuydB7OsHtC6-rtqqHaFhIYQ/exec)
 - [View the demo spreadsheet](https://docs.google.com/spreadsheets/d/1_xVY-Ha2tO6oNJ_I-BWMPHeAT4BM2ww-aGzm7jnab1Y/edit?usp=sharing)
 
-Both links are read-only. The log holds about six months of seeded training — some
-1,100 sets over 70 sessions — chosen to show the things worth seeing:
+Both links are read-only, and hold about six months of seeded training.
+
+<details markdown="block">
+<summary>What is in the demo log</summary>
+
+Some 1,100 sets over 70 sessions, chosen to show the things worth seeing:
 
 | Day type | Sessions | What it demonstrates |
 |---|---|---|
@@ -42,11 +46,12 @@ Both links are read-only. The log holds about six months of seeded training — 
 
 Use **‹ Previous session** to walk back through them — landing on today shows
 nothing, because nothing is logged today. Anything older than six months is
-[archived off](admin.html#history-costs-speed),
-which is what keeps the demo quick.
+[archived off](admin.html#history-costs-speed), which is what keeps it quick.
 
 It is a live spreadsheet rather than a fixture, so the exact numbers drift as
 the demo gets used.
+
+</details>
 
 ---
 
@@ -63,7 +68,11 @@ Every log has an **admin link** and a **viewer link**.
 | A whole session | Deletes it | — |
 | The report | Builds it, prints it | Builds it, prints it |
 
-Who holds the admin link is up to you:
+Read-only is enforced on the server, not by hiding buttons, so a viewer link
+genuinely cannot write.
+
+<details markdown="block">
+<summary>Who holds which link</summary>
 
 - **Logging your own training?** Keep both. You are the admin. The viewer link
   is optional — hand it to a training partner, or never use it at all.
@@ -71,8 +80,7 @@ Who holds the admin link is up to you:
   numbers during the session. You get the viewer link and can look up any
   session afterwards.
 
-Read-only is enforced on the server, not by hiding buttons, so a viewer link
-genuinely cannot write.
+</details>
 
 ---
 
@@ -94,14 +102,18 @@ genuinely cannot write.
 ## What it does
 
 - **One sheet per person.** The spreadsheet is the database, not a copy of it.
-  Export, sort, chart, or delete it like any other sheet.
-- **Builds this week from last week.** Start a session and the exercises,
-  sets, reps and weights appear already filled in, nudged up from last time.
+- **Builds this week from last week**, nudged up from what you managed and how
+  hard it felt.
+- **Never edited in the spreadsheet.** Every number is a **−** / **+** button,
+  because hunting for a cell on a tablet mid-set is the thing to avoid.
+- **Survives bad wifi.** Changes queue on the device and save themselves when
+  the connection comes back.
+
+<details markdown="block">
+<summary>The rest of it</summary>
+
 - **Records RPE.** Every set gets a 1–10 "how hard was that", which is what
   drives next week's numbers.
-- **Never edited in the spreadsheet.** Entry happens in the app, where every
-  number is a **−** / **+** button — you can still tap a field and type, but
-  hunting for the right cell on a tablet mid-set is what this avoids.
 - **Tracks personal bests.** Worked out from the log, shown on the card as you
   train, and listed on their own tab. [Configurable](records.html).
 - **One exercise on screen at a time**, with the whole session listed above it
@@ -116,12 +128,13 @@ genuinely cannot write.
   two lines, week by week or month by month; totals and averages against your
   all-time figures; each exercise's range for the period against its range
   over the whole log. **Save as PDF** prints exactly what is on screen.
-- **Survives bad wifi.** Changes queue on the device and save themselves when
-  the connection comes back.
 - **Scales by copying.** A trainer with twenty-five people runs twenty-five
   independent copies. Nothing shared, nothing to sync.
 
-## What it deliberately does not do
+</details>
+
+<details markdown="block">
+<summary>What it deliberately does not do</summary>
 
 - No dashboard across several logs. One person at a time, by design.
 - No full offline mode. Changes to an open session survive a dropped
@@ -132,3 +145,5 @@ genuinely cannot write.
   show progress over months, not to slice the data.
 
 Full list in [known gaps](architecture.html#known-gaps).
+
+</details>
