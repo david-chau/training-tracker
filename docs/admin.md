@@ -568,6 +568,14 @@ everything logged. Then the report is drawn in the app:
   apart. Over a long period only some weeks are labelled; every one is
   plotted. Past half a year it switches to a point per month, since fifty
   weekly points are texture rather than a trend
+
+  ![A month of training as a weekly line: four points, volume falling from 36k
+  to 5.1k as sessions fall from three a week to one]({{ site.baseurl }}/img/report-week.png)
+
+  Ask for longer and the same chart is drawn by month instead:
+
+  ![Half a year as a monthly line: seven points, volume climbing from 17k to
+  135k]({{ site.baseurl }}/img/report-year.png)
 - **totals and averages** as tiles — sets per session, sets per week, volume —
   each with the same numbers over your whole log underneath, so four weeks is
   read against everything rather than on its own
@@ -575,6 +583,10 @@ everything logged. Then the report is drawn in the app:
   exercise: the period's range, your all-time range, and a trend pill. The
   twelve most-trained are listed and the rest counted on a line beneath
 - **★** on a period holding a best ever set
+
+![The report: a line chart of volume and sessions by month, cards of totals
+and averages with all-time figures under them, and a card per day type listing
+each exercise's range]({{ site.baseurl }}/img/report.png)
 
 It opens over the session; **Close**, the backdrop, or Escape dismiss it.
 
