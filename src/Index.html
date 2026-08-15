@@ -567,7 +567,9 @@ function paintUnit() {
 }
 
 if (!CAN_EDIT) {
-  document.getElementById('tools').style.display = 'none';
+  // Only the destructive half. The report reads what a viewer can already
+  // read, so it stays — it is the one thing here worth having read-only.
+  document.getElementById('wipe').style.display = 'none';
   document.body.classList.add('ro');
   document.getElementById('robanner').className = 'robanner';
   document.getElementById('robanner').textContent =

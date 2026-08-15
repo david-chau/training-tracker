@@ -16,7 +16,7 @@ Which one you were sent decides which guide you want.
 | Sets and exercises | Adds and removes | — |
 | Notes | Writes them | Reads them |
 | A whole session | Deletes it | — |
-| The report | Builds it, prints it | — |
+| The report | Builds it, prints it | Builds it, prints it |
 
 - **[Admin](admin.html)** — you are the one recording sets, whether that is
   your own training or someone else's. Running a session, changing the

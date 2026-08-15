@@ -114,8 +114,9 @@ about it is the whole mechanism.
   the spreadsheet each time. There is no offline copy.
 - **You cannot break anything.** The link genuinely cannot save changes, even
   if you try.
-- **No report from this link.** The period summary — volume and sessions over
-  time, each exercise's range — is built from the admin link only. Ask whoever
-  holds it; the report prints to a PDF they can send you.
+- **The report is yours too.** **Report…** under the session summarises any
+  period — volume and sessions over time, each exercise's range against your
+  all-time range — and **Save as PDF** prints it. It reads the same sessions
+  this link already shows you and saves nothing to anyone's Drive.
 - **Something looks wrong?** Tell whoever holds the admin link — they can fix
   it in a couple of taps.

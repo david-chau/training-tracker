@@ -33,9 +33,12 @@ test.describe('viewer link', () => {
     await expect(app.locator('.cnt')).toHaveCount(0);
     await expect(app.locator('.addex')).toHaveCount(0);
     await expect(app.locator('.rename')).toHaveCount(0);
-    // The report writes a tab, so it is an admin control like the rest.
-    await expect(app.locator('#report')).toBeHidden();
-    await expect(app.locator('#tools')).toBeHidden();
+    await expect(app.locator('#wipe')).toBeHidden();
+
+    // The report is the exception: it reads rows this link can already page
+    // through, writes nothing anywhere, and prints in the visitor's own
+    // browser. So a viewer gets it.
+    await expect(app.locator('#report')).toBeVisible();
   });
 
   test('every day type it offers leads to a real session', async ({ page }) => {

@@ -621,6 +621,17 @@ test('the report can start from a date', () => {
   assert.ok(out.lifetime.weeks >= 2, 'over the weeks it actually spans');
 });
 
+test('the report is readable without a key, and writes nothing', () => {
+  // The one function the bridge can reach that does not assert: it aggregates
+  // rows a viewer can already page through, and returns them. If it ever
+  // writes — a tab, a file, anything in the owner's Drive — it needs the key
+  // back, so this reads the source rather than trusting the comment.
+  const src = sandbox.reportSummary.toString();
+  assert.ok(!/assertEdit/.test(src), 'the report does not demand an edit key');
+  assert.ok(!/setValue|insertSheet|SpreadsheetApp\.create|getRange\(.*\)\.set/
+    .test(src), 'and it writes nothing');
+});
+
 test('the scheduled archive refuses to run for anyone who just asks', () => {
   // It takes a trigger event, not a key, so the guard is that the event has
   // to name a trigger this project holds. Nothing sends that id to a page.
@@ -680,7 +691,6 @@ test('with no period there are no all-time totals to show either', () => {
 
 test('writing functions refuse a wrong key', () => {
   const guarded = {
-    reportSummary: k => sandbox.reportSummary(k, ''),
     rebuildRecords: k => sandbox.rebuildRecords(k),
     writeArchive: k => sandbox.writeArchive(k, 'x', []),
     generateInto: k => sandbox.generateInto(k, 'Push', '2026-08-01', [], 'auto'),

@@ -637,8 +637,14 @@ function epley(reps, weight) {
 
 // The report as data, for the app to draw. No writing, so it is quick enough
 // to run while someone waits and safe to re-run as they change the period.
+// Deliberately unguarded, unlike every other function the bridge can reach:
+// it reads and returns, writing nothing anywhere — no tab, no file, nothing in
+// the owner's Drive. A viewer can already page through every session this
+// aggregates, so the report adds no access, only arithmetic. Its PDF is the
+// visitor's own browser printing the page it was sent.
+//
+// Keep it that way. The moment this writes anything it needs the key back.
 function reportSummary(k, from, to) {
-  assertEdit(k);
   const data = reportData(allRows(), timedLookup(), from, to);
   if (!data.sessions) return null;
 

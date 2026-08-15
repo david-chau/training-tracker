@@ -311,7 +311,11 @@ free of SpreadsheetApp so it stays testable — keep it that way.
 
 `reportData(rows, timed, from, to)` is pure and testable, like `computeRecords`;
 either bound may be blank. `reportSummary(k, from, to)` returns the numbers and
-the browser draws them
+the browser draws them. **It is the one bridge-reachable function that does not
+`assertEdit`** — it reads and returns, writing nothing anywhere, and a viewer
+can already page through every session it aggregates. Viewers get the report
+button for that reason; `#wipe` is what gets hidden, not `#tools`. If it ever
+writes anything, the key goes back on
 (`reportView`) — that is the one place in the app that builds markup from
 spreadsheet values, so everything sheet-derived goes through `esc()`.
 
