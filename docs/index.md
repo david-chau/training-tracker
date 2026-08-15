@@ -16,6 +16,12 @@ proposes slightly more.
      alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"
      class="shot">
 
+Ask for a report over any period and it draws one, in the app, ready to print.
+
+<img src="{{ site.baseurl }}/img/report.png" loading="lazy"
+     alt="The report: a line chart of volume and sessions by month, totals and averages with all-time figures under them, and a card per day type listing each exercise's range"
+     class="shot">
+
 ---
 
 ## Try the read-only demo
@@ -87,9 +93,11 @@ genuinely cannot write.
   a **▶ How to** link — a video search for that movement — and you can add a
   picture or GIF of your own beside any of them. An exercise you type in
   yourself has neither until you fill them in.
-- **Summarises itself on demand.** A menu item builds a report of any period —
-  weekly volume, estimated 1RM per exercise, every session — with charts, and
-  hands you a PDF.
+- **Summarises itself on demand.** A report over any period — the last so many
+  days, weeks, months or years, or between two dates. Volume and sessions as
+  two lines, week by week or month by month; totals and averages against your
+  all-time figures; each exercise's range for the period against its range
+  over the whole log. **Save as PDF** prints exactly what is on screen.
 - **Survives bad wifi.** Changes queue on the device and save themselves when
   the connection comes back.
 - **Scales by copying.** A trainer with twenty-five people runs twenty-five
@@ -101,7 +109,8 @@ genuinely cannot write.
 - No full offline mode. Changes to an open session survive a dropped
   connection and save themselves when it returns, but *starting* a session
   needs the network.
-- No charts or analytics. The real workflow is "look at last week, do slightly
-  more", and that already lives in the app.
+- No analytics beyond the report. The real workflow is "look at last week, do
+  slightly more", and that lives on the session screen; the report exists to
+  show progress over months, not to slice the data.
 
 Full list in [known gaps](architecture.html#known-gaps).

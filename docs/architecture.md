@@ -599,10 +599,15 @@ is true. A viewer who opens the console and calls one directly gets
 
 {: .warning }
 `google.script.run` reaches **any global in the project**, not only the ones
-the page calls. So the report builder, the records rebuild and the archive
-writer take the key as well, even though only a menu item invokes them — menu
+the page calls. So the records rebuild, the archive writer and the archive
+itself take the key as well, even though only a menu item invokes them — menu
 code runs as the owner and passes `editKey()`. A writer that takes only plain
 arguments and checks nothing is callable by anyone holding the viewer link.
+
+The weekly archive is the awkward case: a trigger hands it an event rather
+than arguments, so it cannot be given the key. It checks instead that the
+event names a trigger the project actually holds — an id that never reaches a
+page.
 
 `EDIT_KEY` is a 16-character UUID fragment generated on first use and kept in
 script properties. Deleting the property rotates the key; the viewer URL is
@@ -670,9 +675,11 @@ day. On a `@gmail.com` account the first thing to bite would be property
 reads at around 500 sessions a day, which is twenty times the intended load.
 
 {: .warning }
-The limit that will actually be felt first is none of the above: it is the
-6-minute execution ceiling meeting a `Log` that has grown for years, because
-every read scans all of it. Archive old seasons and it stays quick.
+The limit that will actually be felt first is none of the above: it is a
+`Log` that has grown for years, because every read scans all of it. Measured
+on the demo: ~3s to open a session at 230 rows, ~13s at 1,100, ~19s at 1,800.
+Archiving is what keeps it quick, and it can run
+[weekly on its own](admin.html#archiving-on-a-schedule).
 
 ---
 
@@ -729,10 +736,10 @@ Accepted, documented, not accidental:
   log at a time.
 - **Weights seeded at 0 stay at 0**, because `+2 reps, same weight` never
   moves them. Type the real weight in once.
-- **Archiving is manual and one-way.** *Archive old sessions* moves a closed
-  period into its own spreadsheet, but nothing prompts for it and there is no
-  merge back. Until it is run, a `Log` grows forever and every read pulls the
-  whole sheet.
+- **Archiving is one-way.** *Archive old sessions* moves a closed period into
+  its own spreadsheet, and *Archive automatically* does it weekly, but nothing
+  merges an archive back. Automatic archiving is off until it is switched on,
+  so a `Log` left alone grows forever and every read pulls the whole sheet.
 - **No test suite for the Apps Script half.** The queue and the record maths
   run under `node`; everything touching `SpreadsheetApp` is tested by hand.
   The loop is in
