@@ -91,12 +91,15 @@ test.describe('admin link', () => {
     await expect(modal.locator('#printreport')).toHaveText('Save as PDF');
     await expect(modal.locator('a[href*="format=pdf"]')).toHaveCount(0);
 
-    test.skip(!await modal.locator('.legend').count(),
-      'the live app predates the chart legend — redeploy Index.html');
+    test.skip(!await modal.locator('.chart').count(),
+      'the live app predates the line chart — redeploy Index.html');
 
     await expect(modal.locator('.daycard').first()).toBeVisible();
-    await expect(modal.locator('.wkbar').first()).toBeVisible();
-    await expect(modal).toContainText(/Height is volume/);
+    // Two series: volume as the solid line, sessions as the dashed one.
+    await expect(modal.locator('.chart .ln')).toBeVisible();
+    await expect(modal.locator('.chart .ln2')).toBeVisible();
+    await expect(modal.locator('.pt').first()).toBeVisible();
+    await expect(modal).toContainText(/volume in lb/);
     await expect(modal).toContainText(/Lightest . heaviest set of the period/);
 
     // Escape is the way out, and it must leave the session behind it intact.
