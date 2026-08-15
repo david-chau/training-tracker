@@ -561,7 +561,12 @@ weights at 0 on purpose.
 **Report…** next to *Delete this session*. Say how far back — a number and
 *days*, *weeks*, *months* or *years* — or give two dates for an exact range.
 The dates win when either is filled, and leaving the number blank reports
-everything logged. Then the report is drawn in the app:
+everything logged.
+
+![The report's period controls: a number box reading 6 with a months
+dropdown, two date pickers under it, and Build and Cancel buttons]({{ site.baseurl }}/img/report-panel.png)
+
+Then the report is drawn in the app:
 
 - **two lines across the weeks** — volume in lb, and how many sessions, each
   drawn against its own high so a hard week and a frequent week can be told
