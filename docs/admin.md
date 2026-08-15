@@ -638,16 +638,18 @@ Measured on the demo log, three cold loads each:
 
 | Log size | Opening the app | Loading a session | Building the report |
 |---|---|---|---|
-| ~230 rows (a month) | ~7s | ~3s | ~4s |
+| ~230 rows (one month) | ~7s | ~3s | ~4s |
+| ~1,100 rows (six months) | ~10s | ~13s | ~5s |
 | ~1,800 rows (ten months) | ~15s | ~19s | ~10s |
 
-Nineteen seconds to open a session is the number that matters, because that
-is the one you wait for standing at a machine with your rest timer running.
+Loading a session is the number that matters, because that is the one you
+wait for standing at a machine with your rest timer running.
 
 So: keep the recent months in the sheet and put the rest somewhere else. Six
-months is a reasonable place to start — enough that the report has a year's
-shape to draw and every exercise has history behind it, short enough that the
-app stays quick.
+months is a reasonable place to start — enough that the report has half a
+year of shape to draw and every exercise has history behind it, short enough
+that the app stays quick. Archiving ten months back to six took the demo from
+19s to 13s on a session, and halved the report.
 
 Nothing is lost by archiving. The rows move to another spreadsheet in your
 Drive, which opens like any other and holds its own copy of the records from

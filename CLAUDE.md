@@ -392,7 +392,12 @@ step with the sheet. Measured on the demo log, three cold runs each:
 | Rows | Open | Load a session | Build the report |
 |---|---|---|---|
 | ~230 | ~7s | ~3s | ~4s |
+| ~1,100 | ~10s | ~13s | ~5s |
 | ~1,800 | ~15s | ~19s | ~10s |
+
+Measured with `generated/bench.js`, three cold contexts each. At ~1,800 rows
+the e2e helper's 60s bootstrap deadline started expiring — the suite is a
+canary for this.
 
 Loading a session is the one that hurts: it is what someone waits for between
 sets. This is the reason the scheduled archive exists, and the reason to
