@@ -135,9 +135,10 @@ it slow (a few minutes) and means it has to respect the app's own guards:
 - **Structural writes are refused while the queue is busy**, correctly.
   `awaitQueue()` waits for the amber bar to clear before deleting or adding.
 
-{: .warning }
-Adds get slower as the log grows, because each one rewrites the `Records` tab
-server-side. That is why the timeouts here are minutes rather than seconds.
+> [!WARNING]
+> Adds get slower as the log grows, because every call rescans the whole `Log`
+> — not because of the `Records` tab, which adds deliberately never touch.
+> That is why the timeouts here are minutes rather than seconds.
 
 ## Recording the doc clips
 
@@ -162,19 +163,18 @@ Each clip calls `mark()` once the scene is set, and everything before that is
 seeked past on conversion — 8 to 31 seconds per clip. The frame is then cropped
 by `BANNER_PX` to drop Google's "created by a Google Apps Script user" strip.
 
-{: .note }
-Screen recordings are the good case for GIF — flat colour, a static
-background, a small changing region — which is why these compress to a few
-hundred KB each. Hand-held footage is the opposite: an earlier phone recording
-of a tablet came out at 39 MB as a GIF and had to ship as an MP4, which GitHub
-then refused to play in the README (its `media-src` CSP allows only its own
-hosts). Recording the app directly removed both problems, and the README shows
-a GIF inline.
-
-{: .warning }
-Do not run this at the same time as the test suite. Both drive the same
-spreadsheet, and both launch browsers — running them together produced 180
-second launch timeouts and a poisoned 40 minute test run.
+> [!NOTE]
+> Screen recordings are the good case for GIF — flat colour, a static
+> background, a small changing region — which is why these compress to a few
+> hundred KB each. Hand-held footage is the opposite: an earlier phone recording
+> of a tablet came out at 39 MB as a GIF and had to ship as an MP4, which GitHub
+> then refused to play in the README (its `media-src` CSP allows only its own
+> hosts). Recording the app directly removed both problems, and the README shows
+> a GIF inline.
+> [!WARNING]
+> Do not run this at the same time as the test suite. Both drive the same
+> spreadsheet, and both launch browsers — running them together produced 180
+> second launch timeouts and a poisoned 40 minute test run.
 
 ## End-to-end tests
 
@@ -213,10 +213,10 @@ Three things are worth knowing before running them:
 
 `.github/workflows/e2e.yml` runs them on demand and weekly, never on push.
 
-{: .note }
-Feature-detect against the `<style>` block, not rendered markup. A class like
-`.rename` only appears as an attribute once a card exists, so its absence at
-bootstrap proves nothing; the stylesheet ships either way.
+> [!NOTE]
+> Feature-detect against the `<style>` block, not rendered markup. A class like
+> `.rename` only appears as an attribute once a card exists, so its absence at
+> bootstrap proves nothing; the stylesheet ships either way.
 
 ## Testing
 

@@ -12,24 +12,16 @@ Open it on a tablet at the rack, tap numbers up and down, and the sheet fills
 itself in. Next week it looks at what was lifted and how hard it felt, then
 proposes slightly more.
 
-<img src="{{ site.baseurl }}/img/clip-tour.gif" loading="lazy"
-     alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"
-     class="shot">
-
 ## What it looks like
 
 | | |
 |:---:|:---:|
-| <img src="{{ site.baseurl }}/img/clip-start.gif" loading="lazy" class="shot shot--grid" alt="Picking a day type and starting a session from last week's numbers"> | <img src="{{ site.baseurl }}/img/clip-logging.gif" loading="lazy" class="shot shot--grid" alt="Stepping reps and weight with the plus and minus buttons, and the status bar confirming the save"> |
-| **Start from last week** — pick a day, and the session arrives filled in and nudged up. [More →](admin.html#2-start-it) | **Log without typing** — every number is a − / + button, read back out of the sheet before it counts. [More →](admin.html#3-train-and-adjust) |
+| <img src="{{ site.baseurl }}/img/clip-tour.gif" loading="lazy" class="shot shot--grid" alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"> | <img src="{{ site.baseurl }}/img/clip-logging.gif" loading="lazy" class="shot shot--grid" alt="Stepping reps and weight with the plus and minus buttons, and the status bar confirming the save"> |
+| **A session, end to end** — pick a day, and it arrives filled in from last week and nudged up. [More →](admin.html#running-a-session) | **Log without typing** — every number is a − / + button, read back out of the sheet before it counts. [More →](admin.html#3-train-and-adjust) |
 | <img src="{{ site.baseurl }}/img/clip-superset.gif" loading="lazy" class="shot shot--grid" alt="Pairing two exercises into a superset, which then renders as one card round by round"> | <img src="{{ site.baseurl }}/img/clip-records.gif" loading="lazy" class="shot shot--grid" alt="A set beating a previous best, marked with a star as the number is typed"> |
 | **Supersets** — pair two exercises and they become one card, laid out round by round. [More →](admin.html#supersets) | **Personal bests** — worked out from the log and starred on the card as you train. [More →](records.html) |
-
-Ask for a report over any period and it draws one, in the app, ready to print.
-
-<img src="{{ site.baseurl }}/img/report-top.png" loading="lazy"
-     alt="The report: a line chart of volume and sessions by month, with totals and averages beneath it"
-     class="shot">
+| <img src="{{ site.baseurl }}/img/report-top.png" loading="lazy" class="shot shot--grid" alt="The report: a line chart of volume and sessions by month, with totals and averages beneath it"> | <img src="{{ site.baseurl }}/img/clip-viewer.gif" loading="lazy" class="shot shot--grid" alt="The read-only viewer link: the same session with a READ ONLY banner and no controls"> |
+| **A report on demand** — any period, volume and sessions over time, each exercise against its all-time range. Prints to a PDF. [More →](admin.html#a-report-you-can-send) | **A read-only link** — the same log with nothing to press, enforced on the server rather than by hiding buttons. [More →](viewer.html) |
 
 ---
 

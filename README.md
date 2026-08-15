@@ -11,9 +11,6 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-<img src="docs/img/clip-tour.gif" width="320"
-     alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise">
-
 One exercise on screen at a time, last week's numbers under each field, and
 every tap read back out of the spreadsheet before it counts as saved.
 
@@ -23,18 +20,12 @@ every tap read back out of the spreadsheet before it counts as saved.
 
 | | |
 |:---:|:---:|
-| <img src="docs/img/clip-start.gif" width="260" alt="Picking a day type and starting a session from last week's numbers"> | <img src="docs/img/clip-logging.gif" width="260" alt="Stepping reps and weight with the plus and minus buttons, and the status bar confirming the save"> |
-| **Start from last week** — pick a day, and the session arrives filled in and nudged up. [More →](https://david-chau.github.io/training-tracker/admin.html#2-start-it) | **Log without typing** — every number is a − / + button, read back out of the sheet before it counts. [More →](https://david-chau.github.io/training-tracker/admin.html#3-train-and-adjust) |
+| <img src="docs/img/clip-tour.gif" width="260" alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"> | <img src="docs/img/clip-logging.gif" width="260" alt="Stepping reps and weight with the plus and minus buttons, and the status bar confirming the save"> |
+| **A session, end to end** — pick a day, and it arrives filled in from last week and nudged up. [More →](https://david-chau.github.io/training-tracker/admin.html#running-a-session) | **Log without typing** — every number is a − / + button, read back out of the sheet before it counts. [More →](https://david-chau.github.io/training-tracker/admin.html#3-train-and-adjust) |
 | <img src="docs/img/clip-superset.gif" width="260" alt="Pairing two exercises into a superset, which then renders as one card round by round"> | <img src="docs/img/clip-records.gif" width="260" alt="A set beating a previous best, marked with a star as the number is typed"> |
 | **Supersets** — pair two exercises and they become one card, laid out round by round. [More →](https://david-chau.github.io/training-tracker/admin.html#supersets) | **Personal bests** — worked out from the log and starred on the card as you train. [More →](https://david-chau.github.io/training-tracker/records.html) |
-
-Ask it for a report over any period and it draws one — volume and sessions
-week by week, or month by month once you ask for more than half a year, with
-each exercise's range for the period against your all-time range. **Save as
-PDF** prints what you are looking at.
-
-<img src="docs/img/report-top.png" width="360"
-     alt="The report: a line chart of volume and sessions by month, with totals and averages beneath it">
+| <img src="docs/img/report-top.png" width="260" alt="The report: a line chart of volume and sessions by month, with totals and averages beneath it"> | <img src="docs/img/clip-viewer.gif" width="260" alt="The read-only viewer link: the same session with a READ ONLY banner and no controls"> |
+| **A report on demand** — any period, volume and sessions over time, each exercise against its all-time range. Prints to a PDF. [More →](https://david-chau.github.io/training-tracker/admin.html#a-report-you-can-send) | **A read-only link** — the same log with nothing to press, enforced on the server rather than by hiding buttons. [More →](https://david-chau.github.io/training-tracker/viewer.html) |
 
 ## Documentation
 
@@ -67,9 +58,11 @@ nothing, because nothing is logged today. Anything older than six months is
 [archived off](https://david-chau.github.io/training-tracker/admin.html#history-costs-speed),
 which is what keeps the demo quick.
 
-{: .note }
-It is a live spreadsheet, not a fixture, so exact numbers may drift. Regenerate
-it with `node e2e/seed-demo.js` — see
-[DEVELOPMENT.md](DEVELOPMENT.md#the-demo-data).
+It is a live spreadsheet rather than a fixture, so the exact numbers drift as
+the demo gets used.
 
-Working on the code: [DEVELOPMENT.md](DEVELOPMENT.md).
+## Working on the code
+
+[DEVELOPMENT.md](DEVELOPMENT.md) covers the local loop: the template build,
+the tests, the end-to-end suite, and
+[regenerating this demo](DEVELOPMENT.md#the-demo-data).
