@@ -5,6 +5,9 @@ const { targets, open } = require('../e2e/app.js');
 const { reportMarkup } = require('./report-render.js');
 const fs = require('fs');
 const OUT = __dirname + '/../docs/img/';
+// Scratch, not a doc image: this used to be written into docs/img/ and
+// committed alongside the pictures.
+const TMP = __dirname + '/../generated/doc.html';
 
 const WANT = [
   ['report-week', '', 28],     // a month back: weekly points
@@ -34,8 +37,8 @@ const WANT = [
       '<body style="background:var(--bg)"><div class="repsheet" ' +
       'style="max-width:400px;margin:0"><div class="rep">' +
       reportMarkup(data) + '</div></div>';
-    fs.writeFileSync(OUT + 'doc.html', doc);
-    await shot.goto('file://' + OUT + 'doc.html');
+    fs.writeFileSync(TMP, doc);
+    await shot.goto('file://' + TMP);
     await shot.waitForTimeout(300);
 
     // The chart alone: it is what differs between a week and a year.
