@@ -161,7 +161,13 @@ async function buildSession(app, session) {
   process.stdout.write(`  ${session.date} ${session.day} … `);
 
   await awaitIdle(app);
-  await app.locator('.day', { hasText: new RegExp(`^${session.day}$`) }).click();
+  // Day buttons toggle: clicking the one already chosen clears it, and then
+  // there is no day type and no chooser to wait for. Two Push sessions in a
+  // row is the case that finds this.
+  const dayBtn = app.locator('.day', { hasText: new RegExp(`^${session.day}$`) });
+  const chosen = await dayBtn.evaluate(el => el.classList.contains('on'))
+    .catch(() => false);
+  if (!chosen) await dayBtn.click();
   await gotoDate(app, session.date);
   await rendered(app);
 
@@ -208,7 +214,11 @@ async function buildSession(app, session) {
   }
 
   if (session.note) {
-    const box = app.locator('.note').first();
+    // Same trap as the RPE above: every card is rendered but only the current
+    // page is visible, so `.note` resolves to a box that cannot be typed into.
+    // Take whichever note box is actually on screen.
+    const box = app.locator('.ex:visible .note').first();
+    await box.waitFor({ state: 'visible', timeout: 30_000 });
     await box.fill(session.note);
     await box.dispatchEvent('blur');
   }

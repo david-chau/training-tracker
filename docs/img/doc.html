@@ -1,0 +1,464 @@
+<!doctype html><meta charset="utf-8"><style>
+  :root { --line:#e3e3e0; --muted:#6b6b66; --ink:#1c1c1a; --ok:#1d7a4f; --warn:#a33;
+          --link:#1b5aa0; --bg:#faf9f7; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:system-ui,-apple-system,sans-serif; margin:0; padding:16px 16px 64px;
+         color:var(--ink); background:var(--bg); font-size:17px; }
+  /* Sticky so the log you are in stays visible however far you scroll —
+     with one sheet per person, that is the thing worth never losing. The
+     negative margins bleed it past the body padding so nothing shows
+     through the gutters when it is stuck. */
+  .top { position:sticky; top:0; z-index:5; background:#faf9f7;
+         margin:-16px -16px 12px; padding:14px 16px 8px;
+         border-bottom:1px solid var(--line); }
+  /* Nothing above the session means anything until getBootstrap returns: the
+     heading is a placeholder, the date is blank and there are no day buttons.
+     Showing that half-built is what made a slow first load look broken. */
+  body.booting .datebar,
+  body.booting .sessnav,
+  body.booting #tools,
+  body.booting #days,
+  body.booting .top,
+  body.booting #body,
+  body.booting .bar { display:none; }
+  /* Until getBootstrap returns there is nothing true to show: no name, no
+     date, no day types. A half-built screen is what made a slow first load
+     look broken, so the whole page is one centred message instead. */
+  #boot { position:fixed; inset:0; z-index:20; display:none;
+          flex-direction:column; align-items:center; justify-content:center;
+          gap:14px; background:var(--bg); color:var(--muted); font-size:16px;
+          padding:24px; text-align:center; }
+  body.booting #boot { display:flex; }
+  #boot::before { content:''; width:26px; height:26px;
+                  border:3px solid var(--line); border-top-color:var(--muted);
+                  border-radius:50%; animation:spin 0.7s linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    #boot::before { animation-duration:2.4s; }
+  }
+  h1 { font-size:20px; font-weight:600; margin:0 0 2px;
+       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* It opens the spreadsheet, so it should read as a link rather than as a
+     heading that happens to respond to taps. */
+  h1 a { color:var(--link); text-decoration:underline;
+         text-decoration-color:rgba(27,90,160,0.35); text-underline-offset:3px; }
+  h1 a::after { content:' \2197'; font-size:0.75em; text-decoration:none;
+                display:inline-block; }
+  h1 a:hover { text-decoration-color:var(--link); }
+  .kicker { font-size:12px; color:var(--muted); letter-spacing:0.06em;
+            text-transform:uppercase; margin:0; }
+  /* The heading takes the room it needs and the unit picker sits beside it,
+     because the unit is a property of the machine you are standing at — it
+     has to be reachable without scrolling back up mid-set. */
+  .topline { display:flex; align-items:flex-start; gap:10px; }
+  .topline > div:first-child { flex:1; min-width:0; }
+  .unitpick { display:flex; border:1px solid var(--line); border-radius:8px;
+              overflow:hidden; background:#fff; flex:none; }
+  .unitpick button { padding:7px 11px; border:0; background:transparent;
+                     font-size:13px; font-weight:600; color:var(--muted);
+                     cursor:pointer; }
+  .unitpick button.on { background:var(--ink); color:#fff; }
+  .days { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .day { flex:1; min-width:84px; padding:13px 8px; border:1px solid var(--line);
+         background:#fff; border-radius:10px; font-size:17px; cursor:pointer;
+         display:flex; align-items:center; justify-content:center; gap:7px;
+         transition:padding 0.12s ease, font-size 0.12s ease; }
+  /* A session already exists for this day type on the date being shown. Worth
+     knowing before tapping: it is the difference between opening a session and
+     starting one. */
+  .day.has::before { content:''; width:7px; height:7px; border-radius:50%;
+                     background:var(--ok); flex:none; }
+  .day.on.has::before { background:#fff; }
+  /* Before a day is picked these are the only thing to press, so they are
+     big. Afterwards they are just navigation and the session needs the room —
+     still a comfortable target, half the height. */
+  .days.chosen .day { padding:8px 8px; font-size:15px; }
+  .day.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .datebar { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  /* Two different kinds of stepping, so they get two different controls:
+     the arrows beside the date move one calendar day, these jump to a day
+     that actually has a session. One pair of arrows meaning both was the
+     confusing part. */
+  .sessnav { display:flex; gap:8px; margin-bottom:14px; }
+  .sess { flex:1; padding:9px 8px; border:1px solid var(--line); background:#fff;
+          border-radius:9px; font-size:13px; font-family:inherit;
+          color:var(--muted); cursor:pointer; }
+  .sess:disabled { opacity:0.4; cursor:default; }
+  .datebar input { flex:1; padding:12px; font-size:16px; border:1px solid var(--line);
+                   border-radius:10px; background:#fff; font-family:inherit; }
+  .nav { width:44px; height:46px; border:1px solid var(--line); background:#fff;
+         border-radius:10px; font-size:18px; cursor:pointer; }
+  .ex { background:#fff; border:1px solid var(--line); border-radius:12px;
+        padding:14px; margin-bottom:14px; }
+  /* On screen before the sheet has it. Entry works; the dashed edge is the
+     only sign anything is outstanding. */
+  .ex.adding { border-style:dashed; }
+
+  /* One exercise at a time, with the whole session listed above it. The list
+     is what a stack of cards gave for free: where you are, what is left, and
+     which exercises are paired. */
+  .rail { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
+  /* On a phone the session reads as a list. Given the width it reads better
+     as a row — a tablet in landscape was showing five names down the left of
+     an otherwise empty screen. */
+  @media (min-width: 620px) {
+    .rail { flex-direction:row; flex-wrap:wrap; gap:6px; }
+    .rail .railitem { width:auto; flex:0 1 auto; }
+    .rail .raillabel { max-width:24ch; }
+  }
+  .railitem { display:flex; align-items:center; gap:8px; width:100%;
+              padding:8px 10px; border:1px solid transparent; border-radius:9px;
+              background:transparent; font-size:14px; color:var(--muted);
+              text-align:left; cursor:pointer; }
+  .railitem.on { background:#fff; border-color:var(--line); color:var(--ink);
+                 font-weight:600; }
+  .railno { flex:none; width:20px; height:20px; border-radius:50%;
+            background:var(--line); color:var(--ink); font-size:12px;
+            line-height:20px; text-align:center; }
+  .railitem.on .railno { background:var(--ink); color:#fff; }
+  .raillabel { flex:1; overflow:hidden; text-overflow:ellipsis;
+               white-space:nowrap; }
+  .railss { flex:none; font-size:11px; text-transform:uppercase;
+            letter-spacing:0.05em; color:var(--muted); }
+  .pager { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .pager button { flex:1; padding:13px 8px; border:1px solid var(--line);
+                  background:#fff; border-radius:10px; font-size:16px;
+                  cursor:pointer; color:var(--ink); }
+  .pager button:disabled { color:#c9c7c1; background:#f6f5f2; cursor:default; }
+  .pageat { flex:none; font-size:13px; color:var(--muted); min-width:64px;
+            text-align:center; }
+
+  /* A superset is one card holding two exercises, rendered in the order they
+     are performed: round 1 of both, then round 2. */
+  .ex.ss { border-color:var(--ink); }
+  .sshead { display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:8px; }
+  .sstag { font-size:11px; font-weight:600; text-transform:uppercase;
+           letter-spacing:0.06em; color:var(--muted); }
+  .ssex { margin-bottom:6px; }
+  .round { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
+  .rnum { font-size:12px; text-transform:uppercase; letter-spacing:0.05em;
+          color:var(--muted); margin-bottom:6px; }
+  .sswho { font-size:14px; font-weight:600; margin:6px 0 2px; }
+  .notelabel { font-size:13px; font-weight:600; color:var(--muted);
+               margin:12px 0 4px; }
+  .link { border:0; background:transparent; color:var(--link); font-size:14px;
+          padding:6px 0; cursor:pointer; text-decoration:underline;
+          text-decoration-color:rgba(27,90,160,0.35); }
+  .pair { margin-top:6px; }
+  .exhead { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .title { display:flex; align-items:center; gap:10px; min-width:0; }
+  .ex h2 { font-size:17px; font-weight:600; margin:0; }
+  .rename { flex:0 0 auto; padding:2px 7px; border:1px solid transparent;
+            background:none; border-radius:7px; font-size:13px; cursor:pointer;
+            color:var(--muted); font-family:inherit; line-height:1.4; }
+  .rename:hover { border-color:var(--line); color:var(--ink); }
+  /* Renaming takes the whole card width. Sharing the header row with the set
+     counter squeezed the input to a few pixels on a phone, which is where
+     renaming is most likely to happen. */
+  .namebox { margin-bottom:12px; }
+  .namebox input { width:100%; padding:12px; font-size:16px; font-family:inherit;
+                   border:1px solid var(--link); border-radius:9px;
+                   background:#fff; color:var(--ink); margin-bottom:8px; }
+  .namebox .row { display:flex; gap:8px; }
+  .howto { flex:0 0 auto; font-size:12px; color:var(--muted); text-decoration:none;
+           border:1px solid var(--line); border-radius:999px; padding:3px 10px;
+           white-space:nowrap; background:#fff; }
+  .howto:hover { color:var(--ink); border-color:var(--muted); }
+  .thumb { width:42px; height:42px; flex:0 0 42px; object-fit:cover; border-radius:8px;
+           border:1px solid var(--line); background:#f4f3f0; cursor:pointer; }
+  .demo { display:block; width:100%; max-width:420px; margin:10px 0 4px;
+          border:1px solid var(--line); border-radius:10px; background:#f4f3f0; }
+  .ref { font-size:14px; color:var(--muted); margin:2px 0 4px; }
+  /* One strip of facts about the exercise, under its name. Everything that
+     used to be scattered — the best set, the estimate, the PR marker — reads
+     left to right here instead. */
+  .meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px;
+          font-size:13px; color:var(--muted); margin:6px 0 12px; }
+  .meta b { color:var(--ink); font-weight:600; }
+  .meta .sep { color:var(--line); }
+  .meta .prtag { color:#8a6100; background:#fff5d6; border:1px solid #e8d9a8;
+                 border-radius:999px; padding:1px 9px; font-size:12px; }
+  /* One row per card at most, so this can stay quiet: a faint wash plus a
+     star on the set number, which also means the mark does not depend on
+     colour alone. */
+  .pr .step, .pr .val { background:#fffcf0; }
+  .pr .n::after { content:' ★'; color:#b8860b; font-size:12px; }
+  .cnt { display:flex; align-items:center; border:1px solid var(--line);
+         border-radius:8px; overflow:hidden; flex-shrink:0; }
+  .cnt button { width:34px; height:34px; border:0; background:#f4f3f0; font-size:18px;
+                cursor:pointer; color:var(--ink); }
+  .cnt span { min-width:46px; text-align:center; font-size:13px; color:var(--muted); }
+  .set { display:grid; grid-template-columns:18px 1fr 1fr 1fr; gap:6px;
+         align-items:end; margin-bottom:14px; }
+  .set.bw { grid-template-columns:18px 1fr 1fr; }
+  .n { font-size:14px; color:var(--muted); padding-bottom:28px; }
+  .fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
+  /* Last week's value for this field, directly under the field. Always
+     rendered, even when empty, so the rows stay aligned. */
+  .was { font-size:11px; color:var(--muted); text-align:center;
+         margin-top:4px; min-height:14px; font-variant-numeric:tabular-nums; }
+  @media (max-width: 430px) {
+    .step button { flex:0 0 26px; width:26px; font-size:17px; }
+    .step input { font-size:17px; min-width:34px; }
+    .set { grid-template-columns:14px 1fr 1fr 1fr; gap:5px; }
+    .set.bw { grid-template-columns:14px 1fr 1fr; }
+  }
+  .step { display:flex; align-items:center; border:1px solid var(--line);
+          border-radius:10px; overflow:hidden; background:#fff; }
+  .step button { flex:0 0 30px; width:30px; height:46px; border:0; background:#f4f3f0;
+                 font-size:19px; line-height:1; cursor:pointer; color:var(--ink); padding:0; }
+  .step button:active { background:#e6e5e1; }
+  .step input { flex:1 1 auto; width:100%; min-width:38px; border:0; background:transparent;
+                text-align:center; font-size:18px; font-family:inherit; padding:0 1px;
+                font-variant-numeric:tabular-nums; color:var(--ink); }
+  .step input:focus { outline:0; background:#fffbe8; }
+  .tools { display:flex; justify-content:space-between; gap:8px; margin:4px 0 16px; }
+  .plain { padding:10px 14px; border:1px solid var(--line); background:#fff;
+           border-radius:9px; font-size:15px; cursor:pointer; color:var(--ink); }
+  .report { border:1px solid var(--line); border-radius:12px; background:#fff;
+            padding:14px; margin:4px 0 16px; }
+
+  /* The report reads as cards rather than a table: a number you can see from
+     arm's length, a label under it, grouped by what the numbers are about. */
+  .rep { margin:4px 0 16px; }
+  .rep h2 { font-size:19px; margin:0 0 2px; }
+  .rep .sub { font-size:13px; color:var(--muted); margin-bottom:12px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px;
+          padding:14px; margin-bottom:12px; }
+  .card > h3 { font-size:13px; text-transform:uppercase; letter-spacing:0.06em;
+               color:var(--muted); margin:0 0 10px; font-weight:600; }
+  .tiles { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .tile { background:#faf9f7; border-radius:10px; padding:10px 8px;
+          text-align:center; }
+  .tile b { display:block; font-size:22px; font-weight:600; line-height:1.2;
+            font-variant-numeric:tabular-nums; }
+  .tile span { font-size:11px; color:var(--muted); text-transform:uppercase;
+               letter-spacing:0.05em; }
+  /* The plot is a box with percentage-placed points over it; the line itself
+     is the only SVG, stretched to fit and told to keep its stroke width. */
+  .chart { position:relative; height:120px; margin:14px 0 0; }
+  .chart svg { position:absolute; inset:0; width:100%; height:100%; }
+  .chart .ln { fill:none; stroke:var(--ok); stroke-width:2;
+               stroke-linejoin:round; stroke-linecap:round; }
+  /* Sessions in the palette's blue, not grey: grey read as a gridline rather
+     than as data. Still thinner than volume, which is the headline. Dashed as
+     well as coloured, so the two are told apart in a greyscale print. */
+  .chart .ln2 { fill:none; stroke:var(--link); stroke-width:1.6;
+                stroke-dasharray:5 3; stroke-linejoin:round; }
+  .pt { position:absolute; transform:translate(-50%, 50%); }
+  .pt i { display:block; width:9px; height:9px; border-radius:50%;
+          background:#fff; border:2px solid var(--ok); }
+  /* Past a dozen or so weeks the markers touch and the line disappears under
+     them, so only the labelled weeks keep one. */
+  .chart.dense .pt:not(.mark) i { display:none; }
+  .pt.now i { background:var(--ok); box-shadow:0 0 0 3px rgba(29,122,79,0.15); }
+  /* freq, not sess: `.sess` is the previous/next session button, and a point
+     wearing that name picked up its border, padding and white background. */
+  .pt.freq i { width:7px; height:7px; background:var(--link);
+               border-color:var(--link); }
+  .pt.freq .pv { bottom:11px; font-size:10px; color:var(--link); }
+  .ky { display:inline-block; width:14px; height:0; vertical-align:3px;
+        margin:0 4px 0 7px; }
+  .ky.vol { border-top:2px solid var(--ok); }
+  .ky.ses { border-top:2px dashed var(--link); }
+  .pv { position:absolute; bottom:15px; left:50%; transform:translateX(-50%);
+        font-size:10px; color:var(--muted); white-space:nowrap;
+        font-variant-numeric:tabular-nums; }
+  /* The end points sit on the chart's edge, so a centred label hangs off it
+     and lands on its own marker. Anchor them inwards instead. */
+  .pt.tail .pv { left:auto; right:-2px; transform:none; }
+  .pt.lead .pv { left:-2px; transform:none; }
+  .pt.now .pv { color:var(--ink); font-weight:600; }
+  .xaxis { position:relative; height:32px; border-top:1px solid var(--line);
+           margin-bottom:8px; }
+  .xl { position:absolute; top:5px; transform:translateX(-50%);
+        font-size:10px; color:var(--muted); text-align:center;
+        white-space:nowrap; }
+  .xl b { display:block; font-weight:500; opacity:0.8; }
+  .xl.now { color:var(--ink); font-weight:600; }
+  .legend { font-size:11px; color:var(--muted); line-height:1.5; }
+  .rep > .legend { margin:-4px 0 10px; }
+
+  /* Day-type cards, each with its own icon and totals. */
+  .daycard { border:1px solid var(--line); border-radius:14px; margin-bottom:12px;
+             overflow:hidden; }
+  .dayhead { display:flex; align-items:center; gap:10px; padding:11px 14px;
+             background:var(--ink); color:#fff; }
+  .dayhead svg { width:20px; height:20px; flex:none; }
+  .dayhead b { font-size:15px; letter-spacing:0.02em; }
+  .dayhead .totals { margin-left:auto; font-size:12px; opacity:0.85;
+                     text-align:right; }
+  .exrow { display:flex; align-items:center; gap:8px; padding:9px 14px;
+           border-top:1px solid var(--line); font-size:14px; }
+  .exrow.pb { background:#f3f9f5; }
+  .exrow .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+               white-space:nowrap; }
+  .exrow .mv { font-variant-numeric:tabular-nums; color:var(--muted);
+               font-size:13px; white-space:nowrap; text-align:right; }
+  .allrow { margin-top:10px; padding-top:8px; border-top:1px solid var(--line);
+            font-size:11px; color:var(--muted); text-align:center; }
+  .exrow.more { color:var(--muted); font-size:12px; font-style:italic; }
+  .exrow .all { display:block; font-style:normal; font-size:11px;
+                opacity:0.75; }
+  .exrow .all::before { content:'all '; }
+  .chip { font-size:12px; font-weight:600; padding:2px 7px; border-radius:20px;
+          white-space:nowrap; }
+  .chip.up { background:#e6f4ec; color:var(--ok); }
+  .chip.down { background:#fbeaea; color:var(--warn); }
+  .chip.flat { background:#f0f0ee; color:var(--muted); }
+
+  /* The report opens over the session rather than pushing it down the page:
+     it is a thing you look at and dismiss, not part of the log. */
+  .repmodal { position:fixed; inset:0; z-index:40; background:rgba(28,28,26,0.45);
+              overflow-y:auto; padding:16px; }
+  .repsheet { background:var(--bg); border-radius:16px; padding:16px;
+              max-width:760px; margin:0 auto 16px; }
+  .repbar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .repbar .go { flex:1; }
+  .repclose { border:1px solid var(--line); background:#fff; border-radius:9px;
+              padding:10px 14px; font-size:15px; cursor:pointer; color:var(--ink); }
+
+  /* Printing is how this becomes a PDF. Everything else gets out of the way,
+     the modal stops being a modal, and colours are kept: browsers drop
+     backgrounds by default, which took the bars, the chips and the dark day
+     headers with them. */
+  @media print {
+    @page { size: letter portrait; margin: 8mm; }
+    .top, .datebar, .sessnav, .days, .tools, .bar, .rail, .pager,
+    .ex, .msg, .addex, .noprint, .repbar { display:none !important; }
+    body { padding:0; }
+    .repmodal { position:static; inset:auto; background:none; padding:0;
+                overflow:visible; }
+    .repsheet { max-width:none; margin:0; padding:0; border-radius:0; }
+    .rep, .card, .daycard, .dayhead, .chart, .pt, .chip, .tile, .exrow {
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    /* Sized to fill one page rather than to survive it: two columns of day
+       cards bought back the room the single column was spilling. */
+    .rep h2 { font-size:18px; }
+    .rep .sub { font-size:11px; margin-bottom:8px; }
+    .card, .daycard { break-inside:avoid; margin-bottom:8px; }
+    .card { padding:11px; }
+    .card > h3 { font-size:11px; margin-bottom:7px; }
+    .tile { padding:8px 5px; }
+    .tile b { font-size:20px; }
+    .tile span { font-size:10px; }
+    .chart { height:88px; }
+    .dayhead { padding:7px 11px; }
+    .dayhead b { font-size:14px; }
+    .dayhead .totals { font-size:10px; }
+    .exrow { padding:5px 11px; font-size:12px; }
+    .exrow .mv { font-size:11px; }
+    .chip { font-size:11px; padding:1px 6px; }
+    /* Paper is wider than a phone. One column of day cards spilled a nearly
+       empty second page; two columns put the same content back on one.
+       Columns rather than a grid: a grid row cannot be broken, so a row too
+       tall for what is left of the page moved whole and left half a page
+       blank. Multicol just keeps filling. */
+    /* Totals and averages side by side: the all-time rows under each cost a
+       page otherwise. One grid row at the top of the page, so nothing has to
+       break across one. */
+    .sumgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px;
+               align-items:start; }
+    .sumgrid .card { margin-bottom:8px; }
+    .allrow { margin-top:7px; padding-top:6px; }
+    .daygrid { column-count:2; column-gap:8px; }
+    .daygrid .daycard { break-inside:avoid; margin:0 0 8px; }
+  }
+  .rlab { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
+  .rrow { display:flex; gap:8px; }
+  .rin { flex:1; min-width:0; padding:10px; font-size:16px; font-family:inherit;
+         border:1px solid var(--line); border-radius:9px; background:#fdfdfc;
+         color:var(--ink); }
+  .report h2 { font-size:16px; margin:0 0 8px; }
+  .report .row { display:flex; gap:8px; margin-top:10px; }
+  .report .row button { flex:1; }
+  .report .totals { font-size:15px; color:var(--ink); margin:6px 0; }
+  .report .hint { font-size:13px; color:var(--muted); margin-top:8px; }
+  .report a.go { display:inline-block; padding:11px 16px; border-radius:9px;
+                 background:var(--ink); color:#fff; text-decoration:none;
+                 font-size:15px; }
+  .addex { width:100%; padding:15px; border:1px dashed var(--line); background:#fff;
+           border-radius:10px; font-size:16px; color:var(--muted); cursor:pointer; }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:12px;
+           padding:14px; margin-bottom:14px; }
+  .panel input { width:100%; padding:12px; font-size:16px; border:1px solid var(--line);
+                 border-radius:9px; font-family:inherit; margin-bottom:10px; }
+  .mini { display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-bottom:12px; }
+  /* Reps or seconds. The Exercises tab decides it for a known name; this is
+     how a new one gets to say so. */
+  .unit { display:flex; gap:0; margin-bottom:12px; border:1px solid var(--line);
+          border-radius:9px; overflow:hidden; }
+  .unit button { flex:1; padding:10px 8px; border:0; background:#fff;
+                 font-size:15px; font-family:inherit; color:var(--muted);
+                 cursor:pointer; }
+  .unit button.on { background:var(--ink); color:#fff; }
+  .unit + .hint { font-size:12px; color:var(--muted); margin:-6px 0 10px; }
+  .mini label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .mini input { margin:0; text-align:center; }
+  .go { flex:1; padding:13px; border:0; background:var(--ink); color:#fff;
+        border-radius:9px; font-size:16px; cursor:pointer; }
+  .cancel { flex:1; padding:13px; border:1px solid var(--line); background:#fff;
+            border-radius:9px; font-size:16px; cursor:pointer; }
+  .danger { padding:8px 14px; border:1px solid var(--line); background:#fff;
+            border-radius:8px; font-size:14px; color:var(--warn); cursor:pointer; }
+  .choice { width:100%; display:flex; justify-content:space-between; align-items:center;
+            gap:12px; padding:15px 16px; margin-bottom:10px; border:1px solid var(--line);
+            background:#fff; border-radius:10px; font-size:16px; font-family:inherit;
+            color:var(--ink); cursor:pointer; text-align:left; }
+  .choice.primary { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .choice em { font-style:normal; font-size:13px; color:var(--muted); flex:0 0 auto; }
+  .choice.primary em { color:#c9c9c4; }
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:5;
+         padding:12px 16px; background:#faf9f7;
+         border-top:1px solid var(--line); font-size:14px; color:var(--muted);
+         display:flex; align-items:center; gap:10px; }
+  .bar span { flex:1; min-width:0; }
+  .saved { color:var(--ok); } .failed { color:var(--warn); }
+  .bar.pending { background:#fff8e6; border-top-color:#e8d9a8; color:#7a5c14; }
+  .retry { flex:0 0 auto; padding:7px 12px; border:1px solid #d8c483; background:#fff;
+           border-radius:8px; font-size:13px; font-family:inherit; color:#7a5c14;
+           cursor:pointer; }
+  .retry[hidden] { display:none; }
+  .msg { padding:16px; color:var(--muted); }
+  /* Whole-session work only: loading a day, or a structural change that
+     rewrites rows. Per-tick saves deliberately stay silent — blocking the
+     form on every increment would make entry feel broken. */
+  .busy { position:relative; pointer-events:none; opacity:0.55;
+          transition:opacity 0.12s ease; }
+  .spinner { display:flex; align-items:center; gap:10px;
+             padding:16px; color:var(--muted); }
+  .spinner::before { content:''; width:15px; height:15px; flex:0 0 15px;
+                     border:2px solid var(--line); border-top-color:var(--muted);
+                     border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner::before { animation-duration:2.4s; }
+  }
+  /* Read-only has to be obvious at a glance: a badge in the flow was easy to
+     scroll past and then wonder why nothing saved. A banner across the top
+     and a border around the whole page cannot be missed. */
+  body.ro { box-shadow:inset 0 0 0 3px var(--link); }
+  .robanner { position:fixed; top:0; left:0; right:0; z-index:30;
+              background:var(--link); color:#fff; font-size:13px;
+              font-weight:600; letter-spacing:0.02em; text-align:center;
+              padding:7px 12px; }
+  body.ro { padding-top:34px; }
+  body.ro .top { top:31px; }
+  .val { display:flex; align-items:center; justify-content:center; height:46px;
+         border:1px solid var(--line); border-radius:10px; background:#fff;
+         font-size:18px; font-variant-numeric:tabular-nums; }
+  .rotext { font-size:15px; color:var(--ink); background:#fdfdfc; padding:10px;
+            border:1px solid var(--line); border-radius:9px; margin-top:4px;
+            white-space:pre-wrap; }
+  .note { width:100%; margin-top:4px; padding:10px; font-family:inherit; font-size:15px;
+          border:1px solid var(--line); border-radius:9px; background:#fdfdfc;
+          resize:vertical; min-height:42px; color:var(--ink); }
+  .note:focus { outline:0; background:#fffbe8; }
+  .lastnote { font-size:13px; color:var(--muted); margin-top:8px; font-style:italic; }
+  .noterow { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .notesave { padding:8px 16px; border:1px solid var(--line); background:#fff;
+              border-radius:8px; font-size:14px; cursor:pointer; color:var(--ink); }
+  .notesave.dirty { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .notestate { font-size:13px; color:var(--muted); }
+</style><body style="background:var(--bg)"><div class="repsheet" style="max-width:400px;margin:0"><div class="rep"><h2>Training report</h2><div class="sub">[Demo] Training - David · 2026-02-16 to 2031-08-15</div><div class="card"><h3>Month by month</h3><div class="chart"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="ln" points="6.0,53.9 18.6,51.2 31.1,46.8 43.7,45.8 56.3,31.0 68.9,6.0 81.4,50.6 94.0,50.0" vector-effect="non-scaling-stroke"/><polyline class="ln2" points="6.0,83.7 18.6,70.0 31.1,73.4 43.7,80.3 56.3,70.0 68.9,73.4 81.4,90.6 94.0,92.3" vector-effect="non-scaling-stroke"/></svg><div class="pt lead mark" style="left:6.0%;bottom:46.1%" title="2026-02: 180 lb over 6 sessions"><span class="pv">180</span><i></i></div><div class="pt freq mark" style="left:6.0%;bottom:16.3%" title="6 sessions"><span class="pv">6</span><i></i></div><div class="pt" style="left:18.6%;bottom:48.8%" title="2026-03: 5,645 lb over 14 sessions"><i></i></div><div class="pt freq" style="left:18.6%;bottom:30.0%" title="14 sessions"><i></i></div><div class="pt mark" style="left:31.1%;bottom:53.2%" title="2026-04: 14,430 lb over 12 sessions"><span class="pv">14k</span><i></i></div><div class="pt freq mark" style="left:31.1%;bottom:26.6%" title="12 sessions"><span class="pv">12</span><i></i></div><div class="pt" style="left:43.7%;bottom:54.2%" title="2026-05: 16,355 lb over 8 sessions"><i></i></div><div class="pt freq" style="left:43.7%;bottom:19.7%" title="8 sessions"><i></i></div><div class="pt mark" style="left:56.3%;bottom:69.0%" title="2026-06: 46,010 lb over 14 sessions"><span class="pv">46k</span><i></i></div><div class="pt freq mark" style="left:56.3%;bottom:30.0%" title="14 sessions"><span class="pv">14</span><i></i></div><div class="pt mark" style="left:68.9%;bottom:94.0%" title="2026-07: 96,025 lb over 12 sessions"><span class="pv">96k</span><i></i></div><div class="pt freq mark" style="left:68.9%;bottom:26.6%" title="12 sessions"><span class="pv">12</span><i></i></div><div class="pt" style="left:81.4%;bottom:49.4%" title="2026-08: 6,773 lb over 2 sessions"><i></i></div><div class="pt freq" style="left:81.4%;bottom:9.4%" title="2 sessions"><i></i></div><div class="pt now tail mark" style="left:94.0%;bottom:50.0%" title="2031-08: 7,910 lb over 1 session"><span class="pv">7.9k</span><i></i></div><div class="pt freq mark" style="left:94.0%;bottom:7.7%" title="1 session"><span class="pv">1</span><i></i></div></div><div class="xaxis"><div class="xl" style="left:6.0%">Feb</div><div class="xl" style="left:31.1%">Apr</div><div class="xl" style="left:56.3%">Jun</div><div class="xl" style="left:68.9%">Jul</div><div class="xl now" style="left:94.0%">Aug</div></div><div class="legend"><span class="ky vol"></span>volume in lb <span class="ky ses"></span>sessions — each against its own high, so the two lines are shapes to compare, not one scale.</div></div><div class="sumgrid"><div class="card"><h3>Totals</h3><div class="tiles"><div class="tile"><b>69</b><span>sessions</span></div><div class="tile"><b>1099</b><span>sets</span></div><div class="tile"><b>193,328</b><span>lb volume</span></div></div><div class="allrow">All time · 69 sessions · 1099 sets · 193,328 lb · since 2026-02-16</div></div><div class="card"><h3>Averages</h3><div class="tiles"><div class="tile"><b>15.9</b><span>sets / session</span></div><div class="tile"><b>44.0</b><span>sets / week</span></div><div class="tile"><b>7,733</b><span>lb / week</span></div></div><div class="allrow">All time · 15.9 sets / session · 44.0 sets / week · 7,733 lb / week</div></div></div><div class="legend">Lightest – heaviest set of the period, with your all-time range under it where it is wider. ★ marks a period that holds your best ever. The pill is first session to last.</div><div class="daygrid"><div class="daycard"><div class="dayhead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="2"/><circle cx="17" cy="7" r="2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg><b>Custom</b><span class="totals">1 session · 9 sets</span></div><div class="exrow"><span class="nm">Farmer Carry</span><span class="mv">40s × 50 – 40s × 50</span><span class="chip flat">—</span></div><div class="exrow"><span class="nm">Plank</span><span class="mv">45s – 45s</span><span class="chip flat">—</span></div><div class="exrow"><span class="nm">Push-Up</span><span class="mv">20 – 20</span><span class="chip flat">—</span></div></div><div class="daycard"><div class="dayhead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v6l-2 9M17 4v6l2 9M7 10h10"/></svg><b>Legs</b><span class="totals">20 sessions · 322 sets · 69,060 lb</span></div><div class="exrow"><span class="nm">Back Squat</span><span class="mv">6 – 6 × 145</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Leg Press</span><span class="mv">12 – 12 × 200</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Lying Leg Curl</span><span class="mv">12 – 12 × 55</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Romanian Deadlift</span><span class="mv">8 – 8 × 105</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Bulgarian Split Squat</span><span class="mv">10 – 36 × 10</span><span class="chip up">▲ +260%</span></div><div class="exrow"><span class="nm">Standing Calf Raise</span><span class="mv">15 × 90 – 15 × 95</span><span class="chip up">▲ +5.6%</span></div></div><div class="daycard"><div class="dayhead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v7M8 10h8M9 10l-2 8M15 10l2 8"/></svg><b>Pull</b><span class="totals">23 sessions · 368 sets · 53,648 lb</span></div><div class="exrow"><span class="nm">Barbell Row</span><span class="mv">8 – 8 × 90</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Face Pull</span><span class="mv">15 – 15 × 27.5</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Lat Pulldown</span><span class="mv">10 – 10 × 75</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Seated Cable Row</span><span class="mv">10 – 12 × 65</span><span class="chip up">▲ +20%</span></div><div class="exrow"><span class="nm">Dumbbell Bicep Curl</span><span class="mv">12 – 12 × 20</span><span class="chip flat">▬ 0%</span></div><div class="exrow"><span class="nm">Pull-Up</span><span class="mv">8 – 8</span><span class="chip flat">—</span></div></div><div class="daycard"><div class="dayhead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M19 12h2M6 9v6M18 9v6M6 12h12"/></svg><b>Push</b><span class="totals">25 sessions · 400 sets · 70,622 lb</span></div><div class="exrow"><span class="nm">Barbell Bench Press</span><span class="mv">8 – 11 × 107.5</span><span class="chip up">▲ +37.5%</span></div><div class="exrow"><span class="nm">Incline Dumbbell Press</span><span class="mv">10 – 12 × 35</span><span class="chip up">▲ +20%</span></div><div class="exrow"><span class="nm">Lateral Raise</span><span class="mv">15 – 51 × 20</span><span class="chip up">▲ +13.3%</span></div><div class="exrow"><span class="nm">Seated Dumbbell Shoulder Press</span><span class="mv">10 – 14 × 20</span><span class="chip up">▲ +40%</span></div><div class="exrow"><span class="nm">Triceps Rope Pushdown</span><span class="mv">12 – 14 × 30</span><span class="chip up">▲ +16.7%</span></div></div></div></div></div>
