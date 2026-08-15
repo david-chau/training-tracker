@@ -1094,6 +1094,27 @@ test('past half a year the line is drawn by month, not by week', () => {
   assert.deepStrictEqual(total, [30000, 60], 'every week is still counted');
 });
 
+test('rolling the chart up to months does not turn weeks into months', () => {
+  // 40 weeks of 30 sets is 30 sets a week. Dividing by the ten points the
+  // chart happens to draw would call it 120, which is a different sport.
+  const weeks = [];
+  const d = new Date('2025-11-03');
+  for (let i = 0; i < 40; i++) {
+    weeks.push({ week: d.toISOString().slice(0, 10), sessions: 3, sets: 30,
+                 volume: 10000, change: 1 });
+    d.setDate(d.getDate() + 7);
+  }
+  const el = G.reportView({
+    name: 'Log', from: '2025-11-03', to: '2026-08-11', period: '',
+    sessions: 120, sets: 1200, volume: 400000, weeks: weeks, lifetime: null,
+    exercises: []
+  });
+  const html = el.innerHTML;
+  assert.match(html, /<h3>Month by month<\/h3>/, 'the chart is by month');
+  assert.match(html, /<b>30\.0<\/b><span>sets \/ week/, 'the average is by week');
+  assert.match(html, /<b>10,000<\/b><span>lb \/ week/, 'and so is the volume');
+});
+
 test('a year of weeks does not crowd its last label off the axis', () => {
   const weeks = [];
   const d = new Date('2025-09-01');

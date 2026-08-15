@@ -945,9 +945,12 @@ function reportView(res) {
   el.className = 'rep';
   el.id = 'reportview';
 
-  var weeks = byMonth(res.weeks || []);
-  var monthly = !!(weeks[0] && weeks[0].rolled);
-  var peak = weeks.reduce(function (n, w) { return Math.max(n, w.volume); }, 1);
+  // `weeks` stays weeks: the chart may roll up to months, but sets per week
+  // divided by ten months reads as 173 sets a week, which nobody does.
+  var weeks = res.weeks || [];
+  var series = byMonth(weeks);
+  var monthly = !!(series[0] && series[0].rolled);
+  var peak = series.reduce(function (n, w) { return Math.max(n, w.volume); }, 1);
   var perSession = res.sessions ? res.sets / res.sessions : 0;
   var perWeek = weeks.length ? res.sets / weeks.length : 0;
 
@@ -961,9 +964,9 @@ function reportView(res) {
   // and how hard — and the answers diverge, which is the interesting part.
   html += '<div class="card"><h3>' +
           (monthly ? 'Month by month' : 'Week by week') + '</h3>';
-  if (weeks.length) {
+  if (series.length) {
     var x = function (i) {
-      return weeks.length === 1 ? 50 : 6 + (i / (weeks.length - 1)) * 88;
+      return series.length === 1 ? 50 : 6 + (i / (series.length - 1)) * 88;
     };
     // Stacked bands rather than one plot area: on a good week both series sit
     // near their own maximum, and sharing the height put a session marker
@@ -985,10 +988,10 @@ function reportView(res) {
     // can be labelled without the labels landing on each other, and past a
     // point the markers themselves have to go — at 50 weeks they merge into a
     // string of beads with the line hidden underneath.
-    var last = weeks.length - 1;
-    var every = Math.ceil(weeks.length / 7);
+    var last = series.length - 1;
+    var every = Math.ceil(series.length / 7);
     var peakAt = weeks.reduce(function (best, w, i) {
-      return w.volume > weeks[best].volume ? i : best;
+      return w.volume > series[best].volume ? i : best;
     }, 0);
 
     var keep = {};
@@ -1003,18 +1006,18 @@ function reportView(res) {
       return Math.abs(x(peakAt) - x(Number(n))) >= 10;
     })) keep[peakAt] = true;
     var labelled = function (i) { return !!keep[i]; };
-    var dense = weeks.length > 14;
+    var dense = series.length > 14;
 
     html += '<div class="chart' + (dense ? ' dense' : '') + '">' +
       '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
-      (weeks.length > 1
+      (series.length > 1
         ? '<polyline class="ln" points="' + pts + '" ' +
           'vector-effect="non-scaling-stroke"/>' +
           '<polyline class="ln2" points="' + line(ys, 'sessions') + '" ' +
           'vector-effect="non-scaling-stroke"/>'
         : '') +
       '</svg>';
-    weeks.forEach(function (w, i) {
+    series.forEach(function (w, i) {
       html += '<div class="pt' + (i === last ? ' now' : '') +
         (labelled(i) ? ' on' : '') +
         '" style="left:' + x(i).toFixed(1) + '%;bottom:' +
@@ -1030,7 +1033,7 @@ function reportView(res) {
         '<i></i></div>';
     });
     html += '</div><div class="xaxis">';
-    weeks.forEach(function (w, i) {
+    series.forEach(function (w, i) {
       if (!labelled(i)) return;
       html += '<div class="xl' + (i === last ? ' now' : '') +
         '" style="left:' + x(i).toFixed(1) + '%">' + esc(w.label) +
