@@ -1,4 +1,4 @@
-# Training tracker
+# Training Tracker
 
 A workout log that runs on Google Apps Script over a Google Sheet — free, no
 server, and the sheet stays the source of truth.

@@ -3,7 +3,7 @@ title: Home
 nav_order: 1
 ---
 
-# Training tracker
+# Training Tracker
 
 A workout log that runs inside Google Sheets. Nothing to install, nothing to
 pay for, no account to create beyond the Google account you already have.
