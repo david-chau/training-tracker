@@ -123,8 +123,17 @@ test.describe('admin link', () => {
 
     const modal = app.locator('.repmodal');
     await expect(modal).toBeVisible({ timeout: 120_000 });
-    await expect(modal.locator('.rep .sub')).toContainText('2026-08-11');
     await expect(modal.locator('.rep .sub')).not.toContainText('everything logged');
+
+    // The subtitle names the first and last dates actually logged inside the
+    // window, so assert they fall in it rather than pinning what the demo
+    // happens to hold — which is what broke when the demo was reseeded.
+    const sub = await modal.locator('.rep .sub').textContent();
+    const [from, to] = sub.match(/\d{4}-\d{2}-\d{2}/g) || [];
+    expect(from >= '2026-08-01' && from <= '2026-08-11', 
+      'period starts inside the range, got ' + from).toBeTruthy();
+    expect(to >= from && to <= '2026-08-11',
+      'and ends inside it, got ' + to).toBeTruthy();
 
     // The point of a bounded period: the totals say what the log holds too.
     await expect(modal.locator('.allrow').first()).toContainText(/All time · \d+ sessions/);
