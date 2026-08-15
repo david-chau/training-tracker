@@ -209,7 +209,7 @@ function showSidebar() {
 // buttons that always answer "nothing logged".
 function getBootstrap(k) {
   const canEdit = String(k) === editKey();
-  const rows = allRows();
+  const rows = logIndexRows();
   const logged = rows.map(function (r) { return String(r[COL.day]).trim(); });
 
   let days = dedupe(logged).filter(Boolean);
@@ -236,6 +236,7 @@ function getBootstrap(k) {
 
   // If something is already logged for today, the app opens straight into it
   // rather than asking which day type you meant.
+  const cat = exerciseCatalogue();
   const today = dateKey(new Date());
   const openToday = dedupe(rows
     .filter(function (r) { return dateKey(r[COL.date]) === today; })
@@ -248,11 +249,11 @@ function getBootstrap(k) {
     days: days,
     sessions: sessions,
     openDay: openToday,
-    exercises: exerciseList(),
-    images: exerciseImages(),
-    videos: exerciseVideos(),
-    noWeight: noWeightNames(),
-    timed: timedNames(),
+    exercises: cat.list,
+    images: cat.images,
+    videos: cat.videos,
+    noWeight: cat.noWeight,
+    timed: cat.timed,
     name: logName(),
     // Only for whoever can edit — a viewer has no access to the spreadsheet
     // itself, so the link would only ever land them on a request-access page.
@@ -310,6 +311,27 @@ function noWeightLookup() {
 }
 
 // Names from the Exercises tab, for the autocomplete list.
+// Everything getBootstrap needs off the Exercises tab, from ONE read of it.
+// The five helpers below each re-read the sheet, which was five round trips
+// inside a single bootstrap — most of what the "Loading Web App…" screen was
+// waiting for. They stay, because other callers want one map at a time.
+function exerciseCatalogue(rows) {
+  rows = rows || exerciseRows();
+  const names = [], images = {}, videos = {}, noWeight = {}, timed = {};
+  rows.forEach(function (r) {
+    const name = String(r[0]).trim();
+    names.push(name);
+    const img = String(r[3] || '').trim();
+    const vid = String(r[5] || '').trim();
+    if (/^https?:\/\//i.test(img)) images[name] = img;
+    if (/^https?:\/\//i.test(vid)) videos[name] = vid;
+    if (isYes(r[4])) noWeight[name] = true;
+    if (isYes(r[6])) timed[name] = true;
+  });
+  return { list: dedupe(names).sort(), images: images, videos: videos,
+           noWeight: noWeight, timed: timed };
+}
+
 function exerciseList() {
   return dedupe(exerciseRows().map(function (r) { return String(r[0]).trim(); })).sort();
 }
@@ -354,6 +376,17 @@ function widen(sheet) {
     sheet.getRange(1, WIDTH).setValue(HEADERS[WIDTH - 1]);
   }
   return sheet;
+}
+
+// Date, day and exercise only. getBootstrap wants the day types, which dates
+// hold a session, and whether today has one — none of which need reps, weight,
+// RPE or notes. Ten columns of a thousand-row log is most of a megabyte to
+// move; three is not.
+function logIndexRows() {
+  const sheet = logSheet();
+  if (sheet.getLastRow() < 2) return [];
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues()
+    .filter(function (r) { return r[COL.date] && r[COL.exercise]; });
 }
 
 function allRows() {

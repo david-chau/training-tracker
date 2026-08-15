@@ -621,6 +621,34 @@ test('the report can start from a date', () => {
   assert.ok(out.lifetime.weeks >= 2, 'over the weeks it actually spans');
 });
 
+test('one read of the Exercises tab gives what five helpers gave', () => {
+  // getBootstrap used to call exerciseList, exerciseImages, exerciseVideos,
+  // noWeightNames and timedNames, each re-reading the sheet. This returns the
+  // same five things from one read, and "the same" has to stay true.
+  const rows = [
+    ['Barbell Bench Press', 'chest', 'push', 'https://i/bench.gif', '', 'https://v/bench', ''],
+    ['Pull-Up', 'back', 'pull', '', 'yes', '', ''],
+    ['Plank', 'core', 'hold', '', 'yes', 'https://v/plank', 'yes'],
+    ['Farmer Carry', 'core', 'carry', '', '', '', 'yes'],
+    ['Barbell Bench Press', 'chest', 'push', '', '', '', ''],   // a duplicate
+    ['Sketchy', 'x', 'y', 'javascript:alert(1)', '', 'ftp://nope', '']
+  ];
+  const cat = sandbox.exerciseCatalogue(rows);
+
+  assert.deepStrictEqual(plain(cat.list),
+    ['Barbell Bench Press', 'Farmer Carry', 'Plank', 'Pull-Up', 'Sketchy'],
+    'deduped and sorted, as the autocomplete expects');
+  assert.strictEqual(cat.images['Barbell Bench Press'], 'https://i/bench.gif');
+  assert.strictEqual(cat.videos['Plank'], 'https://v/plank');
+  // Both URL columns are http(s)-guarded, and that guard has to survive.
+  assert.ok(!('Sketchy' in cat.images), 'javascript: is not an image');
+  assert.ok(!('Sketchy' in cat.videos), 'ftp: is not a video');
+  assert.deepStrictEqual(plain(Object.keys(cat.noWeight).sort()),
+    ['Plank', 'Pull-Up']);
+  assert.deepStrictEqual(plain(Object.keys(cat.timed).sort()),
+    ['Farmer Carry', 'Plank']);
+});
+
 test('the report is readable without a key, and writes nothing', () => {
   // The one function the bridge can reach that does not assert: it aggregates
   // rows a viewer can already page through, and returns them. If it ever

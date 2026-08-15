@@ -88,7 +88,9 @@ const DRY = process.argv.includes('--dry');
 // message. Waiting on the spinner instead races with it never appearing.
 async function rendered(app) {
   await app.locator('.ex, .choice, .msg, .addex').first()
-    .waitFor({ state: 'visible', timeout: 45_000 });
+    // Generous: every call rescans the whole Log, so this gets slower as the
+    // demo grows. 45s was not enough once it held six months.
+    .waitFor({ state: 'visible', timeout: 120_000 });
 }
 
 async function addExercise(app, [name, sets, amount, weight]) {
@@ -175,7 +177,9 @@ async function buildSession(app, session) {
   // them before asking which — count() does not wait, so asking too early
   // reads "no chooser" when the truth is "not yet".
   await app.locator('.choice, .addex').first()
-    .waitFor({ state: 'visible', timeout: 45_000 });
+    // Generous: every call rescans the whole Log, so this gets slower as the
+    // demo grows. 45s was not enough once it held six months.
+    .waitFor({ state: 'visible', timeout: 120_000 });
 
   if (await app.locator('.choice').count()) {
     await app.locator('.choice', { hasText: 'Empty' }).click();
