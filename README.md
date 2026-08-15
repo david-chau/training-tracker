@@ -26,6 +26,9 @@ trainer who records your sessions.
 
 ## Working on the code
 
-[DEVELOPMENT.md](DEVELOPMENT.md) covers the local loop: the template build,
-the tests, the end-to-end suite, and
-[regenerating this demo](DEVELOPMENT.md#the-demo-data).
+- **[Architecture →](https://david-chau.github.io/training-tracker/architecture.html)**
+  — how it is put together and why: the sheet as the database, the write queue
+  that survives gym wifi, the report, archiving, and how read-only is enforced.
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** — the local loop: building the template,
+  the tests, the end-to-end suite, and
+  [regenerating this demo](DEVELOPMENT.md#the-demo-data).
