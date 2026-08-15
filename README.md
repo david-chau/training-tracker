@@ -11,13 +11,7 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-One exercise on screen at a time, last week's numbers under each field, and
-every tap read back out of the spreadsheet before it counts as saved.
-
 **[Open the live demo →](https://script.google.com/macros/s/AKfycbxdLep_VYq7ZnH6yGTcM_UzKGZWp7t5jYmtz84GnSGAWTpuydB7OsHtC6-rtqqHaFhIYQ/exec)**  ·  **[The sheet behind it →](https://docs.google.com/spreadsheets/d/1_xVY-Ha2tO6oNJ_I-BWMPHeAT4BM2ww-aGzm7jnab1Y/edit?usp=sharing)**  ·  **[Set it up →](https://david-chau.github.io/training-tracker/setup.html)**  ·  **[Documentation →](https://david-chau.github.io/training-tracker/)**
-
-Both are read-only, and hold about six months of seeded training — the
-[home page](https://david-chau.github.io/training-tracker/#try-the-read-only-demo) says what to look at.
 
 ## What it looks like
 
