@@ -113,6 +113,7 @@ when a wrong zone would file a session under the previous day.
 
 | Field | Set to | Why |
 |---|---|---|
+| Description | **Training log** | Anything you like — it is how you pick this deployment out later in *Manage deployments*, which is where you go to publish a new version |
 | Execute as | **Me** | The app edits *your* sheet on everyone's behalf, so nobody else needs access to it |
 | Who has access | **Anyone** | Links open without signing in. What they can *do* is decided by the key in the URL |
 
