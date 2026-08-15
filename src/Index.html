@@ -259,7 +259,7 @@
           background:#fff; border:2px solid var(--ok); }
   /* Past a dozen or so weeks the markers touch and the line disappears under
      them, so only the labelled weeks keep one. */
-  .chart.dense .pt:not(.on) i { display:none; }
+  .chart.dense .pt:not(.mark) i { display:none; }
   .pt.now i { background:var(--ok); box-shadow:0 0 0 3px rgba(29,122,79,0.15); }
   /* freq, not sess: `.sess` is the previous/next session button, and a point
      wearing that name picked up its border, padding and white background. */
@@ -273,6 +273,10 @@
   .pv { position:absolute; bottom:15px; left:50%; transform:translateX(-50%);
         font-size:10px; color:var(--muted); white-space:nowrap;
         font-variant-numeric:tabular-nums; }
+  /* The end points sit on the chart's edge, so a centred label hangs off it
+     and lands on its own marker. Anchor them inwards instead. */
+  .pt.tail .pv { left:auto; right:-2px; transform:none; }
+  .pt.lead .pv { left:-2px; transform:none; }
   .pt.now .pv { color:var(--ink); font-weight:600; }
   .xaxis { position:relative; height:32px; border-top:1px solid var(--line);
            margin-bottom:8px; }
@@ -407,8 +411,6 @@
             border-radius:9px; font-size:16px; cursor:pointer; }
   .danger { padding:8px 14px; border:1px solid var(--line); background:#fff;
             border-radius:8px; font-size:14px; color:var(--warn); cursor:pointer; }
-  .start { width:100%; padding:16px; border:0; background:var(--ink); color:#fff;
-           border-radius:10px; font-size:17px; cursor:pointer; }
   .choice { width:100%; display:flex; justify-content:space-between; align-items:center;
             gap:12px; padding:15px 16px; margin-bottom:10px; border:1px solid var(--line);
             background:#fff; border-radius:10px; font-size:16px; font-family:inherit;
@@ -1018,14 +1020,14 @@ function reportView(res) {
         : '') +
       '</svg>';
     series.forEach(function (w, i) {
-      html += '<div class="pt' + (i === last ? ' now' : '') +
-        (labelled(i) ? ' on' : '') +
+      html += '<div class="pt' + (i === last ? ' now tail' : '') +
+        (i === 0 ? ' lead' : '') + (labelled(i) ? ' mark' : '') +
         '" style="left:' + x(i).toFixed(1) + '%;bottom:' +
         y(w.volume).toFixed(1) + '%" title="' + esc(w.week) + ': ' +
         commas(w.volume) + ' lb over ' + plural(w.sessions, 'session') + '">' +
         (labelled(i) ? '<span class="pv">' + short(w.volume) + '</span>' : '') +
         '<i></i></div>';
-      html += '<div class="pt freq' + (labelled(i) ? ' on' : '') +
+      html += '<div class="pt freq' + (labelled(i) ? ' mark' : '') +
         '" style="left:' + x(i).toFixed(1) +
         '%;bottom:' + ys(w.sessions).toFixed(1) + '%" title="' +
         plural(w.sessions, 'session') + '">' +

@@ -959,7 +959,9 @@ test('the report draws as cards, with an icon per day type', () => {
   assert.match(html, /chip up/, 'a rise is a green chip');
   assert.match(html, /★ Barbell Bench Press/, 'a best ever is starred');
   assert.match(html, /66,948/, 'volume is grouped in thousands');
-  assert.match(html, /class="pt now on"/, 'the newest week is picked out');
+  assert.match(html, /class="pt now tail mark"/, 'the newest week is picked out');
+  // Both ends sit on the chart's edge, where a centred label overhangs it.
+  assert.match(html, /class="pt lead mark"/, 'and the oldest is anchored too');
   assert.match(html, /<polyline class="ln"/, 'the weeks are joined into a line');
   assert.match(html, /class="pv">34k</, 'every point says what it is worth');
   assert.match(html, /<polyline class="ln2"/, 'sessions are a second line');
@@ -978,17 +980,47 @@ test('the report draws as cards, with an icon per day type', () => {
   // name the app already styles: `.bar` is the fixed status bar, so chart bars
   // went position:fixed and vanished from print; `.sess` is the previous/next
   // session button, so session markers grew its border and background.
-  const owned = ['bar', 'sess', 'set', 'ex', 'nav', 'go', 'choice', 'fld',
-                 'val', 'step', 'msg', 'rail', 'pager', 'days', 'tools', 'top',
-                 'datebar', 'sessnav', 'cnt', 'meta', 'hint', 'report', 'row',
-                 'retry', 'saved', 'failed', 'mini', 'addex', 'prtag'];
+  // Read out of the app's own markup rather than kept by hand: the hand-kept
+  // version missed `.bar`, then `.sess`, then `.start` — each time the report
+  // silently inherited a button's or a status bar's styling.
+  // Every class the app puts on an element, from anywhere except the report's
+  // own renderer: static markup, `className =`, `classList.add`, and markup
+  // built inside the script — which is where `.start` lives, and why reading
+  // the file's markup alone missed it and a chart point came out looking like
+  // the black Start session button.
+  const file = fs.readFileSync(path.join(__dirname, '..', 'src', 'Index.html'), 'utf8');
+  // The report's renderers sit together, from tile() to the end of
+  // reportView(); everything else in the file is the app.
+  const at = file.indexOf('function tile(');
+  const ends = file.indexOf('function showReportView(');
+  assert.ok(at > 0 && ends > at, 'found the report renderers');
+  const appCode = file.slice(0, at) + file.slice(ends);
+  const owned = new Set();
+  for (const m of appCode.matchAll(/class="([^"]+)"/g)) {
+    m[1].split(/\s+/).forEach(c => c && owned.add(c));
+  }
+  for (const m of appCode.matchAll(/\.className\s*=\s*'([^']+)'/g)) {
+    m[1].split(/\s+/).forEach(c => c && owned.add(c));
+  }
+  for (const m of appCode.matchAll(/classList\.(?:add|toggle)\('([^']+)'/g)) {
+    owned.add(m[1]);
+  }
+  assert.ok(owned.size > 50, 'found the app classes to compare against');
   const used = new Set();
   for (const m of html.matchAll(/class="([^"]+)"/g)) {
     m[1].split(/\s+/).forEach(c => used.add(c));
   }
-  const clash = owned.filter(c => used.has(c));
+  const clash = [...owned].filter(c => used.has(c));
   assert.deepStrictEqual(clash, [],
     'the report is wearing a class the app already styles');
+
+  // This sees classes the app puts on elements, not rules that exist without
+  // one. `.start` was styled and applied nowhere, so nothing could have found
+  // it by reading the code — a chart point took its black button styling and
+  // the only way to notice was to look at the picture. It has been deleted.
+  assert.ok(!/^\s*\.start[ ,{.:]/m.test(
+    fs.readFileSync(path.join(__dirname, '..', 'src', 'Index.html'), 'utf8')),
+    'dead style rules are traps for the next class name');
 });
 
 test('a sheet name cannot inject markup into the report', () => {
