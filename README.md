@@ -11,13 +11,22 @@ Every log has an **admin link** (edits) and a **viewer link** (read-only,
 enforced server-side). Hold the admin link yourself, or hand it to a personal
 trainer who records your sessions.
 
-**[Documentation home →](https://david-chau.github.io/training-tracker/)**
-
 <img src="docs/img/clip-tour.gif" width="320"
      alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise">
 
 One exercise on screen at a time, last week's numbers under each field, and
 every tap read back out of the spreadsheet before it counts as saved.
+
+**[Open the live demo →](https://script.google.com/macros/s/AKfycbxdLep_VYq7ZnH6yGTcM_UzKGZWp7t5jYmtz84GnSGAWTpuydB7OsHtC6-rtqqHaFhIYQ/exec)**  ·  **[Documentation →](https://david-chau.github.io/training-tracker/)**
+
+## What it looks like
+
+| | |
+|:---:|:---:|
+| <img src="docs/img/clip-start.gif" width="260" alt="Picking a day type and starting a session from last week's numbers"> | <img src="docs/img/clip-logging.gif" width="260" alt="Stepping reps and weight with the plus and minus buttons, and the status bar confirming the save"> |
+| **Start from last week** — pick a day, and the session arrives filled in and nudged up. [More →](https://david-chau.github.io/training-tracker/admin.html#2-start-it) | **Log without typing** — every number is a − / + button, read back out of the sheet before it counts. [More →](https://david-chau.github.io/training-tracker/admin.html#3-train-and-adjust) |
+| <img src="docs/img/clip-superset.gif" width="260" alt="Pairing two exercises into a superset, which then renders as one card round by round"> | <img src="docs/img/clip-records.gif" width="260" alt="A set beating a previous best, marked with a star as the number is typed"> |
+| **Supersets** — pair two exercises and they become one card, laid out round by round. [More →](https://david-chau.github.io/training-tracker/admin.html#supersets) | **Personal bests** — worked out from the log and starred on the card as you train. [More →](https://david-chau.github.io/training-tracker/records.html) |
 
 Ask it for a report over any period and it draws one — volume and sessions
 week by week, or month by month once you ask for more than half a year, with

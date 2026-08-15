@@ -16,6 +16,15 @@ proposes slightly more.
      alt="Starting a Push session from last week, stepping reps and weight up, and moving on to the next exercise"
      class="shot">
 
+## What it looks like
+
+| | |
+|:---:|:---:|
+| <img src="{{ site.baseurl }}/img/clip-start.gif" loading="lazy" class="shot shot--grid" alt="Picking a day type and starting a session from last week's numbers"> | <img src="{{ site.baseurl }}/img/clip-logging.gif" loading="lazy" class="shot shot--grid" alt="Stepping reps and weight with the plus and minus buttons, and the status bar confirming the save"> |
+| **Start from last week** — pick a day, and the session arrives filled in and nudged up. [More →](admin.html#2-start-it) | **Log without typing** — every number is a − / + button, read back out of the sheet before it counts. [More →](admin.html#3-train-and-adjust) |
+| <img src="{{ site.baseurl }}/img/clip-superset.gif" loading="lazy" class="shot shot--grid" alt="Pairing two exercises into a superset, which then renders as one card round by round"> | <img src="{{ site.baseurl }}/img/clip-records.gif" loading="lazy" class="shot shot--grid" alt="A set beating a previous best, marked with a star as the number is typed"> |
+| **Supersets** — pair two exercises and they become one card, laid out round by round. [More →](admin.html#supersets) | **Personal bests** — worked out from the log and starred on the card as you train. [More →](records.html) |
+
 Ask for a report over any period and it draws one, in the app, ready to print.
 
 <img src="{{ site.baseurl }}/img/report-top.png" loading="lazy"

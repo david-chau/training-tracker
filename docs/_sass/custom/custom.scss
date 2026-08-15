@@ -18,6 +18,13 @@
   max-width: 100%;
 }
 
+// Two clips side by side, in a table cell rather than down the page. The
+// margin belongs to a standalone screenshot; in a cell it just pads the row.
+.shot--grid {
+  margin: 0 auto;
+  max-width: 260px;
+}
+
 // The app is light whatever the docs are set to, so its screenshots stay
 // light. Rounding them stops them reading as a bright rectangle dropped onto
 // a dark page.
