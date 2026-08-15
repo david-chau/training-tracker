@@ -628,6 +628,31 @@ Records are worked out from what is left, so bests set in the archived period
 stop showing in the app. The archive keeps its own `Records` tab, so they are
 not lost — just no longer live.
 
+### History costs speed
+
+Every page load reads the whole `Log`. That is what makes the app simple —
+there is no index, no cache and nothing to get out of step with the sheet —
+and it is also why a long log is a slow one.
+
+Measured on the demo log, three cold loads each:
+
+| Log size | Opening the app | Loading a session | Building the report |
+|---|---|---|---|
+| ~230 rows (a month) | ~7s | ~3s | ~4s |
+| ~1,800 rows (ten months) | ~15s | ~19s | ~10s |
+
+Nineteen seconds to open a session is the number that matters, because that
+is the one you wait for standing at a machine with your rest timer running.
+
+So: keep the recent months in the sheet and put the rest somewhere else. Six
+months is a reasonable place to start — enough that the report has a year's
+shape to draw and every exercise has history behind it, short enough that the
+app stays quick.
+
+Nothing is lost by archiving. The rows move to another spreadsheet in your
+Drive, which opens like any other and holds its own copy of the records from
+that period.
+
 ### Archiving on a schedule
 
 **Training → Archive automatically…** turns the same thing into a weekly job.

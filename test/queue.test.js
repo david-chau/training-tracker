@@ -1113,6 +1113,26 @@ test('rolling the chart up to months does not turn weeks into months', () => {
   assert.match(html, /<h3>Month by month<\/h3>/, 'the chart is by month');
   assert.match(html, /<b>30\.0<\/b><span>sets \/ week/, 'the average is by week');
   assert.match(html, /<b>10,000<\/b><span>lb \/ week/, 'and so is the volume');
+
+  // The lines and the markers have to be plotting the same thing. Once they
+  // were not: the polylines kept every weekly value while the markers moved
+  // to monthly ones, so the chart drew 40 points' worth of line under 10
+  // points' worth of dots and looked like static.
+  const markers = (html.match(/class="pt(?! freq)[^"]*"/g) || []).length;
+  const line = html.match(/class="ln" points="([^"]+)"/);
+  assert.ok(line, 'there is a volume line');
+  assert.strictEqual(line[1].trim().split(/\s+/).length, markers,
+    'the line has a point per marker');
+
+  const sessionLine = html.match(/class="ln2" points="([^"]+)"/);
+  assert.strictEqual(sessionLine[1].trim().split(/\s+/).length, markers,
+    'and so does the sessions line');
+  // Everything inside the box: a scale taken from the wrong array put the
+  // session markers above the chart entirely.
+  [...html.matchAll(/bottom:([\d.]+)%/g)].forEach(m => {
+    const at = Number(m[1]);
+    assert.ok(at >= 0 && at <= 100, 'a point sits at ' + at + '% of the chart');
+  });
 });
 
 test('a year of weeks does not crowd its last label off the axis', () => {

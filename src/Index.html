@@ -973,12 +973,12 @@ function reportView(res) {
     // straight through a volume label. Volume takes the top half, sessions the
     // bottom quarter, and neither can reach the other.
     var y = function (v) { return 46 + (peak ? v / peak : 0) * 48; };
-    var peakS = weeks.reduce(function (n, w) {
+    var peakS = series.reduce(function (n, w) {
       return Math.max(n, w.sessions || 0);
     }, 1);
     var ys = function (n) { return 6 + (n / peakS) * 24; };
     var line = function (fn, key) {
-      return weeks.map(function (w, i) {
+      return series.map(function (w, i) {
         return x(i).toFixed(1) + ',' + (100 - fn(w[key])).toFixed(1);
       }).join(' ');
     };
@@ -990,7 +990,7 @@ function reportView(res) {
     // string of beads with the line hidden underneath.
     var last = series.length - 1;
     var every = Math.ceil(series.length / 7);
-    var peakAt = weeks.reduce(function (best, w, i) {
+    var peakAt = series.reduce(function (best, w, i) {
       return w.volume > series[best].volume ? i : best;
     }, 0);
 
