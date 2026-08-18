@@ -670,6 +670,36 @@ test('one read of the Exercises tab gives what five helpers gave', () => {
     ['Farmer Carry', 'Plank']);
 });
 
+test('reordering a session moves whole exercises, sets and all', () => {
+  const rows = [
+    row('2026-08-10', 'Legs', 'Back Squat', 1, 6, 135),
+    row('2026-08-10', 'Legs', 'Back Squat', 2, 6, 135),
+    row('2026-08-10', 'Legs', 'Leg Press', 1, 12, 180),
+    row('2026-08-10', 'Legs', 'RDL', 1, 8, 95),
+    row('2026-08-10', 'Legs', 'RDL', 2, 8, 95)
+  ];
+  const out = sandbox.reorderRows(rows, ['RDL', 'Back Squat', 'Leg Press']);
+
+  assert.deepStrictEqual(
+    plain(out.map(r => r[2] + ' ' + r[3])),
+    ['RDL 1', 'RDL 2', 'Back Squat 1', 'Back Squat 2', 'Leg Press 1'],
+    'each exercise moves as a block, its sets in order');
+  assert.strictEqual(out.length, rows.length, 'nothing is lost');
+});
+
+test('an exercise the caller forgot to mention keeps its place', () => {
+  // The page sends the order it is showing. If the two ever disagree — an
+  // exercise added on another device, say — dropping it would delete work.
+  const rows = [
+    row('2026-08-10', 'Push', 'Bench', 1, 8, 100),
+    row('2026-08-10', 'Push', 'Fly', 1, 12, 30),
+    row('2026-08-10', 'Push', 'Dip', 1, 10, 0)
+  ];
+  const out = sandbox.reorderRows(rows, ['Fly', 'Bench']);
+  assert.deepStrictEqual(plain(out.map(r => r[2])), ['Fly', 'Bench', 'Dip'],
+    'the unmentioned one is still there, at the end');
+});
+
 test('the report is readable without a key, and writes nothing', () => {
   // The one function the bridge can reach that does not assert: it aggregates
   // rows a viewer can already page through, and returns them. If it ever
@@ -744,6 +774,7 @@ test('writing functions refuse a wrong key', () => {
     writeArchive: k => sandbox.writeArchive(k, 'x', []),
     generateInto: k => sandbox.generateInto(k, 'Push', '2026-08-01', [], 'auto'),
     rememberExercise: k => sandbox.rememberExercise(k, 'Bench', false, false),
+    reorderSession: k => sandbox.reorderSession(k, 'Push', '2026-08-10', []),
     // Archiving deletes rows, and the scheduled one does it unattended.
     runArchive: k => sandbox.runArchive(k, '2026-01-01'),
     putSetting: k => sandbox.putSetting(k, 'archive_after_months', '999'),

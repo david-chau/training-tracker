@@ -554,6 +554,22 @@ weights at 0 on purpose.
 
 ---
 
+### Putting the exercises in order
+
+The list above the card is the running order. **Drag one along it** to move an
+exercise — press, move, let go — the way you would drag a row up a
+spreadsheet. A superset moves as one thing.
+
+The new order is written to the sheet, so it is the order the session opens in
+next time, and the order next week's session is built in. Tapping an exercise
+still jumps to it; the drag only starts once you have actually moved.
+
+{: .note }
+Like adding an exercise or changing a set count, this shuffles rows about, so
+it waits until anything you have typed has finished saving.
+
+---
+
 ### A note for the whole session
 
 Under the exercises there is a **Session note** — how the session went, what

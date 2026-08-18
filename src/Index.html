@@ -118,6 +118,9 @@
               padding:8px 10px; border:1px solid transparent; border-radius:9px;
               background:transparent; font-size:14px; color:var(--muted);
               text-align:left; cursor:pointer; }
+  .rail.dragging { touch-action:none; }
+  .railitem.dragging { opacity:0.75; transform:scale(1.03);
+                       box-shadow:0 4px 14px rgba(0,0,0,0.18); }
   .railitem.on { background:#fff; border-color:var(--line); color:var(--ink);
                  font-weight:600; }
   .railno { flex:none; width:20px; height:20px; border-radius:50%;
@@ -1506,6 +1509,9 @@ function render(res) {
     if (!groups[s.exercise]) { groups[s.exercise] = []; order.push(s.exercise); }
     groups[s.exercise].push(s);
   });
+  // What the sheet currently holds, so a drag that ends where it started
+  // costs nothing.
+  S.order = order.slice();
 
   noteSession(S.date, S.day, !!(res.sets && res.sets.length));
   markDay();
@@ -1605,6 +1611,8 @@ function rail(pages) {
     n.textContent = (i + 1);
     b.appendChild(n);
 
+    b.dataset.names = page.names.join('\u0000');
+
     var label = document.createElement('span');
     label.className = 'raillabel';
     label.textContent = page.names.join(' + ');
@@ -1617,10 +1625,105 @@ function rail(pages) {
       b.appendChild(tag);
     }
 
-    b.onclick = function () { showPage(i); };
+    b.onclick = function () { if (!b.dataset.dragged) showPage(i); };
+    if (CAN_EDIT && pages.length > 1) dragToOrder(b, box);
     box.appendChild(b);
   });
   return box;
+}
+
+// Drag an exercise up or down the list, the way you would drag a row in a
+// spreadsheet — which is what this app replaced, and what people already know.
+//
+// Pointer events rather than HTML5 drag-and-drop: that API does not exist on
+// touch, and this is used on a tablet with a finger or a pencil. A drag only
+// starts after the pointer has moved a few pixels, so a tap still switches
+// page; `dragged` is what tells the click handler to stay out of the way.
+function dragToOrder(item, box) {
+  var from = null;
+
+  item.addEventListener('pointerdown', function (e) {
+    if (e.button) return;                       // right-click, and the like
+    from = { x: e.clientX, y: e.clientY, on: false };
+    delete item.dataset.dragged;
+  });
+
+  item.addEventListener('pointermove', function (e) {
+    if (!from) return;
+
+    if (!from.on) {
+      if (Math.abs(e.clientX - from.x) + Math.abs(e.clientY - from.y) < 8) return;
+      from.on = true;
+      item.dataset.dragged = '1';
+      item.classList.add('dragging');
+      item.setPointerCapture(e.pointerId);
+      // Without this the browser scrolls the page instead of following the
+      // finger, and the list runs away underneath the drag.
+      box.classList.add('dragging');
+    }
+
+    // Whatever is under the pointer decides where this lands. elementFromPoint
+    // rather than arithmetic, because the rail wraps onto several lines on a
+    // narrow screen and its items are not the same width.
+    item.style.pointerEvents = 'none';
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    item.style.pointerEvents = '';
+    var target = under && under.closest && under.closest('.railitem');
+    if (!target || target === item || target.parentNode !== box) return;
+
+    var items = [].slice.call(box.children);
+    var moved = items.indexOf(item) < items.indexOf(target);
+    box.insertBefore(item, moved ? target.nextSibling : target);
+  });
+
+  function drop(e) {
+    if (!from) return;
+    var was = from.on;
+    from = null;
+    item.classList.remove('dragging');
+    box.classList.remove('dragging');
+    if (e && e.pointerId !== undefined && item.hasPointerCapture &&
+        item.hasPointerCapture(e.pointerId)) {
+      item.releasePointerCapture(e.pointerId);
+    }
+    // The click that follows the drop must not also switch page. Clear the
+    // flag after it has fired.
+    if (was) setTimeout(function () { delete item.dataset.dragged; }, 0);
+    if (was) commitOrder(box);
+  }
+
+  item.addEventListener('pointerup', drop);
+  item.addEventListener('pointercancel', drop);
+}
+
+// The rail is the order. Read it off the DOM and tell the server, unless the
+// drag put everything back where it started.
+function commitOrder(box) {
+  var names = [].slice.call(box.children).map(function (b) {
+    return b.dataset.names || '';
+  }).filter(Boolean);
+  var flat = [];
+  names.forEach(function (n) { flat = flat.concat(n.split('\u0000')); });
+
+  if (flat.join('|') === (S.order || []).join('|')) return;
+  if (blockedByQueue()) { load(); return; }     // rows are about to move
+
+  S.working = true;
+  paint();
+  flash('Reordering…', false);
+  google.script.run
+    .withSuccessHandler(function (res) {
+      S.working = false;
+      S.order = flat;
+      render(res);
+      flash('Order saved', true);
+    })
+    .withFailureHandler(function (e) {
+      S.working = false;
+      flash('Could not reorder: ' + why(e), false, true);
+      load();
+    })
+    .reorderSession(KEY, S.day, S.date, flat);
 }
 
 function paintRail() {

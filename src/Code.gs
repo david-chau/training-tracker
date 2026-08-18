@@ -1479,6 +1479,64 @@ function nextGroup(rows, dayType, dayKey) {
 // Put these exercises in one superset, or take them out of one when `names`
 // holds a single exercise or `label` is ''. Every row of each named exercise
 // is written, so set counts can differ between the two halves.
+// Reordering a session, the way you would drag a row up a spreadsheet.
+//
+// Pure, so the arrangement can be tested without a sheet: hand it the
+// session's rows and the order its exercises should be in, and it hands back
+// the same rows rearranged. An exercise the caller does not mention keeps its
+// place at the end rather than vanishing.
+function reorderRows(rows, names) {
+  const byName = {};
+  const seen = [];
+  rows.forEach(function (r) {
+    const name = String(r[COL.exercise]).trim();
+    if (!byName[name]) { byName[name] = []; seen.push(name); }
+    byName[name].push(r);
+  });
+
+  const wanted = [];
+  (names || []).forEach(function (n) {
+    const name = String(n).trim();
+    if (byName[name] && wanted.indexOf(name) === -1) wanted.push(name);
+  });
+  seen.forEach(function (name) {
+    if (wanted.indexOf(name) === -1) wanted.push(name);
+  });
+
+  let out = [];
+  wanted.forEach(function (name) { out = out.concat(byName[name]); });
+  return out;
+}
+
+// The rows of one session are usually next to each other but need not be:
+// adding an exercise appends at the bottom, so another day logged in between
+// splits them. So the values are written back into the rows the session
+// already occupies, in runs, rather than into one block.
+function reorderSession(k, dayType, dayKey, names) {
+  assertEdit(k);
+  const sheet = logSheet();
+  const mine = allRows().filter(function (r) {
+    return dateKey(r[COL.date]) === dayKey && sameDay(r[COL.day], dayType);
+  });
+  if (mine.length < 2) return loadSession(dayType, dayKey, false, k);
+
+  const out = reorderRows(mine, names);
+  const at = mine.map(function (r) { return r.sheetRow; })
+    .sort(function (a, b) { return a - b; });
+
+  let i = 0;
+  while (i < at.length) {
+    let j = i;
+    while (j + 1 < at.length && at[j + 1] === at[j] + 1) j++;
+    const block = out.slice(i, j + 1).map(function (r) { return r.slice(0, WIDTH); });
+    sheet.getRange(at[i], 1, block.length, WIDTH).setValues(block);
+    i = j + 1;
+  }
+
+  SpreadsheetApp.flush();
+  return loadSession(dayType, dayKey, false, k);
+}
+
 function setGroup(k, dayType, dayKey, names, label) {
   assertEdit(k);
   const wanted = (names || []).map(function (n) { return String(n).trim(); })

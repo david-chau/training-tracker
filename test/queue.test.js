@@ -16,6 +16,9 @@ const assert = require('assert');
 function node() {
   const n = {
     style: {}, className: '', textContent: '', innerHTML: '', value: '',
+    // Real elements have one, and the rail keeps what each item stands for
+    // in it — a stub without it throws on assignment rather than on read.
+    dataset: {},
     hidden: false, rows: 0, placeholder: '', type: '', inputMode: '',
     disabled: false, title: '', href: '', target: '', rel: '', alt: '',
     loading: '', src: '',
@@ -164,6 +167,47 @@ test('repeated taps on one set collapse to a single queued write', () => {
   assert.strictEqual(it.weight, 25);
   assert.strictEqual(it.date, '2026-08-09');
 });
+
+test('dragging an exercise to a new place tells the server the new order', () => {
+  const sent = [];
+  const realRun = sandbox.google.script.run;
+  sandbox.google.script.run = {
+    withSuccessHandler() { return this; },
+    withFailureHandler() { return this; },
+    reorderSession(key, day, date, names) { sent.push({ key, day, date, names }); }
+  };
+
+  // A rail as the DOM would hold it after a drag: three items, moved about.
+  const box = { children: [
+    { dataset: { names: 'Leg Press' } },
+    { dataset: { names: 'Back Squat' } },
+    { dataset: { names: 'Dead Bug\u0000Battle Ropes' } }   // a superset
+  ] };
+  S_order(['Back Squat', 'Leg Press', 'Dead Bug', 'Battle Ropes']);
+  G.commitOrder(box);
+
+  assert.strictEqual(sent.length, 1, 'one call');
+  // Joined, because arrays built inside the vm carry that realm's prototype
+  // and deepStrictEqual counts that as a difference.
+  assert.strictEqual(sent[0].names.join('|'),
+    'Leg Press|Back Squat|Dead Bug|Battle Ropes',
+    'a superset travels as its members, in order');
+  assert.strictEqual(sent[0].key, 'testkey', 'with the edit key');
+
+  // Dropping something back where it came from is not a write. Clear the
+  // in-flight flag first, or the structural guard refuses it for its own
+  // reasons and this proves nothing.
+  sent.length = 0;
+  G.S.working = false;
+  S_order(['Leg Press', 'Back Squat', 'Dead Bug', 'Battle Ropes']);
+  G.commitOrder(box);
+  assert.strictEqual(sent.length, 0, 'an unchanged order is left alone');
+
+  sandbox.google.script.run = realRun;
+  G.S.working = false;
+});
+
+function S_order(list) { G.S.order = list; }
 
 test('a session note queues, dedupes and survives a reload', () => {
   // One note for the whole session, keyed by day and date — not by exercise,

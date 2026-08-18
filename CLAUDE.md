@@ -199,6 +199,26 @@ this into building the current page on demand. Cards hold live values,
 throws those away. A superset renders round by round (set 1 of each, then set
 2), which is the order it is performed in.
 
+## Dragging exercises into order
+
+`reorderRows(rows, names)` is pure and testable; `reorderSession(k, …)` does
+the sheet half and returns a fresh `loadSession`. An exercise the page does
+not mention keeps its place at the end rather than disappearing — the page
+sends what it is showing, and if the two ever disagree, dropping the
+difference would delete work.
+
+**The rows of a session need not be contiguous.** Adding an exercise appends
+at the bottom, so another day logged in between splits them. Values are
+written back into the rows the session already occupies, in runs, never as
+one block.
+
+The rail drags with pointer events, not HTML5 drag-and-drop, which does not
+exist on touch — this is used on a tablet with a finger or a pencil. A drag
+starts only after 8px of movement so a tap still switches page, and
+`dataset.dragged` keeps the click that follows a drop from doing both.
+Reordering moves rows, so it is blocked while the queue is non-empty, like
+every other structural write.
+
 ## Traps already hit — don't reintroduce
 
 - **Writes appearing to succeed but not landing.** Apps Script batches
