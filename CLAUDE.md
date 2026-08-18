@@ -101,8 +101,11 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 │                generation, G pairs rows into a superset. Ships 5 exercises
 │                / 16 sets per day (~1hr), one "no" row per day, and one
 │                paired accessory on Push, all as worked examples.
-├── Settings   — key | value | help. pr_rep_targets, pr_metrics. Missing
-│                keys fall back to DEFAULTS in Code.gs.
+├── Settings   — key | value | help. pr_rep_targets, pr_metrics,
+│                archive_after_months. Missing keys fall back to DEFAULTS.
+├── Sessions   — date | day | note. One note per session, not per set. Made
+│                on demand (`sessionSheet(true)`), so live sheets get it
+│                without a migration. NOT in the shipped template.
 └── Records    — DERIVED OUTPUT. Rewritten wholesale; never a source.
 
 Apps Script project (bound to the sheet)
@@ -212,7 +215,14 @@ throws those away. A superset renders round by round (set 1 of each, then set
   eating the width. Buttons are fixed-width with a `min-width` floor on the
   input. Test any stepper change at 390px wide.
 - **Notes losing text on blur.** Now saves three ways: explicit button,
-  1.5s debounce while typing, and blur.
+  1.5s debounce while typing, and blur. The session note (`dayNoteField`)
+  works the same way and queues as `kind: 'day'`; it is keyed by day+date
+  rather than by row, because it is not in the `Log` at all.
+- **The status bar is a floating toast, not an edge-anchored strip.** Flush to
+  the bottom it sits under whatever the system floats there — on an iPad with
+  a pencil, the handwriting palette hides it completely, and this bar is where
+  "did my set save" is answered. `--barlift` tracks the visual viewport so a
+  keyboard or palette pushes it up.
 - **`lastByExercise()` returns values, not a string.** The browser renders
   last time under each field (`was 12`), so it needs `{reps, weight, rpe}`
   per set. Don't fold it back into one line.

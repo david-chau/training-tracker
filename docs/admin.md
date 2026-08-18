@@ -554,6 +554,19 @@ weights at 0 on purpose.
 
 ---
 
+### A note for the whole session
+
+Under the exercises there is a **Session note** — how the session went, what
+to change next time, which is the thing a paper log keeps at the bottom of the
+page. It saves the same three ways as an exercise note: the **Save note**
+button, a pause in typing, or tapping away.
+
+It is stored on its own `Sessions` tab — date, day, note — rather than on the
+`Log`, which holds one row per set. The tab appears the first time you write
+one.
+
+---
+
 ## Housekeeping
 
 ### A report you can send

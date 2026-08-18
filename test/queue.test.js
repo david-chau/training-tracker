@@ -165,6 +165,28 @@ test('repeated taps on one set collapse to a single queued write', () => {
   assert.strictEqual(it.date, '2026-08-09');
 });
 
+test('a session note queues, dedupes and survives a reload', () => {
+  // One note for the whole session, keyed by day and date — not by exercise,
+  // and not by row, because it does not live in the Log at all.
+  G.queueDayNote('Knee felt off. Do RDL first next week.');
+  G.queueDayNote('Knee felt off. Do RDL first next week, lighter.');
+
+  assert.strictEqual(G.pendCount(), 1, 'the second edit replaces the first');
+  const item = G.PEND.items['d|Push|2026-08-09'];
+  assert.ok(item, 'keyed by day and date');
+  assert.strictEqual(item.kind, 'day', 'and marked so the server can tell');
+  assert.match(item.text, /lighter/, 'holding the latest text');
+
+  G.pendPersistNow();
+  assert.match(store.get('wl.pending.v1'), /lighter/, 'stored like any write');
+});
+
+test('a session note and an exercise note do not collide', () => {
+  G.queueDayNote('Whole session was heavy.');
+  G.queueNote('Barbell Bench Press', 'Elbows tucked.');
+  assert.strictEqual(G.pendCount(), 2, 'two notes, two entries');
+});
+
 test('different rows and notes queue separately', () => {
   G.queueSave(set(14, 10, 20, 8));
   G.queueSave(set(15, 10, 20, 8));

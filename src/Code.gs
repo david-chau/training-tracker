@@ -12,6 +12,7 @@ const CFG = {
   exerciseSheet: 'Exercises',
   templateSheet: 'Templates',
   settingsSheet: 'Settings',
+  sessionSheet: 'Sessions',
   recordsSheet: 'Records',
   weightStep: 5,
   repStep: 2,
@@ -510,6 +511,7 @@ function loadSession(dayType, dayKey, create, k, source) {
     priorDate: priorKey,
     lastNotes: lastNotes,
     lastDates: lastDates,
+    dayNote: dayNote(dayType, dayKey),
     records: shown
   };
 }
@@ -1279,6 +1281,9 @@ function saveBatch(k, items) {
       if (it.kind === 'note') {
         return { ok: true, text: writeNote(sheet, it.day, it.date, it.exercise, it.text) };
       }
+      if (it.kind === 'day') {
+        return { ok: true, text: writeDayNote(it.day, it.date, it.text) };
+      }
       return { ok: true, set: writeSet(sheet, it) };
     } catch (err) {
       // Permanent: replaying will not help, so the client drops it and says so.
@@ -1368,6 +1373,59 @@ function setSetCount(k, dayType, dayKey, exercise, count) {
 
 // Notes are per exercise, not per set. Written to every row of that
 // exercise so adding or removing sets never loses the text.
+// A note about the session rather than about one exercise — "do RDL first
+// next week", "knee felt off". It lives on its own tab because the Log is one
+// row per set and everything that reads it drops rows without an exercise;
+// a session note is not a set and has no business pretending to be one.
+//
+// Made when something first needs it, so live sheets get it without a
+// migration and empty logs never grow an unused tab.
+function sessionSheet(make) {
+  const ss = SpreadsheetApp.getActive();
+  let sheet = ss.getSheetByName(CFG.sessionSheet);
+  if (!sheet && make) {
+    sheet = ss.insertSheet(CFG.sessionSheet);
+    sheet.getRange(1, 1, 1, 3).setValues([['Date', 'Day', 'Note']])
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(3, 520);
+  }
+  return sheet || null;
+}
+
+function dayNote(dayType, dayKey) {
+  const sheet = sessionSheet(false);
+  if (!sheet || sheet.getLastRow() < 2) return '';
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+  for (let i = 0; i < rows.length; i++) {
+    if (dateKey(rows[i][0]) === dayKey && sameDay(rows[i][1], dayType)) {
+      return String(rows[i][2] || '');
+    }
+  }
+  return '';
+}
+
+// Upsert, so a session has one note however many times it is edited.
+function writeDayNote(dayType, dayKey, text) {
+  const clean = String(text == null ? '' : text).slice(0, 1000);
+  const sheet = sessionSheet(true);
+  const last = sheet.getLastRow();
+  const rows = last > 1 ? sheet.getRange(2, 1, last - 1, 2).getValues() : [];
+
+  for (let i = 0; i < rows.length; i++) {
+    if (dateKey(rows[i][0]) === dayKey && sameDay(rows[i][1], dayType)) {
+      sheet.getRange(i + 2, 3).setValue(clean);
+      SpreadsheetApp.flush();
+      return clean;
+    }
+  }
+
+  sheet.getRange(last + 1, 1, 1, 3).setValues([[dayKey, dayType, clean]]);
+  sheet.getRange(last + 1, 1).setNumberFormat('yyyy-mm-dd');
+  SpreadsheetApp.flush();
+  return clean;
+}
+
 function writeNote(sheet, dayType, dayKey, exercise, text) {
   const clean = String(text == null ? '' : text).slice(0, 500);
 

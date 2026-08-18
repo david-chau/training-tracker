@@ -11,7 +11,7 @@
   :root { --line:#e3e3e0; --muted:#6b6b66; --ink:#1c1c1a; --ok:#1d7a4f; --warn:#a33;
           --link:#1b5aa0; --bg:#faf9f7; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { font-family:system-ui,-apple-system,sans-serif; margin:0; padding:16px 16px 64px;
+  body { font-family:system-ui,-apple-system,sans-serif; margin:0; padding:16px 16px 84px;
          color:var(--ink); background:var(--bg); font-size:17px; }
   /* Sticky so the log you are in stays visible however far you scroll —
      with one sheet per person, that is the thing worth never losing. The
@@ -418,13 +418,21 @@
   .choice.primary { background:var(--ink); color:#fff; border-color:var(--ink); }
   .choice em { font-style:normal; font-size:13px; color:var(--muted); flex:0 0 auto; }
   .choice.primary em { color:#c9c9c4; }
-  .bar { position:fixed; left:0; right:0; bottom:0; z-index:5;
-         padding:12px 16px; background:#faf9f7;
-         border-top:1px solid var(--line); font-size:14px; color:var(--muted);
-         display:flex; align-items:center; gap:10px; }
+  /* A toast, not an edge-anchored strip. Anchored to the bottom it sat under
+     whatever the system floated there — on an iPad with a pencil, the
+     handwriting palette covers it completely, and the one thing this bar says
+     is whether your set actually saved. `--barlift` is set from the visual
+     viewport when a keyboard or palette shrinks it. */
+  .bar { position:fixed; left:12px; right:12px; z-index:5;
+         bottom:calc(12px + env(safe-area-inset-bottom, 0px) + var(--barlift, 0px));
+         padding:11px 14px; background:#faf9f7; border-radius:12px;
+         border:1px solid var(--line); box-shadow:0 2px 10px rgba(0,0,0,0.10);
+         font-size:14px; color:var(--muted);
+         display:flex; align-items:center; gap:10px;
+         transition:bottom 0.12s ease-out; }
   .bar span { flex:1; min-width:0; }
   .saved { color:var(--ok); } .failed { color:var(--warn); }
-  .bar.pending { background:#fff8e6; border-top-color:#e8d9a8; color:#7a5c14; }
+  .bar.pending { background:#fff8e6; border-color:#e8d9a8; color:#7a5c14; }
   .retry { flex:0 0 auto; padding:7px 12px; border:1px solid #d8c483; background:#fff;
            border-radius:8px; font-size:13px; font-family:inherit; color:#7a5c14;
            cursor:pointer; }
@@ -465,6 +473,9 @@
           resize:vertical; min-height:42px; color:var(--ink); }
   .note:focus { outline:0; background:#fffbe8; }
   .lastnote { font-size:13px; color:var(--muted); margin-top:8px; font-style:italic; }
+  .daynote { background:#fff; border:1px solid var(--line); border-radius:12px;
+             padding:14px; margin-bottom:14px; }
+  .daynote .notelabel { margin-bottom:6px; }
   .noterow { display:flex; align-items:center; gap:8px; margin-top:6px; }
   .notesave { padding:8px 16px; border:1px solid var(--line); background:#fff;
               border-radius:8px; font-size:14px; cursor:pointer; color:var(--ink); }
@@ -1167,6 +1178,31 @@ function showReportView(panel, res) {
   document.body.appendChild(modal);
 }
 
+// Keep the status bar clear of whatever the system has floated over the
+// bottom of the page — the on-screen keyboard, and on an iPad the handwriting
+// palette that appears with a pencil. Both shrink the visual viewport; the
+// layout viewport does not move, so without this the bar sits underneath them.
+//
+// Best-effort by design: no visualViewport, no lift, and the bar is still a
+// toast with a margin rather than flush to the edge.
+(function () {
+  var vv = window.visualViewport;
+  if (!vv) return;
+  var frame = 0;
+  function place() {
+    frame = 0;
+    var hidden = window.innerHeight - (vv.height + vv.offsetTop);
+    // Rounded because iOS reports fractional pixels while scrolling, and a
+    // bar that jitters by half a pixel reads as broken.
+    document.documentElement.style.setProperty(
+      '--barlift', Math.max(0, Math.round(hidden)) + 'px');
+  }
+  function schedule() { if (!frame) frame = requestAnimationFrame(place); }
+  vv.addEventListener('resize', schedule);
+  vv.addEventListener('scroll', schedule);
+  place();
+})();
+
 document.getElementById('dayback').onclick = function () { shiftDay(-1); };
 document.getElementById('dayfwd').onclick = function () { shiftDay(1); };
 document.getElementById('prevsess').onclick = function () { hop(1); };
@@ -1504,6 +1540,7 @@ function render(res) {
   });
 
   if (pages.length > 1) body.appendChild(pager(pages));
+  if (pages.length) body.appendChild(dayNoteField(res.dayNote || ''));
   // The rail only marked the current page when one was tapped, so a freshly
   // loaded session showed every exercise looking equally current.
   paintRail();
@@ -2326,6 +2363,82 @@ function freeGroup(sets) {
   return 'A';
 }
 
+// One note for the whole session — "do RDL first next week", "knee felt off".
+// Sits under the exercise, outside the paged cards, so it is there whichever
+// exercise is on screen. Saves the same three ways as an exercise note: the
+// button, a debounce, and blur.
+function dayNoteField(saved) {
+  var wrap = document.createElement('div');
+  wrap.className = 'daynote';
+
+  var label = document.createElement('div');
+  label.className = 'notelabel';
+  label.textContent = 'Session note';
+  wrap.appendChild(label);
+
+  if (!CAN_EDIT) {
+    var ro = document.createElement('div');
+    ro.className = 'lastnote';
+    ro.textContent = saved || 'None';
+    wrap.appendChild(ro);
+    return wrap;
+  }
+
+  var timer = null;
+  var box = document.createElement('textarea');
+  box.className = 'note';
+  box.rows = 2;
+  box.placeholder = 'How the session went, what to change next time…';
+  box.value = saved;
+  box.setAttribute('aria-label', 'Note for the whole session');
+
+  var row = document.createElement('div');
+  row.className = 'noterow';
+  var btn = document.createElement('button');
+  btn.className = 'notesave';
+  btn.textContent = 'Save note';
+  var state = document.createElement('span');
+  state.className = 'notestate';
+  row.appendChild(btn); row.appendChild(state);
+
+  function dirty() {
+    var d = box.value !== saved;
+    btn.classList.toggle('dirty', d);
+    if (d) state.textContent = 'Unsaved';
+    return d;
+  }
+
+  function commit(silent) {
+    clearTimeout(timer);
+    if (!dirty()) return;
+    saved = box.value;
+    var key = queueDayNote(saved);
+    watch(key, function (result) { state.textContent = result; });
+    btn.classList.remove('dirty');
+    state.textContent = 'Queued';
+    if (!silent) flash('Session note queued', true);
+  }
+
+  // The sidebar steals keyboard focus; the same guard the other inputs carry.
+  box.addEventListener('mousedown', function (e) {
+    e.stopPropagation();
+    window.focus();
+    setTimeout(function () { box.focus(); }, 0);
+  });
+  box.addEventListener('keydown', function (e) { e.stopPropagation(); });
+  box.addEventListener('input', function () {
+    dirty();
+    clearTimeout(timer);
+    timer = setTimeout(function () { commit(true); }, 1500);
+  });
+  box.onblur = function () { commit(true); };
+  btn.onclick = function () { commit(false); };
+
+  wrap.appendChild(box);
+  wrap.appendChild(row);
+  return wrap;
+}
+
 function noteField(name, sets) {
   var wrap = document.createElement('div');
   var saved = (sets[0] && sets[0].note) || '';
@@ -2813,6 +2926,7 @@ var STORAGE = (function () {
 })();
 
 function pendKey(it) {
+  if (it.kind === 'day') return 'd|' + it.day + '|' + it.date;
   return it.kind === 'note'
     ? 'n|' + it.day + '|' + it.date + '|' + it.exercise
     : 's|' + it.row;
@@ -2994,6 +3108,10 @@ function absorbAdd(res) {
   });
 
   if (note) queueNote(add.name, note);
+}
+
+function queueDayNote(text) {
+  return enqueue({ kind: 'day', day: S.day, date: S.date, text: text });
 }
 
 function queueNote(exercise, text) {
