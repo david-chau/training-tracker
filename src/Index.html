@@ -118,7 +118,7 @@
               padding:8px 10px; border:1px solid transparent; border-radius:9px;
               background:transparent; font-size:14px; color:var(--muted);
               text-align:left; cursor:pointer; }
-  .rail.dragging { touch-action:none; }
+  .rail.dragging { touch-action:none; user-select:none; -webkit-user-select:none; }
   .railitem.dragging { opacity:0.75; transform:scale(1.03);
                        box-shadow:0 4px 14px rgba(0,0,0,0.18); }
   .railitem.on { background:#fff; border-color:var(--line); color:var(--ink);
@@ -127,6 +127,11 @@
             background:var(--line); color:var(--ink); font-size:12px;
             line-height:20px; text-align:center; }
   .railitem.on .railno { background:var(--ink); color:#fff; }
+  .draghandle { flex:none; width:24px; height:28px; padding:0; border:0;
+                background:transparent; color:var(--muted); cursor:grab;
+                touch-action:none; user-select:none; -webkit-user-select:none;
+                font-size:20px; line-height:24px; letter-spacing:-3px; }
+  .draghandle:active, .railitem.dragging .draghandle { cursor:grabbing; }
   .raillabel { flex:1; overflow:hidden; text-overflow:ellipsis;
                white-space:nowrap; }
   .railss { flex:none; font-size:11px; text-transform:uppercase;
@@ -1611,6 +1616,14 @@ function rail(pages) {
     n.textContent = (i + 1);
     b.appendChild(n);
 
+    var handle = document.createElement('span');
+    handle.className = 'draghandle';
+    handle.textContent = '\u22ee';
+    handle.setAttribute('aria-label', 'Drag to reorder');
+    handle.title = 'Drag to reorder';
+    handle.onclick = function (e) { e.preventDefault(); e.stopPropagation(); };
+    b.appendChild(handle);
+
     b.dataset.names = page.names.join('\u0000');
 
     var label = document.createElement('span');
@@ -1626,7 +1639,7 @@ function rail(pages) {
     }
 
     b.onclick = function () { if (!b.dataset.dragged) showPage(i); };
-    if (CAN_EDIT && pages.length > 1) dragToOrder(b, box);
+    if (CAN_EDIT && pages.length > 1) dragToOrder(b, box, handle);
     box.appendChild(b);
   });
   return box;
@@ -1639,16 +1652,17 @@ function rail(pages) {
 // touch, and this is used on a tablet with a finger or a pencil. A drag only
 // starts after the pointer has moved a few pixels, so a tap still switches
 // page; `dragged` is what tells the click handler to stay out of the way.
-function dragToOrder(item, box) {
+function dragToOrder(item, box, handle) {
   var from = null;
 
-  item.addEventListener('pointerdown', function (e) {
+  handle.addEventListener('pointerdown', function (e) {
     if (e.button) return;                       // right-click, and the like
+    e.preventDefault();
     from = { x: e.clientX, y: e.clientY, on: false };
     delete item.dataset.dragged;
   });
 
-  item.addEventListener('pointermove', function (e) {
+  handle.addEventListener('pointermove', function (e) {
     if (!from) return;
 
     if (!from.on) {
@@ -1656,7 +1670,7 @@ function dragToOrder(item, box) {
       from.on = true;
       item.dataset.dragged = '1';
       item.classList.add('dragging');
-      item.setPointerCapture(e.pointerId);
+      handle.setPointerCapture(e.pointerId);
       // Without this the browser scrolls the page instead of following the
       // finger, and the list runs away underneath the drag.
       box.classList.add('dragging');
@@ -1682,9 +1696,9 @@ function dragToOrder(item, box) {
     from = null;
     item.classList.remove('dragging');
     box.classList.remove('dragging');
-    if (e && e.pointerId !== undefined && item.hasPointerCapture &&
-        item.hasPointerCapture(e.pointerId)) {
-      item.releasePointerCapture(e.pointerId);
+    if (e && e.pointerId !== undefined && handle.hasPointerCapture &&
+        handle.hasPointerCapture(e.pointerId)) {
+      handle.releasePointerCapture(e.pointerId);
     }
     // The click that follows the drop must not also switch page. Clear the
     // flag after it has fired.
@@ -1692,8 +1706,8 @@ function dragToOrder(item, box) {
     if (was) commitOrder(box);
   }
 
-  item.addEventListener('pointerup', drop);
-  item.addEventListener('pointercancel', drop);
+  handle.addEventListener('pointerup', drop);
+  handle.addEventListener('pointercancel', drop);
 }
 
 // The rail is the order. Read it off the DOM and tell the server, unless the
