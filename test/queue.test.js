@@ -712,6 +712,20 @@ test('a dragged rail item is renumbered and opens its new position', () => {
   assert.strictEqual(box.children[1].children[0].textContent, 2);
 });
 
+test('a drag can target a rail row beyond its immediate neighbour', () => {
+  const rect = (left, top, right, bottom) => ({ left, top, right, bottom });
+  const first = { getBoundingClientRect: () => rect(0, 0, 300, 50) };
+  const second = { getBoundingClientRect: () => rect(0, 60, 300, 110) };
+  const third = { getBoundingClientRect: () => rect(0, 120, 300, 170) };
+  const box = {
+    getBoundingClientRect: () => rect(0, 0, 300, 170),
+    querySelectorAll: () => [first, second, third]
+  };
+
+  assert.strictEqual(G.closestRailItem(box, third, 150, 25), first,
+    'dragging row three over row one skips the middle row');
+});
+
 test('a rendered session marks the current page without being tapped', () => {
   const real = G.paintRail;
   let painted = 0;

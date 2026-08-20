@@ -1678,14 +1678,11 @@ function dragToOrder(item, box, handle) {
       box.classList.add('dragging');
     }
 
-    // Whatever is under the pointer decides where this lands. elementFromPoint
-    // rather than arithmetic, because the rail wraps onto several lines on a
-    // narrow screen and its items are not the same width.
-    item.style.pointerEvents = 'none';
-    var under = document.elementFromPoint(e.clientX, e.clientY);
-    item.style.pointerEvents = '';
-    var target = under && under.closest && under.closest('.railitem');
-    if (!target || target === item || target.parentNode !== box) return;
+    // Pointer capture keeps the handle under the finger, so a DOM hit-test
+    // can keep finding the dragged row instead of the row we crossed. Pick
+    // the closest other rail row from its on-screen bounds instead.
+    var target = closestRailItem(box, item, e.clientX, e.clientY);
+    if (!target) return;
 
     var items = [].slice.call(box.children);
     var moved = items.indexOf(item) < items.indexOf(target);
@@ -1711,6 +1708,22 @@ function dragToOrder(item, box, handle) {
 
   handle.addEventListener('pointerup', drop);
   handle.addEventListener('pointercancel', drop);
+}
+
+function closestRailItem(box, item, x, y) {
+  var outer = box.getBoundingClientRect();
+  if (x < outer.left || x > outer.right || y < outer.top || y > outer.bottom) return null;
+
+  var target = null, distance = Infinity;
+  [].forEach.call(box.querySelectorAll('.railitem'), function (other) {
+    if (other === item) return;
+    var r = other.getBoundingClientRect();
+    var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
+    var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+    var d = dx * dx + dy * dy;
+    if (d < distance) { distance = d; target = other; }
+  });
+  return target;
 }
 
 // The rail is the order. Read it off the DOM and tell the server, unless the
