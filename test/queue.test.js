@@ -587,6 +587,20 @@ test('exercises in one superset share a page, in sheet order', () => {
   assert.strictEqual(pages[2].names[0], 'Plank', 'order is not shuffled');
 });
 
+test('reordering pages keeps a superset together', () => {
+  const squat = { group: '', names: ['Bulgarian Split Squat'] };
+  const pair = { group: 'A', names: ['Dead Bug', 'Battle Ropes'] };
+  const curl = { group: '', names: ['Seated Leg Curl'] };
+  const ordered = G.pagesInOrder(
+    [pair, squat, curl],
+    ['Bulgarian Split Squat', 'Dead Bug', 'Battle Ropes', 'Seated Leg Curl']
+  );
+
+  assert.strictEqual(ordered[0], squat);
+  assert.strictEqual(ordered[1], pair);
+  assert.strictEqual(ordered[2], curl);
+});
+
 test('a superset takes the position of its first member', () => {
   // Pairing something added later must not move the pair to the end.
   const groups = {
@@ -669,6 +683,33 @@ test('the rail marks the page you are on', () => {
   G.paintRail();
   assert.ok(items[1].classes.on, 'the current exercise is lit');
   assert.ok(!items[0].classes.on, 'and only that one');
+});
+
+test('a dragged rail item is renumbered and opens its new position', () => {
+  const pages = [{ group: '', names: ['Bench'] }, { group: '', names: ['Row'] }];
+  const box = G.rail(pages);
+  const moved = box.children[1];
+  box.children.splice(1, 1);
+  box.children.unshift(moved);
+
+  const oldShow = G.showPage;
+  let shown = null;
+  G.showPage = n => { shown = n; };
+  moved.onclick();
+  G.showPage = oldShow;
+  assert.strictEqual(shown, 0, 'tap follows the visual order, not the old index');
+
+  const oldGet = sandbox.document.getElementById;
+  sandbox.document.getElementById = id => id === 'rail' ? box : oldGet(id);
+  box.querySelectorAll = () => box.children;
+  box.children.forEach(item => {
+    item.querySelector = sel => sel === '.railno' ? item.children[0] : null;
+  });
+  G.S.page = 0;
+  G.paintRail();
+  sandbox.document.getElementById = oldGet;
+  assert.strictEqual(box.children[0].children[0].textContent, 1);
+  assert.strictEqual(box.children[1].children[0].textContent, 2);
 });
 
 test('a rendered session marks the current page without being tapped', () => {

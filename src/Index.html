@@ -1638,7 +1638,9 @@ function rail(pages) {
       b.appendChild(tag);
     }
 
-    b.onclick = function () { if (!b.dataset.dragged) showPage(i); };
+    b.onclick = function () {
+      if (!b.dataset.dragged) showPage([].indexOf.call(box.children, b));
+    };
     if (CAN_EDIT && pages.length > 1) dragToOrder(b, box, handle);
     box.appendChild(b);
   });
@@ -1650,8 +1652,8 @@ function rail(pages) {
 //
 // Pointer events rather than HTML5 drag-and-drop: that API does not exist on
 // touch, and this is used on a tablet with a finger or a pencil. A drag only
-// starts after the pointer has moved a few pixels, so a tap still switches
-// page; `dragged` is what tells the click handler to stay out of the way.
+// starts after the pointer has moved a few pixels. The handle keeps dragging
+// separate from tapping an exercise; `dragged` ignores the click after a drop.
 function dragToOrder(item, box, handle) {
   var from = null;
 
@@ -1722,28 +1724,79 @@ function commitOrder(box) {
   if (flat.join('|') === (S.order || []).join('|')) return;
   if (blockedByQueue()) { load(); return; }     // rows are about to move
 
-  S.working = true;
+  // The rail has already moved. Move the live cards to match it now instead
+  // of leaving the screen to disagree with the list while Apps Script writes.
+  syncPageOrder(flat);
+  S.working = 'Reordering';
+  var done = busyGuard('Reordering');
   paint();
   flash('Reordering…', false);
   google.script.run
     .withSuccessHandler(function (res) {
-      S.working = false;
+      done();
+      S.working = null;
       S.order = flat;
       render(res);
       flash('Order saved', true);
     })
     .withFailureHandler(function (e) {
-      S.working = false;
+      done();
+      S.working = null;
       flash('Could not reorder: ' + why(e), false, true);
       load();
     })
     .reorderSession(KEY, S.day, S.date, flat);
 }
 
+// Reorder the existing cards instead of rebuilding them. They hold live
+// fields and queue watchers, so moving their DOM nodes keeps edits intact.
+function syncPageOrder(names) {
+  var before = (S.pages || []).slice();
+  var cards = [].slice.call(document.querySelectorAll('.page'));
+  if (!before.length || cards.length !== before.length) return;
+
+  var active = before[S.page];
+  var pages = pagesInOrder(before, names);
+  var orderedCards = pages.map(function (page) {
+    return cards[before.indexOf(page)];
+  });
+  var after = cards[cards.length - 1].nextSibling;
+  orderedCards.forEach(function (card) {
+    card.parentNode.insertBefore(card, after);
+  });
+
+  S.pages = pages;
+  S.page = Math.max(0, pages.indexOf(active));
+  [].forEach.call(document.querySelectorAll('.page'), function (card, i) {
+    card.style.display = i === S.page ? '' : 'none';
+  });
+  paintRail();
+  paintPager();
+}
+
+// A superset stays one page even though it has more than one exercise name.
+function pagesInOrder(pages, names) {
+  var ordered = [];
+  (names || []).forEach(function (name) {
+    (pages || []).forEach(function (page) {
+      if (page.names.indexOf(name) !== -1 && ordered.indexOf(page) === -1) {
+        ordered.push(page);
+      }
+    });
+  });
+  (pages || []).forEach(function (page) {
+    if (ordered.indexOf(page) === -1) ordered.push(page);
+  });
+  return ordered;
+}
+
 function paintRail() {
   var box = document.getElementById('rail');
   if (!box) return;
   [].forEach.call(box.querySelectorAll('.railitem'), function (b, i) {
+    b.dataset.page = i;
+    var n = b.querySelector('.railno');
+    if (n) n.textContent = i + 1;
     b.classList.toggle('on', i === S.page);
   });
 }
