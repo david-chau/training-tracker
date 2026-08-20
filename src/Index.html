@@ -1690,6 +1690,7 @@ function dragToOrder(item, box, handle) {
     var items = [].slice.call(box.children);
     var moved = items.indexOf(item) < items.indexOf(target);
     box.insertBefore(item, moved ? target.nextSibling : target);
+    renumberRail(box);       // the row moved now, so its number must too
   });
 
   function drop(e) {
@@ -1793,11 +1794,17 @@ function pagesInOrder(pages, names) {
 function paintRail() {
   var box = document.getElementById('rail');
   if (!box) return;
+  renumberRail(box);
+  [].forEach.call(box.querySelectorAll('.railitem'), function (b, i) {
+    b.classList.toggle('on', i === S.page);
+  });
+}
+
+function renumberRail(box) {
   [].forEach.call(box.querySelectorAll('.railitem'), function (b, i) {
     b.dataset.page = i;
     var n = b.querySelector('.railno');
     if (n) n.textContent = i + 1;
-    b.classList.toggle('on', i === S.page);
   });
 }
 
