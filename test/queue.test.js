@@ -126,6 +126,11 @@ function reset() {
   G.PEND.backoff = 1000;
   G.PEND.note = '';
   clearTimeout(G.PEND.timer);
+  clearTimeout(G.ORDER.timer);
+  clearTimeout(G.ORDER.guard);
+  G.ORDER.want = null;
+  G.ORDER.sending = false;
+  G.ORDER.guard = null;
   store.clear();
   outbox = [];
 }
@@ -168,7 +173,7 @@ test('repeated taps on one set collapse to a single queued write', () => {
   assert.strictEqual(it.date, '2026-08-09');
 });
 
-test('dragging an exercise to a new place tells the server the new order', () => {
+test('quick exercise reorders queue one final server order', () => {
   const sent = [];
   const realRun = sandbox.google.script.run;
   sandbox.google.script.run = {
@@ -185,26 +190,44 @@ test('dragging an exercise to a new place tells the server the new order', () =>
   ] };
   S_order(['Back Squat', 'Leg Press', 'Dead Bug', 'Battle Ropes']);
   G.commitOrder(box);
+  assert.strictEqual(sent.length, 0, 'drop is queued so another can follow');
+  assert.strictEqual(G.ORDER.want.join('|'),
+    'Leg Press|Back Squat|Dead Bug|Battle Ropes');
+  assert.strictEqual(sandbox.document.getElementById('barmsg').textContent,
+    'Order queued…', 'status bar shows the deferred save');
+
+  box.children = [box.children[2], box.children[0], box.children[1]];
+  G.commitOrder(box);
+  assert.strictEqual(G.ORDER.want.join('|'),
+    'Dead Bug|Battle Ropes|Leg Press|Back Squat', 'latest quick drop wins');
+
+  clearTimeout(G.ORDER.timer);
+  G.sendOrder();
 
   assert.strictEqual(sent.length, 1, 'one call');
+  assert.strictEqual(sandbox.document.getElementById('barmsg').textContent,
+    'Saving order…', 'status bar shows the server write');
   // Joined, because arrays built inside the vm carry that realm's prototype
   // and deepStrictEqual counts that as a difference.
   assert.strictEqual(sent[0].names.join('|'),
-    'Leg Press|Back Squat|Dead Bug|Battle Ropes',
+    'Dead Bug|Battle Ropes|Leg Press|Back Squat',
     'a superset travels as its members, in order');
   assert.strictEqual(sent[0].key, 'testkey', 'with the edit key');
 
-  // Dropping something back where it came from is not a write. Clear the
-  // in-flight flag first, or the structural guard refuses it for its own
-  // reasons and this proves nothing.
+  clearTimeout(G.ORDER.guard);
+  G.ORDER.want = null;
+  G.ORDER.sending = false;
+  G.S.working = null;
+
+  // Dropping something back where it came from is not queued.
   sent.length = 0;
-  G.S.working = false;
-  S_order(['Leg Press', 'Back Squat', 'Dead Bug', 'Battle Ropes']);
+  S_order(['Dead Bug', 'Battle Ropes', 'Leg Press', 'Back Squat']);
   G.commitOrder(box);
   assert.strictEqual(sent.length, 0, 'an unchanged order is left alone');
+  assert.strictEqual(G.ORDER.want, null);
 
   sandbox.google.script.run = realRun;
-  G.S.working = false;
+  G.S.working = null;
 });
 
 function S_order(list) { G.S.order = list; }
