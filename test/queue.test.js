@@ -182,7 +182,7 @@ test('quick exercise reorders queue one final server order', () => {
     reorderSession(key, day, date, names) { sent.push({ key, day, date, names }); }
   };
 
-  // A rail as the DOM would hold it after a drag: three items, moved about.
+  // A rail as the DOM holds it after a few arrow moves.
   const box = { children: [
     { dataset: { names: 'Leg Press' } },
     { dataset: { names: 'Back Squat' } },
@@ -708,45 +708,44 @@ test('the rail marks the page you are on', () => {
   assert.ok(!items[0].classes.on, 'and only that one');
 });
 
-test('a dragged rail item is renumbered and opens its new position', () => {
+test('move-up renumbers the rail and preserves exercise clicks', () => {
   const pages = [{ group: '', names: ['Bench'] }, { group: '', names: ['Row'] }];
   const box = G.rail(pages);
   const moved = box.children[1];
-  box.children.splice(1, 1);
-  box.children.unshift(moved);
+  box.insertBefore = (child, before) => {
+    box.children.splice(box.children.indexOf(child), 1);
+    box.children.splice(before ? box.children.indexOf(before) : box.children.length, 0, child);
+    return child;
+  };
+  box.querySelectorAll = () => box.children;
+  box.children.forEach(item => {
+    item.querySelector = sel => {
+      if (sel === '.railno') return item.children[0].children[0];
+      if (sel === '.moveup') return item.children[1].children[0];
+      if (sel === '.movedown') return item.children[1].children[1];
+      return null;
+    };
+  });
+
+  G.S.pages = [];
+  G.S.working = null;
+  G.moveRail(moved, box, -1);
+  assert.strictEqual(box.children[0].dataset.names, 'Row', 'up moves exactly one place');
 
   const oldShow = G.showPage;
   let shown = null;
   G.showPage = n => { shown = n; };
-  moved.onclick();
+  moved.children[0].onclick();
   G.showPage = oldShow;
   assert.strictEqual(shown, 0, 'tap follows the visual order, not the old index');
 
-  const oldGet = sandbox.document.getElementById;
-  sandbox.document.getElementById = id => id === 'rail' ? box : oldGet(id);
-  box.querySelectorAll = () => box.children;
-  box.children.forEach(item => {
-    item.querySelector = sel => sel === '.railno' ? item.children[0] : null;
-  });
-  G.S.page = 0;
-  G.paintRail();
-  sandbox.document.getElementById = oldGet;
-  assert.strictEqual(box.children[0].children[0].textContent, 1);
-  assert.strictEqual(box.children[1].children[0].textContent, 2);
-});
-
-test('a drag can target a rail row beyond its immediate neighbour', () => {
-  const rect = (left, top, right, bottom) => ({ left, top, right, bottom });
-  const first = { getBoundingClientRect: () => rect(0, 0, 300, 50) };
-  const second = { getBoundingClientRect: () => rect(0, 60, 300, 110) };
-  const third = { getBoundingClientRect: () => rect(0, 120, 300, 170) };
-  const box = {
-    getBoundingClientRect: () => rect(0, 0, 300, 170),
-    querySelectorAll: () => [first, second, third]
-  };
-
-  assert.strictEqual(G.closestRailItem(box, third, 150, 25), first,
-    'dragging row three over row one skips the middle row');
+  assert.strictEqual(box.children[0].children[0].children[0].textContent, 1);
+  assert.strictEqual(box.children[1].children[0].children[0].textContent, 2);
+  assert.strictEqual(box.children[0].querySelector('.moveup').disabled, true,
+    'top row cannot move farther up');
+  clearTimeout(G.ORDER.timer);
+  G.ORDER.want = null;
+  G.S.working = null;
 });
 
 test('a rendered session marks the current page without being tapped', () => {

@@ -1479,7 +1479,7 @@ function nextGroup(rows, dayType, dayKey) {
 // Put these exercises in one superset, or take them out of one when `names`
 // holds a single exercise or `label` is ''. Every row of each named exercise
 // is written, so set counts can differ between the two halves.
-// Reordering a session, the way you would drag a row up a spreadsheet.
+// Reordering a session from the browser's up/down controls.
 //
 // Pure, so the arrangement can be tested without a sheet: hand it the
 // session's rows and the order its exercises should be in, and it hands back

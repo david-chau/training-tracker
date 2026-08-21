@@ -115,27 +115,27 @@
     .rail .raillabel { max-width:24ch; }
   }
   .railitem { display:flex; align-items:center; gap:8px; width:100%;
-              padding:8px 10px; border:1px solid transparent; border-radius:9px;
-              background:transparent; font-size:14px; color:var(--muted);
-              text-align:left; cursor:pointer; }
-  .rail.dragging { touch-action:none; user-select:none; -webkit-user-select:none; }
-  .railitem.dragging { opacity:0.75; transform:scale(1.03);
-                       box-shadow:0 4px 14px rgba(0,0,0,0.18); }
+              padding:4px 5px 4px 10px; border:1px solid transparent;
+              border-radius:9px; background:transparent; font-size:14px;
+              color:var(--muted); }
   .railitem.on { background:#fff; border-color:var(--line); color:var(--ink);
                  font-weight:600; }
+  .railpick { flex:1; min-width:0; display:flex; align-items:center; gap:8px;
+              padding:6px 0; border:0; background:transparent; color:inherit;
+              font:inherit; font-weight:inherit; text-align:left; cursor:pointer; }
   .railno { flex:none; width:20px; height:20px; border-radius:50%;
             background:var(--line); color:var(--ink); font-size:12px;
             line-height:20px; text-align:center; }
   .railitem.on .railno { background:var(--ink); color:#fff; }
-  .draghandle { flex:none; width:24px; height:28px; padding:0; border:0;
-                background:transparent; color:var(--muted); cursor:grab;
-                touch-action:none; user-select:none; -webkit-user-select:none;
-                font-size:20px; line-height:24px; letter-spacing:-3px; }
-  .draghandle:active, .railitem.dragging .draghandle { cursor:grabbing; }
   .raillabel { flex:1; overflow:hidden; text-overflow:ellipsis;
                white-space:nowrap; }
   .railss { flex:none; font-size:11px; text-transform:uppercase;
             letter-spacing:0.05em; color:var(--muted); }
+  .railmove { flex:none; display:flex; gap:3px; }
+  .railmove button { width:40px; height:40px; padding:0; border:1px solid var(--line);
+                     border-radius:8px; background:#fff; color:var(--ink);
+                     font-size:18px; font-family:inherit; cursor:pointer; }
+  .railmove button:disabled { opacity:0.28; cursor:default; }
   .pager { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
   .pager button { flex:1; padding:13px 8px; border:1px solid var(--line);
                   background:#fff; border-radius:10px; font-size:16px;
@@ -1519,7 +1519,7 @@ function render(res) {
     if (!groups[s.exercise]) { groups[s.exercise] = []; order.push(s.exercise); }
     groups[s.exercise].push(s);
   });
-  // What the sheet currently holds, so a drag that ends where it started
+  // What the sheet currently holds, so moves that restore the original order
   // costs nothing.
   S.order = order.slice();
 
@@ -1612,127 +1612,69 @@ function rail(pages) {
   box.id = 'rail';
 
   pages.forEach(function (page, i) {
-    var b = document.createElement('button');
-    b.className = 'railitem';
-    b.setAttribute('data-page', i);
+    var row = document.createElement('div');
+    row.className = 'railitem';
+    row.setAttribute('data-page', i);
+    row.dataset.names = page.names.join('\u0000');
+
+    var pick = document.createElement('button');
+    pick.className = 'railpick';
+    pick.type = 'button';
 
     var n = document.createElement('span');
     n.className = 'railno';
     n.textContent = (i + 1);
-    b.appendChild(n);
-
-    var handle = document.createElement('span');
-    handle.className = 'draghandle';
-    handle.textContent = '\u22ee';
-    handle.setAttribute('aria-label', 'Drag to reorder');
-    handle.title = 'Drag to reorder';
-    handle.onclick = function (e) { e.preventDefault(); e.stopPropagation(); };
-    b.appendChild(handle);
-
-    b.dataset.names = page.names.join('\u0000');
+    pick.appendChild(n);
 
     var label = document.createElement('span');
     label.className = 'raillabel';
     label.textContent = page.names.join(' + ');
-    b.appendChild(label);
+    pick.appendChild(label);
 
     if (page.group) {
       var tag = document.createElement('span');
       tag.className = 'railss';
       tag.textContent = 'superset';
-      b.appendChild(tag);
+      pick.appendChild(tag);
     }
 
-    b.onclick = function () {
-      if (!b.dataset.dragged) showPage([].indexOf.call(box.children, b));
+    pick.onclick = function () {
+      showPage([].indexOf.call(box.children, row));
     };
-    if (CAN_EDIT && pages.length > 1) dragToOrder(b, box, handle);
-    box.appendChild(b);
+    row.appendChild(pick);
+
+    if (CAN_EDIT && pages.length > 1) {
+      var move = document.createElement('div');
+      move.className = 'railmove';
+      var up = document.createElement('button');
+      up.type = 'button'; up.className = 'moveup'; up.textContent = '↑';
+      up.setAttribute('aria-label', 'Move ' + page.names.join(' and ') + ' up');
+      up.onclick = function () { moveRail(row, box, -1); };
+      var down = document.createElement('button');
+      down.type = 'button'; down.className = 'movedown'; down.textContent = '↓';
+      down.setAttribute('aria-label', 'Move ' + page.names.join(' and ') + ' down');
+      down.onclick = function () { moveRail(row, box, 1); };
+      move.appendChild(up); move.appendChild(down);
+      row.appendChild(move);
+    }
+    box.appendChild(row);
   });
+  renumberRail(box);
   return box;
 }
 
-// Drag an exercise up or down the list, the way you would drag a row in a
-// spreadsheet — which is what this app replaced, and what people already know.
-//
-// Pointer events rather than HTML5 drag-and-drop: that API does not exist on
-// touch, and this is used on a tablet with a finger or a pencil. A drag only
-// starts after the pointer has moved a few pixels. The handle keeps dragging
-// separate from tapping an exercise; `dragged` ignores the click after a drop.
-function dragToOrder(item, box, handle) {
-  var from = null;
-
-  handle.addEventListener('pointerdown', function (e) {
-    if (e.button) return;                       // right-click, and the like
-    e.preventDefault();
-    if (ORDER.sending || (S.working && S.working !== 'Order queued')) {
-      flash(S.working || 'Saving order…', false);
-      return;
-    }
-    from = { x: e.clientX, y: e.clientY, on: false };
-    delete item.dataset.dragged;
-  });
-
-  handle.addEventListener('pointermove', function (e) {
-    if (!from) return;
-
-    if (!from.on) {
-      if (Math.abs(e.clientX - from.x) + Math.abs(e.clientY - from.y) < 8) return;
-      from.on = true;
-      item.dataset.dragged = '1';
-      item.classList.add('dragging');
-      handle.setPointerCapture(e.pointerId);
-      // Without this the browser scrolls the page instead of following the
-      // finger, and the list runs away underneath the drag.
-      box.classList.add('dragging');
-    }
-
-    // Pointer capture keeps the handle under the finger, so a DOM hit-test
-    // can keep finding the dragged row instead of the row we crossed. Pick
-    // the closest other rail row from its on-screen bounds instead.
-    var target = closestRailItem(box, item, e.clientX, e.clientY);
-    if (!target) return;
-
-    var items = [].slice.call(box.children);
-    var moved = items.indexOf(item) < items.indexOf(target);
-    box.insertBefore(item, moved ? target.nextSibling : target);
-    renumberRail(box);       // the row moved now, so its number must too
-  });
-
-  function drop(e) {
-    if (!from) return;
-    var was = from.on;
-    from = null;
-    item.classList.remove('dragging');
-    box.classList.remove('dragging');
-    if (e && e.pointerId !== undefined && handle.hasPointerCapture &&
-        handle.hasPointerCapture(e.pointerId)) {
-      handle.releasePointerCapture(e.pointerId);
-    }
-    // The click that follows the drop must not also switch page. Clear the
-    // flag after it has fired.
-    if (was) setTimeout(function () { delete item.dataset.dragged; }, 0);
-    if (was) commitOrder(box);
+function moveRail(item, box, direction) {
+  if (S.adding || ORDER.sending || (S.working && S.working !== 'Order queued')) {
+    flash(S.working || 'Still saving', false);
+    return;
   }
-
-  handle.addEventListener('pointerup', drop);
-  handle.addEventListener('pointercancel', drop);
-}
-
-function closestRailItem(box, item, x, y) {
-  var outer = box.getBoundingClientRect();
-  if (x < outer.left || x > outer.right || y < outer.top || y > outer.bottom) return null;
-
-  var target = null, distance = Infinity;
-  [].forEach.call(box.querySelectorAll('.railitem'), function (other) {
-    if (other === item) return;
-    var r = other.getBoundingClientRect();
-    var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
-    var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
-    var d = dx * dx + dy * dy;
-    if (d < distance) { distance = d; target = other; }
-  });
-  return target;
+  var items = [].slice.call(box.children);
+  var at = items.indexOf(item), to = at + direction;
+  if (at < 0 || to < 0 || to >= items.length) return;
+  var target = items[to];
+  box.insertBefore(item, direction < 0 ? target : target.nextSibling);
+  renumberRail(box);
+  commitOrder(box);
 }
 
 // The rail is the order. Several quick drops become one server write after
@@ -1763,7 +1705,7 @@ function sendOrder() {
   if (!ORDER.want || ORDER.sending) return;
 
   // Set writes still use physical row numbers. Let those land before moving
-  // rows, then retry the one queued order without making the user drag again.
+  // rows, then retry the one queued order without another arrow tap.
   if (pendCount() || PEND.sending) {
     flush();
     ORDER.timer = setTimeout(sendOrder, 500);
@@ -1774,6 +1716,7 @@ function sendOrder() {
   var flat = ORDER.want.slice();
   ORDER.sending = true;
   S.working = 'Saving order';
+  paintRail();
   paint();
 
   var settled = false;
@@ -1862,6 +1805,10 @@ function renumberRail(box) {
     b.dataset.page = i;
     var n = b.querySelector('.railno');
     if (n) n.textContent = i + 1;
+    var up = b.querySelector('.moveup');
+    var down = b.querySelector('.movedown');
+    if (up) up.disabled = ORDER.sending || i === 0;
+    if (down) down.disabled = ORDER.sending || i === box.children.length - 1;
   });
 }
 
