@@ -250,9 +250,8 @@ be given some.
 {: .note }
 **A name that is not on the list gets added to the `Exercises` tab**, so it
 autocompletes from then on — carrying whatever you picked, so *Seconds* marks
-it `time based` and *Bodyweight* marks it `no weight`. An existing exercise
-keeps what the tab already says about it; the toggles only change this one
-session's rows.
+it `time based` and *Bodyweight* marks it `no weight`. For a known exercise,
+changing either toggle updates that same Exercises-tab setting everywhere.
 
 {: .warning }
 A name is an exercise. `Dead Bug (ss)` is not `Dead Bug` — it gets its own row
@@ -307,9 +306,10 @@ tab against two exercises for the same day. The shipped template pairs
 
 ### Drop sets
 
-Use **Add drop set** below an exercise to append a lighter set performed
-immediately after the one above it. Adjust its weight and reps normally. Add
-again to chain another drop; **Remove drop set** removes the last one.
+Use **Make drop set** above any set after the first to link it to the row above.
+Mark consecutive rows to make a chain; **Unlink** turns that row back into a
+normal set. **Add drop set** below the exercise appends a new lighter row when
+you need one rather than converting an existing set.
 
 Drop sets are stored as `yes` in column **K** of the `Log`. They remain part of
 the same exercise, count toward its records and volume, and carry into a
@@ -375,11 +375,11 @@ tablet and a viewer's phone can disagree.
 Progression is worked out in pounds, so a kg user sees steps of 2.3 kg rather
 than a round 2.5. The generated number is a proposal you overwrite anyway.
 
-### Renaming an exercise
+### Editing an exercise
 
-The **✎** beside an exercise name opens a full-width text box across the top of
-the card. Rename, press Enter, done — no trip to the spreadsheet. Escape
-cancels. Useful when you logged something under a throwaway name mid-session.
+The **✎** beside an exercise name opens a full-width editor across the top of
+the card. Change its name, switch **Reps / Seconds**, or switch **Weighted /
+Bodyweight**, then save — no trip to the spreadsheet.
 
 <img src="{{ site.baseurl }}/img/clip-rename.gif" loading="lazy"
      alt="The pencil beside Lat Pulldown opening a full-width box, the name being retyped as Machine by the window, and the card reloading under the new name"
@@ -390,6 +390,11 @@ It renames **this session only**. The same exercise in earlier sessions keeps
 its old name, deliberately — rewriting history would change what progression
 and records were built from. The new name joins the `Exercises` tab so it
 autocompletes next time.
+
+The two toggles are exercise-wide because they live on the `Exercises` tab.
+Changing Reps/Seconds reinterprets existing numbers without converting them.
+Changing to Bodyweight asks first, then sets this session's weights to zero so
+hidden load cannot carry into next time.
 
 {: .warning }
 A throwaway name like `temp` should be renamed before the next session of that

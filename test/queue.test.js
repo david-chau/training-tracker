@@ -89,6 +89,10 @@ function runner(state) {
     setSetCount(key, day, date, exercise, count, drops) {
       outbox.push(Object.assign({ call: 'setSetCount', exercise, count, drops }, state));
     },
+    renameExercise(key, day, date, from, to, timed, bodyweight) {
+      outbox.push(Object.assign({ call: 'renameExercise', key, day, date,
+        from, to, timed, bodyweight }, state));
+    },
     loadSession(day, date) {
       outbox.push(Object.assign({ call: 'loadSession', day, date }, state));
     },
@@ -501,21 +505,50 @@ test('a card renders for an exercise with no records at all', () => {
 
 test('drop sets append as a lighter chain and remove from the tail', () => {
   G.S.lastRes = { sets: [sample('Bench')] };
-  assert.strictEqual(G.applyResize('Bench', 2, 1), true);
+  assert.strictEqual(G.applyResize('Bench', 2, [2]), true);
   let mine = G.S.lastRes.sets;
   assert.strictEqual(mine[1].drop, true);
   assert.strictEqual(mine[1].weight, 95, 'the first drop starts 5 lb lighter');
 
-  assert.strictEqual(G.applyResize('Bench', 3, 2), true);
+  assert.strictEqual(G.applyResize('Bench', 3, [2, 3]), true);
   mine = G.S.lastRes.sets;
   assert.strictEqual(mine[2].drop, true);
   assert.strictEqual(mine[2].weight, 90, 'a second drop chains from the first');
-  assert.strictEqual(G.trailingDrops(mine), 2);
 
-  assert.strictEqual(G.applyResize('Bench', 2, 1), true);
+  assert.strictEqual(G.applyResize('Bench', 2, [2]), true);
   mine = G.S.lastRes.sets;
   assert.strictEqual(mine.length, 2);
-  assert.strictEqual(G.trailingDrops(mine), 1);
+  assert.strictEqual(mine[1].drop, true);
+});
+
+test('existing rows toggle into a drop chain through the save queue', () => {
+  const second = sample('Bench', { row: 15, set: 2 });
+  const row = G.setRow(second);
+  const toggle = row.children[0];
+
+  assert.match(toggle.textContent, /Make drop set/);
+  toggle.onclick();
+  assert.strictEqual(second.drop, true);
+  assert.ok(row.classes.drop);
+  assert.strictEqual(G.PEND.items['s|15'].drop, true);
+
+  toggle.onclick();
+  assert.strictEqual(second.drop, false);
+  assert.ok(!row.classes.drop);
+  assert.strictEqual(G.PEND.items['s|15'].drop, false, 'unlink replaces the queued link');
+});
+
+test('resizing preserves individually marked rows', () => {
+  G.S.lastRes = { sets: [
+    sample('Bench'),
+    sample('Bench', { row: 15, set: 2, drop: true }),
+    sample('Bench', { row: 16, set: 3, drop: false })
+  ] };
+  G.applyResize('Bench', 4, [2]);
+  const mine = G.S.lastRes.sets;
+  assert.strictEqual(mine[1].drop, true);
+  assert.strictEqual(mine[2].drop, false);
+  assert.strictEqual(mine[3].drop, false);
 });
 
 test('the add-exercise panel builds without throwing', () => {
@@ -816,6 +849,30 @@ test('renaming hides the header of the exercise being renamed', () => {
 
   assert.strictEqual(mine.style.display, 'none', 'the right header goes');
   assert.notStrictEqual(other.style.display, 'none', 'the other one stays');
+});
+
+test('the exercise editor saves seconds and bodyweight flags', () => {
+  const card = sandbox.document.createElement();
+  const head = sandbox.document.createElement();
+  card.appendChild(head);
+  G.S.timed = {};
+  G.S.noWeight = {};
+  G.S.lastRes = { sets: [sample('Battle Ropes', { weight: 0 })] };
+  G.S.adding = null;
+  G.S.working = null;
+
+  const panel = G.renamePanel(card, 'Battle Ropes', head);
+  panel.children[2].children[1].onclick();  // Seconds
+  panel.children[4].children[1].onclick();  // Bodyweight
+  panel.children[6].children[0].onclick();  // Save
+
+  const call = outbox.find(o => o.call === 'renameExercise');
+  assert.ok(call);
+  assert.strictEqual(call.from, 'Battle Ropes');
+  assert.strictEqual(call.to, 'Battle Ropes');
+  assert.strictEqual(call.timed, true);
+  assert.strictEqual(call.bodyweight, true);
+  call.bad({ message: 'test complete' });   // release busyGuard's timer
 });
 
 test('the rail and the pager build for a session', () => {

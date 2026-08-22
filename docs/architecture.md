@@ -161,7 +161,7 @@ derived from it.
               │ exercise │ group │ pattern │ image │ no weight │ video │ time based │
               └──────────┴───────┴─────────┴───────┴───────────┴───────┴────────────┘
               autocomplete source; grows when a new name is used, with
-              E and G set from the add form's two toggles. D optional
+              E and G editable from add form or card pencil. D optional
               picture URL, F a how-to link — both http(s) only. E hides
               the weight field and stops progress() adding load. G makes
               column E of the Log mean seconds
@@ -573,9 +573,10 @@ logged above it.
 
 Drop sets stay inside an exercise rather than becoming another page. Column K
 marks a row that follows the preceding set immediately; consecutive marks are
-a chain. The browser only appends or removes the marked tail, reusing the
-debounced set-count write so structural changes still wait for queued edits.
-`fromHistory()` copies the marker when it generates the next session.
+a chain. Per-row toggles use the normal durable set queue. Appending a new drop
+reuses the debounced set-count write, which preserves existing markers while
+structural changes wait for queued edits. `fromHistory()` copies the marker
+when it generates the next session.
 
 ---
 

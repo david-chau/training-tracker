@@ -94,8 +94,8 @@ Google Sheet (named per person — the name is the app's heading and tab title)
 │                hiding the weight field + a how-to link + the unit for
 │                Log column E. Both URLs http(s)-guarded. Ships 255 rows:
 │                52 unweighted, 23 timed, a video search on every one.
-│                No placeholder row — the name box is free text and ✎
-│                renames in place, so `[Other]` was redundant.
+│                No placeholder row — the name box is free text and ✎ edits
+│                the name and flags in place, so `[Other]` was redundant.
 ├── Templates  — day | exercise | sets | reps | weight | include in new
 │                session | group. Seeds a session; F="no" keeps a row out of
 │                generation, G pairs rows into a superset. Ships 5 exercises
@@ -156,8 +156,9 @@ blank means "off", which is the whole migration.
 
 Column K marks a drop set with `yes`: that row is performed immediately after
 the preceding set of the same exercise. Consecutive marked rows form a chain.
-Blank means a normal set. `setSetCount()` is its only browser-facing writer;
-generated sessions carry the marker forward from history.
+Blank means a normal set. Normal queued set writes toggle it, while
+`setSetCount()` preserves it across row additions/removals; generated sessions
+carry the marker forward from history.
 
 Changing this layout means changing `COL` and `WIDTH` in `Code.gs` **and**
 `LOG` in `data/build_template.py` together.
@@ -298,11 +299,11 @@ because reordering moves rows and set writes are addressed by row number.
   this repo happened to commit. `logTimeZone()` prefers
   `getSpreadsheetTimeZone()` and falls back. An evening session under the
   wrong zone lands on the previous day, silently.
-- **The add form's toggles only write flags for a NEW name.** Reps/Seconds and
-  Weighted/Bodyweight follow the `Exercises` tab for a known exercise and say
-  so; an explicit pick changes this session's rows and, for a name the tab has
-  never seen, the row it appends (`rememberExercise(name, timed, noWeight)`).
-  An existing exercise keeps its flags — fix those on the tab, or rename.
+- **Reps/Seconds and Weighted/Bodyweight are exercise-wide flags.** The add
+  form starts from the `Exercises` tab and an explicit choice updates it. The
+  card's ✎ editor changes the same E/G cells. Bodyweight zeroes this session's
+  weights after confirmation so hidden load cannot leak into progression;
+  changing Reps/Seconds reinterprets history rather than converting values.
 - **Structural writes are optimistic and debounced, not blocking.** Adding an
   exercise, pairing a superset and changing a set count all render at once and
   write behind it (`S.adding`, `S.working`, `S.resize`). Each round trip is
@@ -481,7 +482,7 @@ checks exist for the parts that can run locally, both stdlib-only:
   global, and arrays built in the vm fail `deepStrictEqual` on prototype —
   both worked around at the top of that file.
 - `python3 data/build_template.py` — re-reads the `.xlsx` it just wrote and
-  asserts tab names, the nine `Log` headings, and numeric typing.
+  asserts tab names, the eleven `Log` headings, and numeric typing.
 
 Manual loop:
 

@@ -177,6 +177,8 @@
                    border:1px solid var(--link); border-radius:9px;
                    background:#fff; color:var(--ink); margin-bottom:8px; }
   .namebox .row { display:flex; gap:8px; }
+  .edithint { font-size:12px; color:var(--muted); line-height:1.4;
+              margin:-4px 0 12px; }
   .howto { flex:0 0 auto; font-size:12px; color:var(--muted); text-decoration:none;
            border:1px solid var(--line); border-radius:999px; padding:3px 10px;
            white-space:nowrap; background:#fff; }
@@ -208,15 +210,17 @@
   .set { display:grid; grid-template-columns:18px 1fr 1fr 1fr; gap:6px;
          align-items:end; margin-bottom:14px; position:relative; }
   .set.bw { grid-template-columns:18px 1fr 1fr; }
-  .set.drop { border-left:2px solid var(--link); padding:21px 0 0 7px; }
-  .dropflag { position:absolute; top:0; left:7px; font-size:11px;
-              font-weight:600; color:var(--link); text-transform:uppercase;
-              letter-spacing:0.05em; }
+  .set.candrop { padding-top:23px; }
+  .set.drop { border-left:2px solid var(--link); padding-left:7px; }
+  .dropflag { position:absolute; top:0; left:0; border:0; background:transparent;
+              padding:2px 0; font:inherit; font-size:11px; font-weight:600;
+              color:var(--link); text-transform:uppercase; letter-spacing:0.05em;
+              cursor:pointer; }
+  .set.drop .dropflag { left:7px; }
   .dropctl { display:flex; gap:8px; margin:2px 0 8px; }
-  .dropctl button { flex:1; padding:10px 8px; border:1px solid var(--line);
+  .dropctl button { flex:1; min-width:0; padding:10px 8px; border:1px solid var(--line);
                     background:#fff; border-radius:9px; color:var(--link);
                     font:inherit; font-size:14px; cursor:pointer; }
-  .dropctl .removedrop { color:var(--warn); }
   .n { font-size:14px; color:var(--muted); padding-bottom:28px; }
   .fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
   /* Last week's value for this field, directly under the field. Always
@@ -2086,8 +2090,11 @@ function addExercisePanel(prefill) {
     // A name that is new here is not in the bootstrap lookups yet, so record
     // what the panel was told about it — otherwise the optimistic card would
     // render a timed exercise in reps.
-    if (unit.timed()) S.timed[wanted] = true;
+    var oldTimed = !!S.timed[wanted];
+    var oldBodyweight = !!S.noWeight[wanted];
+    if (unit.timed()) S.timed[wanted] = true; else delete S.timed[wanted];
     if (load.bodyweight()) S.noWeight[wanted] = true;
+    else delete S.noWeight[wanted];
 
     var sets = [];
     for (var i = 1; i <= count; i++) {
@@ -2128,6 +2135,9 @@ function addExercisePanel(prefill) {
       .withFailureHandler(function (e) {
         clearTimeout(guard);
         S.adding = null;
+        if (oldTimed) S.timed[wanted] = true; else delete S.timed[wanted];
+        if (oldBodyweight) S.noWeight[wanted] = true;
+        else delete S.noWeight[wanted];
         el.remove();
         redraw();
         // Put the panel back with what was typed still in it, rather than
@@ -2189,8 +2199,8 @@ function title(name, card, head) {
     var ren = document.createElement('button');
     ren.className = 'rename';
     ren.textContent = '✎';
-    ren.title = 'Rename ' + name;
-    ren.setAttribute('aria-label', 'Rename ' + name);
+    ren.title = 'Edit ' + name;
+    ren.setAttribute('aria-label', 'Edit ' + name);
     ren.onclick = function () { renamePanel(card, name, head); };
     wrap.appendChild(ren);
   }
@@ -2209,9 +2219,33 @@ function title(name, card, head) {
   return wrap;
 }
 
-// Swaps the name for an input in place. Renames only within this session —
-// the same exercise in earlier sessions keeps its name, because rewriting
-// history would change what progression and records were built from.
+function exerciseFlagToggle(leftText, rightText, on) {
+  var row = document.createElement('div');
+  row.className = 'unit';
+  var left = document.createElement('button');
+  var right = document.createElement('button');
+  left.type = right.type = 'button';
+  left.textContent = leftText;
+  right.textContent = rightText;
+  var value = !!on;
+
+  function set(next) {
+    value = !!next;
+    left.classList.toggle('on', !value);
+    right.classList.toggle('on', value);
+    left.setAttribute('aria-pressed', value ? 'false' : 'true');
+    right.setAttribute('aria-pressed', value ? 'true' : 'false');
+  }
+  left.onclick = function () { set(false); };
+  right.onclick = function () { set(true); };
+  row.appendChild(left); row.appendChild(right);
+  row.value = function () { return value; };
+  set(value);
+  return row;
+}
+
+// Edits the current session's name and the exercise-wide unit flags in one
+// round trip. The old name remains untouched in earlier sessions.
 function renamePanel(card, name, head) {
   head = head || card.querySelector('.exhead');
 
@@ -2221,12 +2255,28 @@ function renamePanel(card, name, head) {
   var input = document.createElement('input');
   input.value = name;
   input.setAttribute('list', 'exlist');
-  input.setAttribute('aria-label', 'New name for ' + name);
+  input.setAttribute('aria-label', 'Exercise name');
+
+  var measureLabel = document.createElement('div');
+  measureLabel.className = 'notelabel';
+  measureLabel.textContent = 'Measure';
+  var measure = exerciseFlagToggle('Reps', 'Seconds', isTimed(name));
+
+  var loadLabel = document.createElement('div');
+  loadLabel.className = 'notelabel';
+  loadLabel.textContent = 'Load';
+  var load = exerciseFlagToggle('Weighted', 'Bodyweight',
+    !!(S.noWeight && S.noWeight[name]));
+
+  var help = document.createElement('div');
+  help.className = 'edithint';
+  help.textContent = 'These settings apply to this exercise everywhere. ' +
+    'Existing rep/second values are not converted.';
 
   var row = document.createElement('div');
   row.className = 'row';
   var ok = document.createElement('button');
-  ok.className = 'go'; ok.textContent = 'Rename';
+  ok.className = 'go'; ok.textContent = 'Save';
   var no = document.createElement('button');
   no.className = 'cancel'; no.textContent = 'Cancel';
   row.appendChild(ok); row.appendChild(no);
@@ -2238,24 +2288,42 @@ function renamePanel(card, name, head) {
 
   function commit() {
     var to = input.value.trim();
-    if (!to || to === name) return restore();
+    if (!to) { input.focus(); return; }
+    var timed = measure.value();
+    var bodyweight = load.value();
+    var changed = to !== name || timed !== isTimed(name) ||
+      bodyweight !== !!(S.noWeight && S.noWeight[name]);
+    if (!changed) return restore();
     if (blockedByQueue()) return;
 
+    var hasWeight = ((S.lastRes && S.lastRes.sets) || []).some(function (s) {
+      return s.exercise === name && s.weight > 0;
+    });
+    if (bodyweight && !(S.noWeight && S.noWeight[name]) && hasWeight &&
+        !confirm('Make ' + name + ' bodyweight?\n\n' +
+                 'This sets its weights in this session to 0.')) return;
+
     ok.disabled = no.disabled = true;
-    ok.textContent = 'Renaming…';
-    busy(true, 'Renaming ' + name + '…');
-    var done = busyGuard('Renaming ' + name);
+    ok.textContent = 'Saving…';
+    busy(true, 'Saving ' + name + '…');
+    var done = busyGuard('Saving ' + name);
     google.script.run
       .withSuccessHandler(function (res) {
-        done(); busy(false); render(res); flash('Renamed to ' + to, true);
+        done(); busy(false);
+        S.timed = S.timed || {};
+        S.noWeight = S.noWeight || {};
+        if (timed) S.timed[to] = true; else delete S.timed[to];
+        if (bodyweight) S.noWeight[to] = true; else delete S.noWeight[to];
+        render(res);
+        flash(to === name ? 'Exercise updated' : 'Updated to ' + to, true);
       })
       .withFailureHandler(function (e) {
         done(); busy(false);
         ok.disabled = no.disabled = false;
-        ok.textContent = 'Rename';
+        ok.textContent = 'Save';
         flash(why(e), false, true);
       })
-      .renameExercise(KEY, S.day, S.date, name, to);
+      .renameExercise(KEY, S.day, S.date, name, to, timed, bodyweight);
   }
 
   ok.onclick = commit;
@@ -2275,12 +2343,18 @@ function renamePanel(card, name, head) {
   // How-to link come back untouched on cancel.
   if (head) head.style.display = 'none';
   box.appendChild(input);
+  box.appendChild(measureLabel);
+  box.appendChild(measure);
+  box.appendChild(loadLabel);
+  box.appendChild(load);
+  box.appendChild(help);
   box.appendChild(row);
   // Next to the exercise being renamed, not at the top of the card — on a
   // superset those are two different places.
   var host = (head && head.parentNode) || card;
   host.insertBefore(box, head || card.firstChild);
   setTimeout(function () { input.focus(); input.select(); }, 50);
+  return box;
 }
 
 function toggleDemo(card, name, url) {
@@ -2510,39 +2584,19 @@ function setCounter(name, sets) {
   return cnt;
 }
 
-// A drop chain is the marked tail of one exercise. Appending is deliberate:
-// inserting in the middle would renumber queued row-addressed edits.
-function trailingDrops(sets) {
-  var n = 0;
-  for (var i = sets.length - 1; i > 0 && sets[i].drop; i--) n++;
-  return n;
-}
-
 function dropControl(name, sets, showName) {
   var wrap = document.createElement('div');
   wrap.className = 'dropctl';
   if (!CAN_EDIT || !sets.length) return wrap;
 
-  var drops = trailingDrops(sets);
   var add = document.createElement('button');
   add.type = 'button';
   add.textContent = '↓ Add drop set' + (showName ? ' to ' + name : '');
   add.disabled = sets.length >= 10;
   add.onclick = function () {
-    resize(name, sets.length + 1, null, drops + 1, 'Drop set added');
+    resize(name, sets.length + 1, null, true, 'Drop set added');
   };
   wrap.appendChild(add);
-
-  if (drops) {
-    var remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'removedrop';
-    remove.textContent = 'Remove drop set';
-    remove.onclick = function () {
-      resize(name, sets.length - 1, null, drops - 1, 'Drop set removed');
-    };
-    wrap.appendChild(remove);
-  }
   return wrap;
 }
 
@@ -2796,7 +2850,7 @@ var RESIZE_MS = 800;
 // Set counts change on screen and the write follows. Each tap used to be its
 // own round trip with the page dimmed for it, so taking an exercise from
 // three sets to none meant three waits — on gym wifi, most of a minute.
-function resize(exercise, count, label, drops, message) {
+function resize(exercise, count, label, addDrop, message) {
   if (count < 0 || count > 10) return;
 
   // A resize already under way for this exercise is not a reason to refuse
@@ -2814,13 +2868,11 @@ function resize(exercise, count, label, drops, message) {
 
   var current = ((S.lastRes && S.lastRes.sets) || [])
     .filter(function (s) { return s.exercise === exercise; });
-  var oldDrops = trailingDrops(current);
-  if (drops === undefined || drops === null) {
-    var change = count - current.length;
-    drops = change > 0 && oldDrops ? oldDrops + change
-      : Math.max(0, oldDrops + Math.min(0, change));
+  var drops = current.filter(function (s) { return s.drop && s.set <= count; })
+    .map(function (s) { return s.set; });
+  if (addDrop) {
+    for (var n = current.length + 1; n <= count; n++) drops.push(n);
   }
-  drops = Math.max(0, Math.min(Math.max(0, count - 1), drops));
 
   if (!applyResize(exercise, count, drops)) return;
   S.working = count === 0 ? 'Removing ' + exercise : 'Updating sets';
@@ -2853,7 +2905,7 @@ function applyResize(exercise, count, drops) {
   } else {
     var last = mine[mine.length - 1];
     for (var n = mine.length + 1; n <= count; n++) {
-      var isDrop = n > count - drops;
+      var isDrop = drops.indexOf(n) !== -1;
       res.sets.push({
         row: 0, exercise: exercise, set: n, reps: last.reps,
         weight: isDrop ? Math.max(0, last.weight - 5) : last.weight,
@@ -2863,7 +2915,7 @@ function applyResize(exercise, count, drops) {
     }
   }
   res.sets.filter(function (s) { return s.exercise === exercise; })
-    .forEach(function (s) { s.drop = s.set > count - drops; });
+    .forEach(function (s) { s.drop = drops.indexOf(s.set) !== -1; });
   return true;
 }
 
@@ -2879,7 +2931,7 @@ function sendResize() {
       // A tap that landed while this was in flight is the newer truth: send
       // it rather than letting the response overwrite it.
       var next = S.resize &&
-        (S.resize.want !== want.want || S.resize.drops !== want.drops)
+        (S.resize.want !== want.want || S.resize.drops.join('|') !== want.drops.join('|'))
         ? S.resize : null;
       S.resize = next;
       S.working = next ? S.working : null;
@@ -2912,7 +2964,7 @@ function absorbResize(res, exercise) {
     if (t.exercise !== exercise) return;
     var d = dirty[t.set];
     if (!d) return;
-    t.reps = d.reps; t.weight = d.weight; t.rpe = d.rpe;
+    t.reps = d.reps; t.weight = d.weight; t.rpe = d.rpe; t.drop = !!d.drop;
     queueSave(t);
   });
 }
@@ -3019,11 +3071,24 @@ function beats(a, b) {
 function setRow(s) {
   var row = document.createElement('div');
   row.className = 'set';
-  if (s.drop) {
-    row.classList.add('drop');
-    var flag = document.createElement('div');
+  if (s.set > 1) {
+    row.classList.add('candrop');
+    row.classList.toggle('drop', !!s.drop);
+    var flag = document.createElement(CAN_EDIT ? 'button' : 'div');
     flag.className = 'dropflag';
-    flag.textContent = '↳ Drop set';
+    function paintDrop() {
+      row.classList.toggle('drop', !!s.drop);
+      flag.textContent = s.drop ? '↳ Drop set · Unlink' : '↓ Make drop set';
+      if (CAN_EDIT) flag.setAttribute('aria-pressed', s.drop ? 'true' : 'false');
+    }
+    if (CAN_EDIT) {
+      flag.type = 'button';
+      flag.onclick = function () { s.drop = !s.drop; paintDrop(); queueSave(s); };
+    } else if (!s.drop) {
+      flag.hidden = true;
+      row.classList.remove('candrop');
+    }
+    paintDrop();
     row.appendChild(flag);
   }
   var n = document.createElement('div'); n.className = 'n'; n.textContent = s.set;
@@ -3346,7 +3411,8 @@ function queueSave(s) {
   if (!(s.row > 1)) { s.dirty = true; return; }
   enqueue({
     kind: 'set', row: s.row, exercise: s.exercise, set: s.set,
-    reps: s.reps, weight: s.weight, rpe: s.rpe, day: S.day, date: S.date
+    reps: s.reps, weight: s.weight, rpe: s.rpe, drop: !!s.drop,
+    day: S.day, date: S.date
   });
 }
 
@@ -3367,7 +3433,7 @@ function absorbAdd(res) {
     if (note) t.note = note;
     var d = dirty[t.set];
     if (!d) return;
-    t.reps = d.reps; t.weight = d.weight; t.rpe = d.rpe;
+    t.reps = d.reps; t.weight = d.weight; t.rpe = d.rpe; t.drop = !!d.drop;
     queueSave(t);
   });
 
@@ -3390,6 +3456,7 @@ function overlayPending(sets) {
     var p = PEND.items['s|' + s.row];
     if (p && p.exercise === s.exercise && p.set === s.set) {
       s.reps = p.reps; s.weight = p.weight; s.rpe = p.rpe;
+      if (p.drop !== undefined) s.drop = !!p.drop;
     }
     var n = PEND.items['n|' + S.day + '|' + S.date + '|' + s.exercise];
     if (n) s.note = n.text;

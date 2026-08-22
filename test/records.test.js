@@ -235,6 +235,18 @@ test('a drop marker is valid only after the first set', () => {
   assert.strictEqual(sandbox.dropSet(second[COL.drop], second[COL.set]), true);
 });
 
+test('set resizing keeps explicit drop markers and accepts the old trailing count', () => {
+  const marked = sandbox.dropMap(4, [2, 3]);
+  assert.strictEqual(marked[2], true);
+  assert.strictEqual(marked[3], true);
+  assert.strictEqual(marked[4], undefined);
+
+  const legacy = sandbox.dropMap(4, 2);
+  assert.strictEqual(legacy[2], undefined);
+  assert.strictEqual(legacy[3], true);
+  assert.strictEqual(legacy[4], true);
+});
+
 test('history carries a chained drop set into the next session', () => {
   sandbox.noWeightLookup = () => ({});
   sandbox.timedLookup = () => ({});
@@ -798,6 +810,9 @@ test('writing functions refuse a wrong key', () => {
     writeArchive: k => sandbox.writeArchive(k, 'x', []),
     generateInto: k => sandbox.generateInto(k, 'Push', '2026-08-01', [], 'auto'),
     rememberExercise: k => sandbox.rememberExercise(k, 'Bench', false, false),
+    exerciseSheet: k => sandbox.exerciseSheet(k),
+    renameExercise: k => sandbox.renameExercise(k, 'Push', '2026-08-01',
+      'Bench', 'Press', false, false),
     reorderSession: k => sandbox.reorderSession(k, 'Push', '2026-08-10', []),
     // Archiving deletes rows, and the scheduled one does it unattended.
     runArchive: k => sandbox.runArchive(k, '2026-01-01'),

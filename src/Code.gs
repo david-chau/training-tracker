@@ -394,7 +394,7 @@ function widen(sheet) {
 
 // Date, day and exercise only. getBootstrap wants the day types, which dates
 // hold a session, and whether today has one — none of which need reps, weight,
-// RPE or notes. Ten columns of a thousand-row log is most of a megabyte to
+// RPE or notes. Eleven columns of a thousand-row log is most of a megabyte to
 // move; three is not.
 function logIndexRows() {
   const sheet = logSheet();
@@ -1322,7 +1322,7 @@ function writeSet(sheet, it) {
   if (row < 2) throw new Error('Bad row ' + it.row + '.');
   if (row > sheet.getLastRow()) throw new Error('Row ' + row + ' no longer exists.');
 
-  const guard = sheet.getRange(row, 1, 1, 4).getValues()[0];   // A–D
+  const guard = sheet.getRange(row, 1, 1, WIDTH).getValues()[0];
   if (dateKey(guard[COL.date]) !== String(it.date) ||
       !sameDay(guard[COL.day], it.day) ||
       String(guard[COL.exercise]).trim() !== String(it.exercise).trim() ||
@@ -1332,6 +1332,11 @@ function writeSet(sheet, it) {
 
   const target = sheet.getRange(row, COL.reps + 1, 1, 3);
   target.setValues([[num(it.reps), num(it.weight), it.rpe === BLANK_RPE ? '' : num(it.rpe)]]);
+  const oldDrop = dropSet(guard[COL.drop], guard[COL.set]);
+  const drop = it.drop === undefined ? oldDrop : dropSet(it.drop, guard[COL.set]);
+  const dropCell = sheet.getRange(row, COL.drop + 1);
+  const changedDrop = drop !== oldDrop;
+  if (changedDrop) dropCell.setValue(drop ? 'yes' : '');
   SpreadsheetApp.flush();
 
   const back = target.getValues()[0];
@@ -1339,7 +1344,8 @@ function writeSet(sheet, it) {
     row: row,
     reps: num(back[0]),
     weight: num(back[1]),
-    rpe: back[2] === '' ? BLANK_RPE : num(back[2])
+    rpe: back[2] === '' ? BLANK_RPE : num(back[2]),
+    drop: changedDrop ? dropSet(dropCell.getValue(), guard[COL.set]) : oldDrop
   };
 }
 
@@ -1351,12 +1357,10 @@ function setSetCount(k, dayType, dayKey, exercise, count, drops) {
   assertEdit(k);
   const sheet = logSheet();
   count = Math.max(0, Math.min(10, Math.round(count)));
-  // Drop sets are always a trailing chain and set 1 can never be a drop from
-  // anything. An omitted value is kept for compatibility with an older page.
+  // The page sends the exact set numbers marked as drops. A numeric trailing
+  // count is still accepted so a page open during deployment can finish.
   const setDrops = drops !== undefined && drops !== null;
-  const dropCount = setDrops
-    ? Math.max(0, Math.min(Math.max(0, count - 1), Math.round(num(drops))))
-    : 0;
+  const marked = dropMap(count, drops);
 
   const mine = allRows().filter(function (r) {
     return dateKey(r[COL.date]) === dayKey &&
@@ -1372,7 +1376,7 @@ function setSetCount(k, dayType, dayKey, exercise, count, drops) {
     const add = [];
     let nextWeight = wt;
     for (var i = mine.length + 1; i <= count; i++) {
-      const isDrop = setDrops && i > count - dropCount;
+      const isDrop = setDrops && !!marked[i];
       if (isDrop) nextWeight = Math.max(0, nextWeight - CFG.weightStep);
       add.push(buildRow(parseKey(dayKey), dayType, exercise, i, reps, nextWeight,
                         '', grp, isDrop));
@@ -1382,12 +1386,12 @@ function setSetCount(k, dayType, dayKey, exercise, count, drops) {
       .setNumberFormat('yyyy-mm-dd');
   }
 
-  // Existing rows may become (or stop being) drops as the trailing chain is
-  // resized. Write before deleting so sheet row numbers are still trustworthy.
+  // Existing markers survive a resize. Write before deleting so sheet row
+  // numbers are still trustworthy.
   if (setDrops) {
     mine.slice(0, count).forEach(function (r) {
       sheet.getRange(r.sheetRow, COL.drop + 1)
-        .setValue(num(r[COL.set]) > count - dropCount ? 'yes' : '');
+        .setValue(marked[num(r[COL.set])] ? 'yes' : '');
     });
   }
 
@@ -1654,7 +1658,7 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed, noWeig
   sheet.getRange(sheet.getLastRow() - out.length + 1, 1, out.length, 1)
     .setNumberFormat('yyyy-mm-dd');
 
-  rememberExercise(k, name, timed, noWeight);
+  writeExerciseFlags(exerciseSheet(k), name, isYes(timed), isYes(noWeight));
   SpreadsheetApp.flush();
   return loadSession(dayType, dayKey, false, k);
 }
@@ -1667,12 +1671,13 @@ function addExercise(k, dayType, dayKey, name, sets, reps, weight, timed, noWeig
 // Scoped to this session on purpose: the same exercise in earlier sessions
 // keeps its name, because renaming history would silently rewrite what
 // progression and records were built from.
-function renameExercise(k, dayType, dayKey, from, to) {
+function renameExercise(k, dayType, dayKey, from, to, timed, noWeight) {
   assertEdit(k);
   from = String(from).trim();
   to = String(to).trim();
   if (!to) throw new Error('New name required.');
-  if (to === from) return loadSession(dayType, dayKey, false, k);
+  const setFlags = timed !== undefined && noWeight !== undefined;
+  if (to === from && !setFlags) return loadSession(dayType, dayKey, false, k);
   if (to.length > 80) throw new Error('That name is too long.');
 
   const rows = allRows();
@@ -1685,20 +1690,57 @@ function renameExercise(k, dayType, dayKey, from, to) {
   });
   if (!mine.length) throw new Error(from + ' is not in this session.');
 
-  const clash = here.some(function (r) {
+  const clash = to !== from && here.some(function (r) {
     return String(r[COL.exercise]).trim().toLowerCase() === to.toLowerCase() &&
       String(r[COL.exercise]).trim() !== from;
   });
   if (clash) throw new Error(to + ' is already in this session.');
 
   const sheet = logSheet();
-  mine.forEach(function (r) {
-    sheet.getRange(r.sheetRow, COL.exercise + 1).setValue(to);
-  });
+  if (to !== from) {
+    mine.forEach(function (r) {
+      sheet.getRange(r.sheetRow, COL.exercise + 1).setValue(to);
+    });
+  }
 
-  rememberExercise(k, to);
+  if (setFlags) {
+    const bodyweight = isYes(noWeight);
+    writeExerciseFlags(exerciseSheet(k), to, isYes(timed), bodyweight);
+    // A no-weight exercise must not carry a hidden load into progression.
+    if (bodyweight) {
+      mine.forEach(function (r) {
+        sheet.getRange(r.sheetRow, COL.weight + 1).setValue(0);
+      });
+    }
+  } else if (to !== from) {
+    rememberExercise(k, to);
+  }
   SpreadsheetApp.flush();
   return loadSession(dayType, dayKey, false, k);
+}
+
+function exerciseSheet(k) {
+  assertEdit(k);
+  const sheet = SpreadsheetApp.getActive().getSheetByName(CFG.exerciseSheet);
+  if (!sheet) throw new Error('No sheet named "' + CFG.exerciseSheet + '".');
+  return sheet;
+}
+
+// First argument is a live Sheet, so this helper is not callable through the
+// browser bridge. E and G are global properties of an exercise.
+function writeExerciseFlags(sheet, name, timed, noWeight) {
+  if (sheet.getMaxColumns() < 7) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 7 - sheet.getMaxColumns());
+  }
+  const last = sheet.getLastRow();
+  const names = last > 1 ? sheet.getRange(2, 1, last - 1, 1).getValues() : [];
+  for (var i = 0; i < names.length; i++) {
+    if (String(names[i][0]).trim().toLowerCase() !== name.toLowerCase()) continue;
+    sheet.getRange(i + 2, 5).setValue(noWeight ? 'yes' : '');
+    sheet.getRange(i + 2, 7).setValue(timed ? 'yes' : '');
+    return;
+  }
+  sheet.appendRow([name, '', '', '', noWeight ? 'yes' : '', '', timed ? 'yes' : '']);
 }
 
 
@@ -1850,6 +1892,21 @@ function buildRow(date, dayType, exercise, setNo, reps, weight, note, group, dro
 
 function dropSet(v, setNo) {
   return num(setNo) > 1 && isYes(v);
+}
+
+function dropMap(count, drops) {
+  const out = {};
+  if (Array.isArray(drops)) {
+    drops.forEach(function (n) {
+      n = Math.round(num(n));
+      if (n > 1 && n <= count) out[n] = true;
+    });
+    return out;
+  }
+
+  const trailing = Math.max(0, Math.min(Math.max(0, count - 1), Math.round(num(drops))));
+  for (var i = count - trailing + 1; i <= count; i++) out[i] = true;
+  return out;
 }
 
 // Superset labels are single letters, scoped to one session. Anything else
