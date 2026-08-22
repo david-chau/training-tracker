@@ -522,9 +522,11 @@ test('drop sets append as a lighter chain and remove from the tail', () => {
 });
 
 test('existing rows toggle into a drop chain through the save queue', () => {
+  const first = sample('Bench', { row: 14, set: 1 });
   const second = sample('Bench', { row: 15, set: 2 });
   const row = G.setRow(second);
-  const toggle = row.children[0];
+  const control = G.dropAfterControl('Bench', [first, second], 0);
+  const toggle = control.children[0];
 
   assert.match(toggle.textContent, /Make drop set/);
   toggle.onclick();
@@ -536,6 +538,21 @@ test('existing rows toggle into a drop chain through the save queue', () => {
   assert.strictEqual(second.drop, false);
   assert.ok(!row.classes.drop);
   assert.strictEqual(G.PEND.items['s|15'].drop, false, 'unlink replaces the queued link');
+});
+
+test('the control under the last row appends a marked drop set', () => {
+  const sets = [sample('Bench')];
+  let call;
+  const resize = G.resize;
+  G.resize = (...args) => { call = args; };
+  try {
+    const control = G.dropAfterControl('Bench', sets, 0);
+    assert.match(control.children[0].textContent, /Make drop set/);
+    control.children[0].onclick();
+  } finally {
+    G.resize = resize;
+  }
+  assert.deepStrictEqual(call, ['Bench', 2, null, true, 'Drop set added']);
 });
 
 test('resizing preserves individually marked rows', () => {

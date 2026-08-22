@@ -217,10 +217,12 @@
               color:var(--link); text-transform:uppercase; letter-spacing:0.05em;
               cursor:pointer; }
   .set.drop .dropflag { left:7px; }
-  .dropctl { display:flex; gap:8px; margin:2px 0 8px; }
-  .dropctl button { flex:1; min-width:0; padding:10px 8px; border:1px solid var(--line);
-                    background:#fff; border-radius:9px; color:var(--link);
-                    font:inherit; font-size:14px; cursor:pointer; }
+  .dropafter { margin:-9px 0 8px 18px; }
+  .dropafter button { border:0; background:transparent; padding:7px 0;
+                      color:var(--link); font:inherit; font-size:11px;
+                      font-weight:600; text-transform:uppercase;
+                      letter-spacing:0.05em; cursor:pointer; }
+  .dropafter button:disabled { color:var(--muted); cursor:default; }
   .n { font-size:14px; color:var(--muted); padding-bottom:28px; }
   .fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
   /* Last week's value for this field, directly under the field. Always
@@ -2409,15 +2411,15 @@ function card(name, sets) {
 
   function refresh() { setTag(markPr(name, sets, rows)); }
 
-  sets.forEach(function (s) {
+  sets.forEach(function (s, i) {
     var row = setRow(s);
     rows.push(row);
     s.onChange = refresh;
     el.appendChild(row);
+    el.appendChild(dropAfterControl(name, sets, i));
   });
   refresh();
 
-  el.appendChild(dropControl(name, sets, false));
   el.appendChild(noteField(name, sets));
   el.appendChild(pairControl(name));
   return el;
@@ -2525,17 +2527,12 @@ function supersetCard(page, groups) {
       refreshers[idx].rows.push(row);
       s.onChange = refresh;
       line.appendChild(row);
+      if (CAN_EDIT) line.appendChild(dropAfterControl(name, groups[name], r));
       round.appendChild(line);
     });
     el.appendChild(round);
   }
   refresh();
-
-  if (CAN_EDIT) {
-    page.names.forEach(function (name) {
-      el.appendChild(dropControl(name, groups[name], true));
-    });
-  }
 
   page.names.forEach(function (name) {
     var sets = groups[name];
@@ -2584,19 +2581,37 @@ function setCounter(name, sets) {
   return cnt;
 }
 
-function dropControl(name, sets, showName) {
+function dropAfterControl(name, sets, index) {
   var wrap = document.createElement('div');
-  wrap.className = 'dropctl';
+  wrap.className = 'dropafter';
   if (!CAN_EDIT || !sets.length) return wrap;
 
-  var add = document.createElement('button');
-  add.type = 'button';
-  add.textContent = '↓ Add drop set' + (showName ? ' to ' + name : '');
-  add.disabled = sets.length >= 10;
-  add.onclick = function () {
-    resize(name, sets.length + 1, null, true, 'Drop set added');
-  };
-  wrap.appendChild(add);
+  var next = sets[index + 1];
+  var button = document.createElement('button');
+  button.type = 'button';
+
+  function paint() {
+    var linked = !!(next && next.drop);
+    button.textContent = linked ? '↳ Drop set · Unlink' : '↓ Make drop set';
+    if (next) button.setAttribute('aria-pressed', linked ? 'true' : 'false');
+  }
+
+  if (next) {
+    button.onclick = function () {
+      next.drop = !next.drop;
+      paint();
+      if (next.paintDrop) next.paintDrop();
+      queueSave(next);
+    };
+  } else {
+    button.disabled = sets.length >= 10;
+    if (button.disabled) button.title = '10 set maximum';
+    button.onclick = function () {
+      resize(name, sets.length + 1, null, true, 'Drop set added');
+    };
+  }
+  paint();
+  wrap.appendChild(button);
   return wrap;
 }
 
@@ -3071,24 +3086,14 @@ function beats(a, b) {
 function setRow(s) {
   var row = document.createElement('div');
   row.className = 'set';
-  if (s.set > 1) {
+  function paintDrop() { row.classList.toggle('drop', !!s.drop); }
+  s.paintDrop = paintDrop;
+  paintDrop();
+  if (!CAN_EDIT && s.set > 1 && s.drop) {
     row.classList.add('candrop');
-    row.classList.toggle('drop', !!s.drop);
-    var flag = document.createElement(CAN_EDIT ? 'button' : 'div');
+    var flag = document.createElement('div');
     flag.className = 'dropflag';
-    function paintDrop() {
-      row.classList.toggle('drop', !!s.drop);
-      flag.textContent = s.drop ? '↳ Drop set · Unlink' : '↓ Make drop set';
-      if (CAN_EDIT) flag.setAttribute('aria-pressed', s.drop ? 'true' : 'false');
-    }
-    if (CAN_EDIT) {
-      flag.type = 'button';
-      flag.onclick = function () { s.drop = !s.drop; paintDrop(); queueSave(s); };
-    } else if (!s.drop) {
-      flag.hidden = true;
-      row.classList.remove('candrop');
-    }
-    paintDrop();
+    flag.textContent = '↳ Drop set';
     row.appendChild(flag);
   }
   var n = document.createElement('div'); n.className = 'n'; n.textContent = s.set;

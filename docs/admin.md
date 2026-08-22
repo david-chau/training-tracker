@@ -306,10 +306,9 @@ tab against two exercises for the same day. The shipped template pairs
 
 ### Drop sets
 
-Use **Make drop set** above any set after the first to link it to the row above.
-Mark consecutive rows to make a chain; **Unlink** turns that row back into a
-normal set. **Add drop set** below the exercise appends a new lighter row when
-you need one rather than converting an existing set.
+Use **Make drop set** under a set. If another set follows, it links that next
+row; under the final set, it appends a new lighter row. Mark consecutive rows
+to make a chain. The same control becomes **Unlink** for an existing link.
 
 Drop sets are stored as `yes` in column **K** of the `Log`. They remain part of
 the same exercise, count toward its records and volume, and carry into a

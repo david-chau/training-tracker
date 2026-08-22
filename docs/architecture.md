@@ -573,8 +573,9 @@ logged above it.
 
 Drop sets stay inside an exercise rather than becoming another page. Column K
 marks a row that follows the preceding set immediately; consecutive marks are
-a chain. Per-row toggles use the normal durable set queue. Appending a new drop
-reuses the debounced set-count write, which preserves existing markers while
+a chain. The control under each row toggles the following row through the
+normal durable set queue; under the final row, it appends a new drop through
+the debounced set-count write. That write preserves existing markers while
 structural changes wait for queued edits. `fromHistory()` copies the marker
 when it generates the next session.
 
