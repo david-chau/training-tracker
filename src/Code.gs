@@ -1,7 +1,7 @@
 // Workout log — server code
 // Sheet "Log" columns, in order:
 // A date | B day | C exercise | D set | E reps-or-seconds | F weight |
-// G rpe | H auto note | I user note
+// G rpe | H auto note | I user note | J superset group | K drop set
 //
 // Column E is reps for most exercises and seconds for the ones flagged
 // "time based" on the Exercises tab. The unit is a property of the exercise,
@@ -37,15 +37,17 @@ const COL = {
   date: 0, day: 1, exercise: 2, set: 3,
   reps: 4, weight: 5, rpe: 6, note: 7,
   userNote: 8,  // column I — free text, never touched by the generator
-  group: 9      // column J — superset label, blank for a normal exercise
+  group: 9,     // column J — superset label, blank for a normal exercise
+  drop: 10      // column K — "yes" means continue immediately from prior set
 };
 
-const WIDTH = 10;
+const WIDTH = 11;
 
 // Must stay in step with LOG in data/build_template.py. Only used when
 // creating a sheet from scratch — reads go by position, never by heading.
 const HEADERS = ['Date', 'Day', 'Exercise', 'Set', 'Reps / Secs',
-                 'Weight (LB)', 'RPE', 'Auto note', 'Notes', 'Group'];
+                 'Weight (LB)', 'RPE', 'Auto note', 'Notes', 'Group',
+                 'Drop set'];
 const RECORD_HEADERS = ['Exercise', 'Record', 'Value', 'Detail', 'Date', 'Day'];
 
 const BLANK_RPE = -1;   // sentinel: google.script.run is unreliable with null
@@ -369,17 +371,24 @@ function logSheet() {
   return widen(s);
 }
 
-// Column J (Group) arrived after people were already logging. A sheet made
-// from the older template has nine headings and may have been trimmed to nine
-// columns, which would make every write throw. Blank J means "not part of a
-// superset", so widening is all the migration there is.
+// Optional columns arrived after people were already logging. An older sheet
+// may have been trimmed to fewer columns, which would make every write throw.
+// Their blank value means "off", so widening and adding headings is the whole
+// migration; no existing row needs rewriting.
 function widen(sheet) {
   if (sheet.getMaxColumns() < WIDTH) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), WIDTH - sheet.getMaxColumns());
   }
-  if (!String(sheet.getRange(1, WIDTH).getValue()).trim()) {
-    sheet.getRange(1, WIDTH).setValue(HEADERS[WIDTH - 1]);
+  const tail = sheet.getRange(1, 10, 1, WIDTH - 9);
+  const values = tail.getValues()[0];
+  let changed = false;
+  for (var i = 0; i < values.length; i++) {
+    if (!String(values[i]).trim()) {
+      values[i] = HEADERS[i + 9];
+      changed = true;
+    }
   }
+  if (changed) tail.setValues([values]);
   return sheet;
 }
 
@@ -471,6 +480,7 @@ function loadSession(dayType, dayKey, create, k, source) {
       rpe: r[COL.rpe] === '' ? BLANK_RPE : num(r[COL.rpe]),
       note: String(r[COL.userNote] || ''),
       group: groupLabel(r[COL.group]),
+      drop: dropSet(r[COL.drop], r[COL.set]),
       last: (prev && prev.sets[num(r[COL.set])]) || null
     };
   });
@@ -1337,10 +1347,16 @@ function writeSet(sheet, it) {
 // Add or remove rows so this exercise has exactly `count` sets.
 // Zero is allowed and means "take it out of this session altogether" —
 // removing the rows is the same operation as shrinking to none of them.
-function setSetCount(k, dayType, dayKey, exercise, count) {
+function setSetCount(k, dayType, dayKey, exercise, count, drops) {
   assertEdit(k);
   const sheet = logSheet();
   count = Math.max(0, Math.min(10, Math.round(count)));
+  // Drop sets are always a trailing chain and set 1 can never be a drop from
+  // anything. An omitted value is kept for compatibility with an older page.
+  const setDrops = drops !== undefined && drops !== null;
+  const dropCount = setDrops
+    ? Math.max(0, Math.min(Math.max(0, count - 1), Math.round(num(drops))))
+    : 0;
 
   const mine = allRows().filter(function (r) {
     return dateKey(r[COL.date]) === dayKey &&
@@ -1354,13 +1370,28 @@ function setSetCount(k, dayType, dayKey, exercise, count) {
     const wt = last ? num(last[COL.weight]) : 0;
     const grp = last ? last[COL.group] : '';
     const add = [];
+    let nextWeight = wt;
     for (var i = mine.length + 1; i <= count; i++) {
-      add.push(buildRow(parseKey(dayKey), dayType, exercise, i, reps, wt, '', grp));
+      const isDrop = setDrops && i > count - dropCount;
+      if (isDrop) nextWeight = Math.max(0, nextWeight - CFG.weightStep);
+      add.push(buildRow(parseKey(dayKey), dayType, exercise, i, reps, nextWeight,
+                        '', grp, isDrop));
     }
     sheet.getRange(sheet.getLastRow() + 1, 1, add.length, WIDTH).setValues(add);
     sheet.getRange(sheet.getLastRow() - add.length + 1, 1, add.length, 1)
       .setNumberFormat('yyyy-mm-dd');
-  } else if (count < mine.length) {
+  }
+
+  // Existing rows may become (or stop being) drops as the trailing chain is
+  // resized. Write before deleting so sheet row numbers are still trustworthy.
+  if (setDrops) {
+    mine.slice(0, count).forEach(function (r) {
+      sheet.getRange(r.sheetRow, COL.drop + 1)
+        .setValue(num(r[COL.set]) > count - dropCount ? 'yes' : '');
+    });
+  }
+
+  if (count < mine.length) {
     mine.slice(count).map(function (r) { return r.sheetRow; })
       .sort(function (a, b) { return b - a; })
       .forEach(function (rowNum) { sheet.deleteRow(rowNum); });
@@ -1749,7 +1780,8 @@ function fromHistory(prior, dayType, dayKey) {
       const key = String(set[COL.exercise]).trim().toLowerCase();
       const next = progress(set, noWeight[key], timed[key]);
       return buildRow(when, dayType, set[COL.exercise], set[COL.set],
-                      next.reps, next.weight, next.note, set[COL.group]);
+                      next.reps, next.weight, next.note, set[COL.group],
+                      dropSet(set[COL.drop], set[COL.set]));
     });
 }
 
@@ -1802,7 +1834,7 @@ function progress(set, noWeight, timed) {
 
 // ---------- helpers ----------
 
-function buildRow(date, dayType, exercise, setNo, reps, weight, note, group) {
+function buildRow(date, dayType, exercise, setNo, reps, weight, note, group, drop) {
   const out = new Array(WIDTH).fill('');
   out[COL.date] = date;
   out[COL.day] = dayType;
@@ -1812,7 +1844,12 @@ function buildRow(date, dayType, exercise, setNo, reps, weight, note, group) {
   out[COL.weight] = weight;
   out[COL.note] = note;
   out[COL.group] = groupLabel(group);
+  out[COL.drop] = dropSet(drop, setNo) ? 'yes' : '';
   return out;
+}
+
+function dropSet(v, setNo) {
+  return num(setNo) > 1 && isYes(v);
 }
 
 // Superset labels are single letters, scoped to one session. Anything else

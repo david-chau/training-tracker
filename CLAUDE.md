@@ -88,7 +88,7 @@ it persist.
 
 ```
 Google Sheet (named per person — the name is the app's heading and tab title)
-├── Log        — one row per set. The only real data. 10 columns, A–J.
+├── Log        — one row per set. The only real data. 11 columns, A–K.
 ├── Exercises  — name | group | pattern | image | no weight | video |
 │                time based. Autocomplete + optional picture URL + a flag
 │                hiding the weight field + a how-to link + the unit for
@@ -133,7 +133,7 @@ and progression compare column F against itself.
 
 ```
 A Date | B Day | C Exercise | D Set | E Reps / Secs | F Weight (LB) |
-G RPE | H Auto note | I Notes | J Group
+G RPE | H Auto note | I Notes | J Group | K Drop set
 ```
 
 Column E is reps, or seconds when the exercise is flagged `time based` on
@@ -150,9 +150,14 @@ Column J is the superset label — a single letter shared by every row of every
 exercise in one group, scoped to one session, blank for a normal exercise.
 `setGroup()` is its only writer. Membership is by label, not adjacency: rows
 are appended in the order they were added, so an exercise added later has to
-be able to join a pair logged above it. It arrived after people were logging,
-so `logSheet()` widens a nine-column sheet and writes the heading — blank J
-means "not a superset", which is the whole migration.
+be able to join a pair logged above it. Optional columns arrived after people
+were logging, so `logSheet()` widens an older sheet and fills their headings;
+blank means "off", which is the whole migration.
+
+Column K marks a drop set with `yes`: that row is performed immediately after
+the preceding set of the same exercise. Consecutive marked rows form a chain.
+Blank means a normal set. `setSetCount()` is its only browser-facing writer;
+generated sessions carry the marker forward from history.
 
 Changing this layout means changing `COL` and `WIDTH` in `Code.gs` **and**
 `LOG` in `data/build_template.py` together.

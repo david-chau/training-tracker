@@ -36,14 +36,15 @@ vm.runInContext(
 const { computeRecords, recordRows, epley, better, progress, isYes, isNo,
         resolveSource } = sandbox;
 const COL = vm.runInContext('COL', sandbox);
+const WIDTH = vm.runInContext('WIDTH', sandbox);
 
 // Arrays built inside the vm have that realm's prototype, which
 // deepStrictEqual treats as a difference. Copy them back out first.
 const plain = a => Array.from(a);
 
-// date, day, exercise, set, reps, weight, rpe, auto note, note
+// One Log row. Most tests only fill the columns their rule reads.
 const row = (date, day, exercise, set, reps, weight) => {
-  const r = new Array(9).fill('');
+  const r = new Array(WIDTH).fill('');
   r[COL.date] = date; r[COL.day] = day; r[COL.exercise] = exercise;
   r[COL.set] = set; r[COL.reps] = reps; r[COL.weight] = weight;
   return r;
@@ -211,7 +212,7 @@ test('better() is the single tie-break rule', () => {
 // ---------- the progression rule ----------
 
 const done = (reps, weight, rpe) => {
-  const r = new Array(9).fill('');
+  const r = new Array(WIDTH).fill('');
   r[COL.reps] = reps; r[COL.weight] = weight; r[COL.rpe] = rpe;
   return r;
 };
@@ -221,6 +222,29 @@ test('an easy set earns reps and weight', () => {
   assert.strictEqual(next.reps, 10);
   assert.strictEqual(next.weight, 105);
   assert.strictEqual(next.note, 'was easy');
+});
+
+test('a drop marker is valid only after the first set', () => {
+  const first = sandbox.buildRow('2026-08-01', 'Push', 'Bench', 1, 10, 30,
+    '', '', true);
+  const second = sandbox.buildRow('2026-08-01', 'Push', 'Bench', 2, 15, 20,
+    '', '', true);
+
+  assert.strictEqual(first[COL.drop], '', 'set 1 has nothing to drop from');
+  assert.strictEqual(second[COL.drop], 'yes');
+  assert.strictEqual(sandbox.dropSet(second[COL.drop], second[COL.set]), true);
+});
+
+test('history carries a chained drop set into the next session', () => {
+  sandbox.noWeightLookup = () => ({});
+  sandbox.timedLookup = () => ({});
+  const normal = row('2026-08-01', 'Push', 'Bench', 1, 10, 30);
+  const drop = row('2026-08-01', 'Push', 'Bench', 2, 15, 20);
+  drop[COL.drop] = 'yes';
+
+  const next = sandbox.fromHistory([normal, drop], 'Push', '2026-08-08');
+  assert.strictEqual(next[0][COL.drop], '');
+  assert.strictEqual(next[1][COL.drop], 'yes');
 });
 
 test('a hard set backs the weight off and rounds to 2.5', () => {

@@ -25,7 +25,7 @@ OUT = (Path(__file__).parent.parent
 
 LOG = [
     ["Date", "Day", "Exercise", "Set", "Reps / Secs", "Weight (LB)", "RPE",
-     "Auto note", "Notes", "Group"],
+     "Auto note", "Notes", "Group", "Drop set"],
 ]
 
 # name | group | pattern | image | no weight | video | time based
@@ -519,8 +519,8 @@ def check():
 
         log = z.read("xl/worksheets/sheet1.xml").decode()
         assert log.count("<row ") == 1, "Log must ship empty apart from headings"
-        assert log.count("<c ") == 10, "Log needs exactly 10 headings, A to J"
-        assert ">Group</t>" in log, "last heading missing"
+        assert log.count("<c ") == 11, "Log needs exactly 11 headings, A to K"
+        assert ">Drop set</t>" in log, "last heading missing"
 
         ex = z.read("xl/worksheets/sheet2.xml").decode()
         assert ex.count("<row ") == len(EXERCISES)

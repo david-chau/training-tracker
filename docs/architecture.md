@@ -571,6 +571,12 @@ is by label rather than by adjacency because rows are appended in the order
 they were added, and an exercise added later has to be able to join a pair
 logged above it.
 
+Drop sets stay inside an exercise rather than becoming another page. Column K
+marks a row that follows the preceding set immediately; consecutive marks are
+a chain. The browser only appends or removes the marked tail, reusing the
+debounced set-count write so structural changes still wait for queued edits.
+`fromHistory()` copies the marker when it generates the next session.
+
 ---
 
 ## Pounds, kilograms, and what is stored

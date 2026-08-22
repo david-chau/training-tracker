@@ -305,6 +305,16 @@ You can also plan one: put the same letter in column **G** of the `Templates`
 tab against two exercises for the same day. The shipped template pairs
 *Lateral Raise* with *Triceps Rope Pushdown* on Push as a worked example.
 
+### Drop sets
+
+Use **Add drop set** below an exercise to append a lighter set performed
+immediately after the one above it. Adjust its weight and reps normally. Add
+again to chain another drop; **Remove drop set** removes the last one.
+
+Drop sets are stored as `yes` in column **K** of the `Log`. They remain part of
+the same exercise, count toward its records and volume, and carry into a
+session built *From last time*. They also work inside a superset.
+
 ### One exercise at a time
 
 A session is a stack of pages, one card each, with the whole session listed
@@ -731,6 +741,7 @@ filter, chart, export or edit it freely — the app reads it fresh each time.
 | H | Auto note — the app's (`from template`, `was easy`, `repeat`, `backed off`) |
 | I | Notes — yours |
 | J | Group — a letter shared by the exercises in a [superset](#supersets), blank otherwise |
+| K | Drop set — `yes` when this set follows the preceding set immediately, blank otherwise |
 
 {: .warning }
 Keep the column order. The code reads columns by position, not by heading.

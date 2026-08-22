@@ -206,8 +206,17 @@
                 cursor:pointer; color:var(--ink); }
   .cnt span { min-width:46px; text-align:center; font-size:13px; color:var(--muted); }
   .set { display:grid; grid-template-columns:18px 1fr 1fr 1fr; gap:6px;
-         align-items:end; margin-bottom:14px; }
+         align-items:end; margin-bottom:14px; position:relative; }
   .set.bw { grid-template-columns:18px 1fr 1fr; }
+  .set.drop { border-left:2px solid var(--link); padding:21px 0 0 7px; }
+  .dropflag { position:absolute; top:0; left:7px; font-size:11px;
+              font-weight:600; color:var(--link); text-transform:uppercase;
+              letter-spacing:0.05em; }
+  .dropctl { display:flex; gap:8px; margin:2px 0 8px; }
+  .dropctl button { flex:1; padding:10px 8px; border:1px solid var(--line);
+                    background:#fff; border-radius:9px; color:var(--link);
+                    font:inherit; font-size:14px; cursor:pointer; }
+  .dropctl .removedrop { color:var(--warn); }
   .n { font-size:14px; color:var(--muted); padding-bottom:28px; }
   .fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
   /* Last week's value for this field, directly under the field. Always
@@ -2334,6 +2343,7 @@ function card(name, sets) {
   });
   refresh();
 
+  el.appendChild(dropControl(name, sets, false));
   el.appendChild(noteField(name, sets));
   el.appendChild(pairControl(name));
   return el;
@@ -2447,6 +2457,12 @@ function supersetCard(page, groups) {
   }
   refresh();
 
+  if (CAN_EDIT) {
+    page.names.forEach(function (name) {
+      el.appendChild(dropControl(name, groups[name], true));
+    });
+  }
+
   page.names.forEach(function (name) {
     var sets = groups[name];
 
@@ -2492,6 +2508,42 @@ function setCounter(name, sets) {
   plus.onclick = function () { resize(name, sets.length + 1, label); };
   cnt.appendChild(minus); cnt.appendChild(label); cnt.appendChild(plus);
   return cnt;
+}
+
+// A drop chain is the marked tail of one exercise. Appending is deliberate:
+// inserting in the middle would renumber queued row-addressed edits.
+function trailingDrops(sets) {
+  var n = 0;
+  for (var i = sets.length - 1; i > 0 && sets[i].drop; i--) n++;
+  return n;
+}
+
+function dropControl(name, sets, showName) {
+  var wrap = document.createElement('div');
+  wrap.className = 'dropctl';
+  if (!CAN_EDIT || !sets.length) return wrap;
+
+  var drops = trailingDrops(sets);
+  var add = document.createElement('button');
+  add.type = 'button';
+  add.textContent = '↓ Add drop set' + (showName ? ' to ' + name : '');
+  add.disabled = sets.length >= 10;
+  add.onclick = function () {
+    resize(name, sets.length + 1, null, drops + 1, 'Drop set added');
+  };
+  wrap.appendChild(add);
+
+  if (drops) {
+    var remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'removedrop';
+    remove.textContent = 'Remove drop set';
+    remove.onclick = function () {
+      resize(name, sets.length - 1, null, drops - 1, 'Drop set removed');
+    };
+    wrap.appendChild(remove);
+  }
+  return wrap;
 }
 
 // Pair with the next page, or unlink. Structural, so it goes through the same
@@ -2744,7 +2796,7 @@ var RESIZE_MS = 800;
 // Set counts change on screen and the write follows. Each tap used to be its
 // own round trip with the page dimmed for it, so taking an exercise from
 // three sets to none meant three waits — on gym wifi, most of a minute.
-function resize(exercise, count, label) {
+function resize(exercise, count, label, drops, message) {
   if (count < 0 || count > 10) return;
 
   // A resize already under way for this exercise is not a reason to refuse
@@ -2760,7 +2812,17 @@ function resize(exercise, count, label) {
     return;
   }
 
-  if (!applyResize(exercise, count)) return;
+  var current = ((S.lastRes && S.lastRes.sets) || [])
+    .filter(function (s) { return s.exercise === exercise; });
+  var oldDrops = trailingDrops(current);
+  if (drops === undefined || drops === null) {
+    var change = count - current.length;
+    drops = change > 0 && oldDrops ? oldDrops + change
+      : Math.max(0, oldDrops + Math.min(0, change));
+  }
+  drops = Math.max(0, Math.min(Math.max(0, count - 1), drops));
+
+  if (!applyResize(exercise, count, drops)) return;
   S.working = count === 0 ? 'Removing ' + exercise : 'Updating sets';
   if (count) S.focus = exercise;
   render(S.lastRes);
@@ -2770,13 +2832,15 @@ function resize(exercise, count, label) {
   S.resize = {
     name: exercise,
     want: count,
+    drops: drops,
+    message: message || '',
     timer: setTimeout(function () { sendResize(); }, RESIZE_MS)
   };
 }
 
 // Add or drop set rows in the response already on screen. New rows have no
 // row number until the server assigns one, exactly like an optimistic add.
-function applyResize(exercise, count) {
+function applyResize(exercise, count, drops) {
   var res = S.lastRes;
   if (!res || !res.sets) return false;
 
@@ -2789,12 +2853,17 @@ function applyResize(exercise, count) {
   } else {
     var last = mine[mine.length - 1];
     for (var n = mine.length + 1; n <= count; n++) {
+      var isDrop = n > count - drops;
       res.sets.push({
-        row: 0, exercise: exercise, set: n, reps: last.reps, weight: last.weight,
-        rpe: BLANK, note: last.note, group: last.group, last: null
+        row: 0, exercise: exercise, set: n, reps: last.reps,
+        weight: isDrop ? Math.max(0, last.weight - 5) : last.weight,
+        rpe: BLANK, note: last.note, group: last.group, drop: isDrop, last: null
       });
+      last = res.sets[res.sets.length - 1];
     }
   }
+  res.sets.filter(function (s) { return s.exercise === exercise; })
+    .forEach(function (s) { s.drop = s.set > count - drops; });
   return true;
 }
 
@@ -2809,13 +2878,15 @@ function sendResize() {
       done();
       // A tap that landed while this was in flight is the newer truth: send
       // it rather than letting the response overwrite it.
-      var next = S.resize && S.resize.want !== want.want ? S.resize : null;
+      var next = S.resize &&
+        (S.resize.want !== want.want || S.resize.drops !== want.drops)
+        ? S.resize : null;
       S.resize = next;
       S.working = next ? S.working : null;
       absorbResize(res, want.name);
       render(res);
       if (next) { clearTimeout(next.timer); sendResize(); return; }
-      flash(want.want === 0 ? want.name + ' removed' : 'Sets updated', true);
+      flash(want.message || (want.want === 0 ? want.name + ' removed' : 'Sets updated'), true);
     })
     .withFailureHandler(function (e) {
       done();
@@ -2824,7 +2895,7 @@ function sendResize() {
       flash('Failed: ' + why(e), false, true);
       load(false);              // the sheet is the truth; drop the guess
     })
-    .setSetCount(KEY, S.day, S.date, want.name, want.want);
+    .setSetCount(KEY, S.day, S.date, want.name, want.want, want.drops);
 }
 
 // Anything typed into a set that did not exist yet moves onto the row the
@@ -2948,6 +3019,13 @@ function beats(a, b) {
 function setRow(s) {
   var row = document.createElement('div');
   row.className = 'set';
+  if (s.drop) {
+    row.classList.add('drop');
+    var flag = document.createElement('div');
+    flag.className = 'dropflag';
+    flag.textContent = '↳ Drop set';
+    row.appendChild(flag);
+  }
   var n = document.createElement('div'); n.className = 'n'; n.textContent = s.set;
   row.appendChild(n);
   var t = isTimed(s.exercise);

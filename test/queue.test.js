@@ -86,8 +86,8 @@ function runner(state) {
     withSuccessHandler(f) { return runner(Object.assign({}, state, { ok: f })); },
     withFailureHandler(f) { return runner(Object.assign({}, state, { bad: f })); },
     saveBatch(key, batch) { outbox.push(Object.assign({ batch, key }, state)); },
-    setSetCount(key, day, date, exercise, count) {
-      outbox.push(Object.assign({ call: 'setSetCount', exercise, count }, state));
+    setSetCount(key, day, date, exercise, count, drops) {
+      outbox.push(Object.assign({ call: 'setSetCount', exercise, count, drops }, state));
     },
     loadSession(day, date) {
       outbox.push(Object.assign({ call: 'loadSession', day, date }, state));
@@ -481,7 +481,7 @@ G.S.lastNotes = {};
 
 const sample = (name, over) => Object.assign({
   row: 14, exercise: name, set: 1, reps: 8, weight: 100, rpe: 8, note: '',
-  last: { reps: 8, weight: 95, rpe: 7 }
+  drop: false, last: { reps: 8, weight: 95, rpe: 7 }
 }, over || {});
 
 test('a card renders for a loaded exercise', () => {
@@ -497,6 +497,25 @@ test('a card renders for an unweighted timed exercise', () => {
 test('a card renders for an exercise with no records at all', () => {
   const el = G.card('Brand New Thing', [sample('Brand New Thing')]);
   assert.ok(el);
+});
+
+test('drop sets append as a lighter chain and remove from the tail', () => {
+  G.S.lastRes = { sets: [sample('Bench')] };
+  assert.strictEqual(G.applyResize('Bench', 2, 1), true);
+  let mine = G.S.lastRes.sets;
+  assert.strictEqual(mine[1].drop, true);
+  assert.strictEqual(mine[1].weight, 95, 'the first drop starts 5 lb lighter');
+
+  assert.strictEqual(G.applyResize('Bench', 3, 2), true);
+  mine = G.S.lastRes.sets;
+  assert.strictEqual(mine[2].drop, true);
+  assert.strictEqual(mine[2].weight, 90, 'a second drop chains from the first');
+  assert.strictEqual(G.trailingDrops(mine), 2);
+
+  assert.strictEqual(G.applyResize('Bench', 2, 1), true);
+  mine = G.S.lastRes.sets;
+  assert.strictEqual(mine.length, 2);
+  assert.strictEqual(G.trailingDrops(mine), 1);
 });
 
 test('the add-exercise panel builds without throwing', () => {
